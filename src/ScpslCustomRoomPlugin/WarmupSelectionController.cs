@@ -357,26 +357,20 @@ namespace ScpslCustomRoomPlugin
 
         private IEnumerator<float> WarmupCountdown()
         {
-            int minimumPlayers = Math.Max(2, plugin.Config.MinimumPlayersToCountdown);
             short lastLoggedTimer = short.MinValue;
 
             while (warmupActive && !IsRoundStarted())
             {
-                int readyPlayers = ReadyWarmupPlayerCount();
-                int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(readyPlayers, 1);
+                int playerCount = CurrentServerPlayerCount();
+                int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(playerCount, 1);
                 short nativeTimer = GetNativeLobbyTimer();
-                string countdownLine = BuildCountdownLine(nativeTimer, readyPlayers, maxPlayers);
+                string countdownLine = BuildCountdownLine(nativeTimer, playerCount, maxPlayers);
 
-                if (readyPlayers < minimumPlayers || nativeTimer == -2)
+                if (nativeTimer == -2)
                 {
-                    if (readyPlayers < minimumPlayers)
-                    {
-                        SetNativeLobbyTimer(-2);
-                    }
-
                     if (!countdownPausedLogged)
                     {
-                        Log.Info($"Native lobby countdown paused; waiting for players ({readyPlayers}/{maxPlayers}).");
+                        Log.Info($"Native lobby countdown paused; waiting for players ({playerCount}/{maxPlayers}).");
                         countdownPausedLogged = true;
                     }
 
@@ -387,13 +381,13 @@ namespace ScpslCustomRoomPlugin
 
                 if (countdownPausedLogged)
                 {
-                    Log.Info($"Native lobby countdown resumed with {readyPlayers}/{maxPlayers} players.");
+                    Log.Info($"Native lobby countdown resumed with {playerCount}/{maxPlayers} players.");
                     countdownPausedLogged = false;
                 }
 
                 if (nativeTimer != lastLoggedTimer && nativeTimer >= 0 && nativeTimer % 10 == 0)
                 {
-                    Log.Debug($"Native lobby countdown timer is {nativeTimer}s with {readyPlayers}/{maxPlayers} players.");
+                    Log.Debug($"Native lobby countdown timer is {nativeTimer}s with {playerCount}/{maxPlayers} players.");
                     lastLoggedTimer = nativeTimer;
                 }
 
@@ -706,6 +700,11 @@ namespace ScpslCustomRoomPlugin
             return Player.List.Count(IsWarmupParticipant);
         }
 
+        private static int CurrentServerPlayerCount()
+        {
+            return Server.PlayerCount;
+        }
+
         private void ShowWarmupStatusHint(string countdownLine)
         {
             if (!plugin.Config.ShowCountdownHints)
@@ -731,26 +730,28 @@ namespace ScpslCustomRoomPlugin
 
         private static string GetCurrentCountdownLine()
         {
-            int readyPlayers = ReadyWarmupPlayerCount();
-            int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(readyPlayers, 1);
-            return BuildCountdownLine(GetNativeLobbyTimer(), readyPlayers, maxPlayers);
+            int playerCount = CurrentServerPlayerCount();
+            int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(playerCount, 1);
+            return BuildCountdownLine(GetNativeLobbyTimer(), playerCount, maxPlayers);
         }
 
-        private static string BuildCountdownLine(short nativeTimer, int readyPlayers, int maxPlayers)
+        private static string BuildCountdownLine(short nativeTimer, int playerCount, int maxPlayers)
         {
             if (nativeTimer == -2)
             {
-                return $"Countdown: Waiting for players ({readyPlayers}/{maxPlayers})";
+                return $"Countdown: Waiting for players\nPlayers: {playerCount}/{maxPlayers}";
             }
 
-            return nativeTimer <= 0
+            string timerLine = nativeTimer <= 0
                 ? "Countdown: Round starting"
                 : $"Countdown: {nativeTimer}s";
+
+            return $"{timerLine}\nPlayers: {playerCount}/{maxPlayers}";
         }
 
         private static bool IsWarmupParticipant(Player player)
         {
-            return player.IsConnected && (player.IsVerified || player.IsNPC);
+            return player.IsConnected && player.IsVerified && !player.IsNPC;
         }
 
         private static void SetNativeLobbyTimer(short value)
