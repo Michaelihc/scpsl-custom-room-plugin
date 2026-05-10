@@ -124,6 +124,7 @@ namespace ScpslCustomRoomPlugin
             if (plugin.Config.LockLobbyDuringWarmup)
             {
                 Round.IsLobbyLocked = true;
+                Log.Warn("LockLobbyDuringWarmup is enabled; the game's native lobby countdown will stay paused until warmup ends.");
             }
 
             LockWarmupDoors();
@@ -136,7 +137,7 @@ namespace ScpslCustomRoomPlugin
                 MovePlayerToWarmupRoom(player);
             }
 
-            Log.Info($"Warmup SCP class selector room is active ({reason}).");
+            Log.Info($"Warmup SCP class selector room is active ({reason}); using the game's native lobby countdown.");
             countdownCoroutine = Timing.RunCoroutine(WarmupCountdown());
             playerMaintenanceCoroutine = Timing.RunCoroutine(MaintainWarmupPlayers());
         }
@@ -356,71 +357,52 @@ namespace ScpslCustomRoomPlugin
 
         private IEnumerator<float> WarmupCountdown()
         {
-            int remainingSeconds = Math.Max(1, plugin.Config.WarmupSeconds);
+            int minimumPlayers = Math.Max(2, plugin.Config.MinimumPlayersToCountdown);
+            short lastLoggedTimer = short.MinValue;
 
-            while (warmupActive && remainingSeconds > 0)
+            while (warmupActive && !IsRoundStarted())
             {
                 int readyPlayers = ReadyWarmupPlayerCount();
-                int minimumPlayers = Math.Max(1, plugin.Config.MinimumPlayersToCountdown);
+                int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(readyPlayers, 1);
+                short nativeTimer = GetNativeLobbyTimer();
 
-                if (readyPlayers < minimumPlayers)
+                if (readyPlayers < minimumPlayers || nativeTimer == -2)
                 {
-                    SetNativeLobbyTimer(-2);
+                    if (readyPlayers < minimumPlayers)
+                    {
+                        SetNativeLobbyTimer(-2);
+                    }
+
                     if (!countdownPausedLogged)
                     {
-                        Log.Info($"Warmup countdown paused; waiting for {minimumPlayers} verified players ({readyPlayers}/{minimumPlayers}).");
+                        Log.Info($"Native lobby countdown paused; waiting for players ({readyPlayers}/{maxPlayers}).");
                         countdownPausedLogged = true;
                     }
 
-                    foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
-                    {
-                        player.ShowHint($"Waiting for players ({readyPlayers}/{minimumPlayers})\nChoose an SCP class in the selector room.", 1.25f);
-                    }
-
+                    ShowWarmupStatusHint($"Waiting for players ({readyPlayers}/{maxPlayers})\nChoose an SCP class in the selector room.");
                     yield return Timing.WaitForSeconds(1f);
                     continue;
                 }
 
                 if (countdownPausedLogged)
                 {
-                    Log.Info($"Warmup countdown resumed with {readyPlayers} verified players.");
+                    Log.Info($"Native lobby countdown resumed with {readyPlayers}/{maxPlayers} players.");
                     countdownPausedLogged = false;
                 }
 
-                SetNativeLobbyTimer((short)Math.Min(short.MaxValue, remainingSeconds));
-
-                if (plugin.Config.ShowCountdownHints)
+                if (nativeTimer != lastLoggedTimer && nativeTimer >= 0 && nativeTimer % 10 == 0)
                 {
-                    string message = $"Round starts in {remainingSeconds}s\nChoose an SCP class in the selector room.";
-                    foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
-                    {
-                        player.ShowHint(message, 1.25f);
-                    }
+                    Log.Debug($"Native lobby countdown timer is {nativeTimer}s with {readyPlayers}/{maxPlayers} players.");
+                    lastLoggedTimer = nativeTimer;
                 }
 
+                string message = nativeTimer <= 0
+                    ? "Round starting\nChoose an SCP class in the selector room."
+                    : $"Round starts in {nativeTimer}s\nChoose an SCP class in the selector room.";
+                ShowWarmupStatusHint(message);
+
                 yield return Timing.WaitForSeconds(1f);
-                remainingSeconds--;
             }
-
-            if (!warmupActive)
-            {
-                yield break;
-            }
-
-            if (plugin.Config.LockLobbyDuringWarmup)
-            {
-                Round.IsLobbyLocked = false;
-            }
-
-            if (IsRoundStarted())
-            {
-                EndWarmup();
-                roundSelectionPending = true;
-                ApplySelectionsAfterVanillaAssignment();
-                yield break;
-            }
-
-            Round.Start();
         }
 
         private void ApplySelectionsAfterVanillaAssignment()
@@ -726,12 +708,30 @@ namespace ScpslCustomRoomPlugin
             return Player.List.Count(player => player.IsConnected && player.IsVerified);
         }
 
+        private void ShowWarmupStatusHint(string message)
+        {
+            if (!plugin.Config.ShowCountdownHints)
+            {
+                return;
+            }
+
+            foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+            {
+                player.ShowHint(message, 1.25f);
+            }
+        }
+
         private static void SetNativeLobbyTimer(short value)
         {
             if (RoundStart.singleton is not null && !RoundStart.RoundStarted)
             {
                 RoundStart.singleton.NetworkTimer = value;
             }
+        }
+
+        private static short GetNativeLobbyTimer()
+        {
+            return RoundStart.singleton is null ? (short)-2 : RoundStart.singleton.NetworkTimer;
         }
 
         private static bool IsRoundStarted()

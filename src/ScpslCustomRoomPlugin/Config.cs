@@ -14,8 +14,8 @@ namespace ScpslCustomRoomPlugin
         [Description("Whether debug logging is enabled.")]
         public bool Debug { get; set; }
 
-        [Description("Lock the vanilla lobby countdown while the plugin warmup is active.")]
-        public bool LockLobbyDuringWarmup { get; set; } = true;
+        [Description("Lock the vanilla lobby countdown while the plugin warmup is active. Keep this false when using the game's normal start timer.")]
+        public bool LockLobbyDuringWarmup { get; set; } = false;
 
         [Description("Force-start a temporary round for warmup. Disabled by default; the Lobby-style existing-room warmup runs during waiting-for-players.")]
         public bool ForceRoundStartForWarmup { get; set; }
@@ -23,10 +23,10 @@ namespace ScpslCustomRoomPlugin
         [Description("Prevent round-end checks while the selector warmup is active.")]
         public bool SuppressRoundEndDuringWarmup { get; set; } = true;
 
-        [Description("Manual warmup duration in seconds.")]
+        [Description("Legacy manual warmup duration in seconds. The normal selector warmup uses the game's native lobby countdown.")]
         public int WarmupSeconds { get; set; } = 90;
 
-        [Description("Minimum verified players required before the warmup countdown decreases.")]
+        [Description("Minimum verified players required before the game's lobby countdown can run.")]
         public int MinimumPlayersToCountdown { get; set; } = 2;
 
         [Description("Use an existing generated map room instead of spawning a floating primitive room.")]
@@ -56,8 +56,8 @@ namespace ScpslCustomRoomPlugin
         [Description("Lock the SCP-173 connector door while the selector lobby is active.")]
         public bool LockScp173ConnectorDuringWarmup { get; set; } = true;
 
-        [Description("Show plugin countdown hints while the selector is active.")]
-        public bool ShowCountdownHints { get; set; }
+        [Description("Show plugin status hints while the selector is active.")]
+        public bool ShowCountdownHints { get; set; } = true;
 
         [Description("Seconds after vanilla round start before selected SCPs are swapped in.")]
         public float RoleSwapDelaySeconds { get; set; } = 1.5f;
