@@ -378,7 +378,7 @@ namespace ScpslCustomRoomPlugin
                 {
                     player.ClearInventory();
                     player.Position = GetTutorialSpawnPosition();
-                    player.ShowHint("Choose an SCP class by interacting with its coin.", 4f);
+                    player.ShowHint(WarmupText.InitialSelectionHint(plugin.Config.UseChineseLocalization), 4f);
                     Log.Debug($"Moved {player.Nickname} ({player.UserId}) to selector room at {player.Position}.");
                 }
             });
@@ -796,32 +796,23 @@ namespace ScpslCustomRoomPlugin
         private string BuildWarmupStatusHint(Player player, string countdownLine)
         {
             string playerKey = GetPlayerKey(player);
-            string selection = playerSelections.TryGetValue(playerKey, out RoleTypeId selectedRole)
-                ? selectedRole.GetFullName()
-                : "None";
+            RoleTypeId? selectedRole = playerSelections.TryGetValue(playerKey, out RoleTypeId role)
+                ? role
+                : null;
 
-            return $"{countdownLine}\nSelected SCP: {selection}\nInteract with a coin to change selection.";
+            return WarmupText.BuildWarmupStatusHint(countdownLine, selectedRole, plugin.Config.UseChineseLocalization);
         }
 
-        private static string GetCurrentCountdownLine()
+        private string GetCurrentCountdownLine()
         {
             int playerCount = CurrentServerPlayerCount();
             int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(playerCount, 1);
-            return BuildCountdownLine(GetNativeLobbyTimer(), playerCount, maxPlayers);
+            return WarmupText.BuildCountdownLine(GetNativeLobbyTimer(), playerCount, maxPlayers, plugin.Config.UseChineseLocalization);
         }
 
-        private static string BuildCountdownLine(short nativeTimer, int playerCount, int maxPlayers)
+        private string BuildCountdownLine(short nativeTimer, int playerCount, int maxPlayers)
         {
-            if (nativeTimer == -2)
-            {
-                return $"Countdown: Waiting for players\nPlayers: {playerCount}/{maxPlayers}";
-            }
-
-            string timerLine = nativeTimer <= 0
-                ? "Countdown: Round starting"
-                : $"Countdown: {nativeTimer}s";
-
-            return $"{timerLine}\nPlayers: {playerCount}/{maxPlayers}";
+            return WarmupText.BuildCountdownLine(nativeTimer, playerCount, maxPlayers, plugin.Config.UseChineseLocalization);
         }
 
         private static bool IsWarmupParticipant(Player player)

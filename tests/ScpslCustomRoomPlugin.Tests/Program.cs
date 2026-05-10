@@ -35,6 +35,8 @@ namespace ScpslCustomRoomPlugin.Tests
                 LiveRoundRoleBeatsStaleCapturedRole,
                 CapturedRoleIsFallbackWhenLiveRoleIsSpectator,
                 TutorialRoleWithoutCaptureIsUnresolved,
+                EnglishWarmupTextStaysDefault,
+                ChineseWarmupTextUsesSimplifiedChinese,
             };
 
             int failed = 0;
@@ -307,6 +309,28 @@ namespace ScpslCustomRoomPlugin.Tests
 
             AssertEqual(false, resolved, "resolved");
             AssertEqual(RoleTypeId.None, resolvedRole, "resolved role");
+        }
+
+        private static void EnglishWarmupTextStaysDefault()
+        {
+            string countdown = WarmupText.BuildCountdownLine(12, 3, 50, false);
+            string hint = WarmupText.BuildWarmupStatusHint(countdown, RoleTypeId.Scp173, false);
+
+            AssertEqual("Countdown: 12s\nPlayers: 3/50", countdown, "countdown");
+            AssertEqual("Countdown: 12s\nPlayers: 3/50\nSelected SCP: SCP-173\nInteract with a coin to change selection.", hint, "hint");
+            AssertEqual("None", WarmupText.SelectionName(null, false), "none selection");
+        }
+
+        private static void ChineseWarmupTextUsesSimplifiedChinese()
+        {
+            string waiting = WarmupText.BuildCountdownLine(-2, 1, 50, true);
+            string starting = WarmupText.BuildCountdownLine(0, 4, 50, true);
+            string hint = WarmupText.BuildWarmupStatusHint(waiting, null, true);
+
+            AssertEqual("倒计时：等待玩家\n玩家：1/50", waiting, "waiting countdown");
+            AssertEqual("倒计时：回合即将开始\n玩家：4/50", starting, "starting countdown");
+            AssertEqual("倒计时：等待玩家\n玩家：1/50\n已选择SCP：无\n与硬币互动可更改选择。", hint, "hint");
+            AssertEqual("与硬币互动来选择SCP职业。", WarmupText.InitialSelectionHint(true), "initial hint");
         }
 
         private static SelectionSwapPlan<string> BuildPlan(

@@ -59,6 +59,9 @@ namespace ScpslCustomRoomPlugin
         [Description("Show plugin status hints while the selector is active.")]
         public bool ShowCountdownHints { get; set; } = true;
 
+        [Description("Use Simplified Chinese for player-facing selector hints and countdown text.")]
+        public bool UseChineseLocalization { get; set; }
+
         [Description("Seconds after vanilla round start before selected SCPs are swapped in.")]
         public float RoleSwapDelaySeconds { get; set; } = 1.5f;
 

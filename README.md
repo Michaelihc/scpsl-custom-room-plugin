@@ -1,8 +1,8 @@
 # SCP:SL Custom Room Plugin
 
-Draft EXILED plugin for SCP: Secret Laboratory warmup SCP class selection.
+EXILED plugin for SCP: Secret Laboratory warmup SCP class selection.
 
-Status: draft/private version.
+Status: public draft build.
 
 ## Overview
 
@@ -32,11 +32,48 @@ src/ScpslCustomRoomPlugin/bin/Release/net48/ScpslCustomRoomPlugin.dll
 
 Copy that DLL to the port-specific EXILED plugins folder for the target server.
 
+## Configuration
+
+EXILED generates the config under the port-specific plugin config folder, for example:
+
+```text
+%AppData%\EXILED\Configs\Plugins\scpsl_custom_room_plugin\7780.yml
+```
+
+Set this option to enable Simplified Chinese player-facing text in-game:
+
+```yaml
+use_chinese_localization: true
+```
+
+When enabled, countdown hints, selected-SCP status, and the initial selector instruction are shown in Simplified Chinese. The SCP selector labels remain configurable through `scp_class_options`; the default labels are numeric SCP IDs.
+
 ## Project Layout
 
 - `src/ScpslCustomRoomPlugin/Plugin.cs` - plugin entrypoint and event registration.
 - `src/ScpslCustomRoomPlugin/Config.cs` - EXILED config object.
 - `src/ScpslCustomRoomPlugin/WarmupSelectionController.cs` - selector lobby, native countdown status, player selections, and post-start swap logic.
+
+## 中文说明
+
+这是一个适用于 SCP: Secret Laboratory 的 EXILED 暖场 SCP 选择插件。
+
+在等待玩家阶段，插件会把玩家移动到 SCP-173 门附近的选择大厅。玩家通过与硬币互动选择想要的 SCP。回合倒计时和原版职业分配仍由游戏本身处理。
+
+回合开始后，插件只交换原版已经分配出的职业：
+
+- 如果原版生成了玩家选择的 SCP，选择池中的一名玩家可以获得该 SCP 位置。
+- 被替换的原 SCP 玩家会获得选择者原本的原版职业。
+- 如果原版没有生成该 SCP，选择会被跳过。
+- 插件不会额外创建 SCP，也不会随机创建回退职业。
+
+启用中文游戏内提示：
+
+```yaml
+use_chinese_localization: true
+```
+
+该开关会把倒计时提示、当前选择提示和初始选择说明切换为简体中文。SCP 标签默认仍为数字编号，可通过 `scp_class_options` 自行配置。
 
 ## License
 
