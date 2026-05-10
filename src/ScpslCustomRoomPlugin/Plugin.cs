@@ -27,6 +27,7 @@ namespace ScpslCustomRoomPlugin
             ServerHandlers.EndingRound += warmupSelectionController.OnEndingRound;
             PlayerHandlers.Verified += warmupSelectionController.OnVerified;
             PlayerHandlers.Left += warmupSelectionController.OnLeft;
+            PlayerHandlers.ChangingRole += warmupSelectionController.OnChangingRole;
             PlayerHandlers.Spawning += warmupSelectionController.OnSpawning;
             PlayerHandlers.PickingUpItem += warmupSelectionController.OnPickingUpItem;
 
@@ -42,6 +43,7 @@ namespace ScpslCustomRoomPlugin
                 ServerHandlers.EndingRound -= warmupSelectionController.OnEndingRound;
                 PlayerHandlers.Verified -= warmupSelectionController.OnVerified;
                 PlayerHandlers.Left -= warmupSelectionController.OnLeft;
+                PlayerHandlers.ChangingRole -= warmupSelectionController.OnChangingRole;
                 PlayerHandlers.Spawning -= warmupSelectionController.OnSpawning;
                 PlayerHandlers.PickingUpItem -= warmupSelectionController.OnPickingUpItem;
                 warmupSelectionController.CleanupRoom();

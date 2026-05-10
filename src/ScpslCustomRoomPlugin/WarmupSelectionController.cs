@@ -37,6 +37,7 @@ namespace ScpslCustomRoomPlugin
         private int forceRoundStartAttempts;
         private bool countdownPausedLogged;
         private bool releasedPlayersForRoundStart;
+        private bool applyingSelectionSwaps;
         private Vector3 roomOrigin;
         private Quaternion roomRotation = Quaternion.identity;
         private Door? lockedConnectorDoor;
@@ -121,6 +122,7 @@ namespace ScpslCustomRoomPlugin
             warmupActive = true;
             roundSelectionPending = false;
             releasedPlayersForRoundStart = false;
+            applyingSelectionSwaps = false;
             ResolveRoomOrigin();
 
             if (plugin.Config.LockLobbyDuringWarmup)
@@ -148,6 +150,7 @@ namespace ScpslCustomRoomPlugin
         {
             warmupActive = false;
             releasedPlayersForRoundStart = false;
+            applyingSelectionSwaps = false;
             Timing.KillCoroutines(countdownCoroutine);
             Timing.KillCoroutines(playerMaintenanceCoroutine);
 
@@ -193,6 +196,7 @@ namespace ScpslCustomRoomPlugin
             roundSelectionPending = false;
             countdownPausedLogged = false;
             releasedPlayersForRoundStart = false;
+            applyingSelectionSwaps = false;
         }
 
         public void OnVerified(VerifiedEventArgs ev)
@@ -238,6 +242,22 @@ namespace ScpslCustomRoomPlugin
             }
 
             ev.Position = GetTutorialSpawnPosition();
+        }
+
+        public void OnChangingRole(ChangingRoleEventArgs ev)
+        {
+            if (applyingSelectionSwaps || (!warmupActive && !roundSelectionPending) || !IsWarmupParticipant(ev.Player))
+            {
+                return;
+            }
+
+            if (ev.NewRole is RoleTypeId.None or RoleTypeId.Spectator or RoleTypeId.Tutorial)
+            {
+                return;
+            }
+
+            vanillaRoleAssignments[GetPlayerKey(ev.Player)] = ev.NewRole;
+            Log.Debug($"Captured vanilla role assignment for {ev.Player.Nickname}: {ev.NewRole.GetFullName()}.");
         }
 
         public void OnPickingUpItem(PickingUpItemEventArgs ev)
@@ -453,6 +473,7 @@ namespace ScpslCustomRoomPlugin
             Dictionary<RoleTypeId, List<Player>> selectedPools = BuildSelectedPools();
             Dictionary<Player, RoleTypeId> originalRoles = BuildVanillaRoleAssignments();
             Dictionary<Player, RoleTypeId> finalRoles = new Dictionary<Player, RoleTypeId>(originalRoles);
+            Log.Info($"Applying selector swaps with {selectedPools.Sum(pair => pair.Value.Count)} selected player(s) and {originalRoles.Count} resolved vanilla role(s).");
             if (selectedPools.Count == 0)
             {
                 Log.Info("No SCP class selections were made during warmup.");
@@ -576,21 +597,29 @@ namespace ScpslCustomRoomPlugin
             return originalRoles;
         }
 
-        private static void ApplyChangedRoles(Dictionary<Player, RoleTypeId> originalRoles, Dictionary<Player, RoleTypeId> finalRoles)
+        private void ApplyChangedRoles(Dictionary<Player, RoleTypeId> originalRoles, Dictionary<Player, RoleTypeId> finalRoles)
         {
-            foreach (KeyValuePair<Player, RoleTypeId> finalRole in finalRoles)
+            applyingSelectionSwaps = true;
+            try
             {
-                if (!finalRole.Key.IsConnected)
+                foreach (KeyValuePair<Player, RoleTypeId> finalRole in finalRoles)
                 {
-                    continue;
-                }
+                    if (!finalRole.Key.IsConnected)
+                    {
+                        continue;
+                    }
 
-                if (!originalRoles.TryGetValue(finalRole.Key, out RoleTypeId originalRole) || originalRole == finalRole.Value)
-                {
-                    continue;
-                }
+                    if (!originalRoles.TryGetValue(finalRole.Key, out RoleTypeId originalRole) || originalRole == finalRole.Value)
+                    {
+                        continue;
+                    }
 
-                finalRole.Key.Role.Set(finalRole.Value, SpawnReason.ForceClass);
+                    finalRole.Key.Role.Set(finalRole.Value, SpawnReason.ForceClass);
+                }
+            }
+            finally
+            {
+                applyingSelectionSwaps = false;
             }
         }
 
