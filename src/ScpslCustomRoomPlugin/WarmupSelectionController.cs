@@ -132,7 +132,7 @@ namespace ScpslCustomRoomPlugin
             BuildSelectionRoom();
             Log.Info($"Selector room spawned {spawnedPrimitives.Count} collidable primitive(s), {spawnedToys.Count} text toy(s), and {spawnedPickups.Count} selector pickup(s).");
 
-            foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
                 MovePlayerToWarmupRoom(player);
             }
@@ -243,7 +243,7 @@ namespace ScpslCustomRoomPlugin
 
             string roleName = selectedRole.GetFullName();
             Log.Info($"{ev.Player.Nickname} ({ev.Player.UserId}) selected {roleName} during warmup.");
-            ev.Player.ShowHint($"Selected: {roleName}", 3f);
+            ev.Player.ShowHint(BuildWarmupStatusHint(ev.Player, GetCurrentCountdownLine()), 1.25f);
         }
 
         public void OnRoundStarted()
@@ -343,7 +343,7 @@ namespace ScpslCustomRoomPlugin
         {
             while (warmupActive)
             {
-                foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+                foreach (Player player in Player.List.Where(IsWarmupParticipant))
                 {
                     if (player.Role.Type != RoleTypeId.Tutorial || Vector3.Distance(player.Position, roomOrigin) > 24f)
                     {
@@ -365,6 +365,7 @@ namespace ScpslCustomRoomPlugin
                 int readyPlayers = ReadyWarmupPlayerCount();
                 int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(readyPlayers, 1);
                 short nativeTimer = GetNativeLobbyTimer();
+                string countdownLine = BuildCountdownLine(nativeTimer, readyPlayers, maxPlayers);
 
                 if (readyPlayers < minimumPlayers || nativeTimer == -2)
                 {
@@ -379,7 +380,7 @@ namespace ScpslCustomRoomPlugin
                         countdownPausedLogged = true;
                     }
 
-                    ShowWarmupStatusHint($"Waiting for players ({readyPlayers}/{maxPlayers})\nChoose an SCP class in the selector room.");
+                    ShowWarmupStatusHint(countdownLine);
                     yield return Timing.WaitForSeconds(1f);
                     continue;
                 }
@@ -396,10 +397,7 @@ namespace ScpslCustomRoomPlugin
                     lastLoggedTimer = nativeTimer;
                 }
 
-                string message = nativeTimer <= 0
-                    ? "Round starting\nChoose an SCP class in the selector room."
-                    : $"Round starts in {nativeTimer}s\nChoose an SCP class in the selector room.";
-                ShowWarmupStatusHint(message);
+                ShowWarmupStatusHint(countdownLine);
 
                 yield return Timing.WaitForSeconds(1f);
             }
@@ -511,7 +509,7 @@ namespace ScpslCustomRoomPlugin
         {
             vanillaRoleAssignments.Clear();
 
-            foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
                 RoleTypeId role = player.Role.Type;
                 if (role is RoleTypeId.None or RoleTypeId.Spectator or RoleTypeId.Tutorial)
@@ -529,7 +527,7 @@ namespace ScpslCustomRoomPlugin
         {
             Dictionary<Player, RoleTypeId> finalRoles = new Dictionary<Player, RoleTypeId>();
 
-            foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
                 finalRoles[player] = ResolveRoundRole(player);
             }
@@ -705,20 +703,54 @@ namespace ScpslCustomRoomPlugin
 
         private static int ReadyWarmupPlayerCount()
         {
-            return Player.List.Count(player => player.IsConnected && player.IsVerified);
+            return Player.List.Count(IsWarmupParticipant);
         }
 
-        private void ShowWarmupStatusHint(string message)
+        private void ShowWarmupStatusHint(string countdownLine)
         {
             if (!plugin.Config.ShowCountdownHints)
             {
                 return;
             }
 
-            foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
-                player.ShowHint(message, 1.25f);
+                player.ShowHint(BuildWarmupStatusHint(player, countdownLine), 1.25f);
             }
+        }
+
+        private string BuildWarmupStatusHint(Player player, string countdownLine)
+        {
+            string playerKey = GetPlayerKey(player);
+            string selection = playerSelections.TryGetValue(playerKey, out RoleTypeId selectedRole)
+                ? selectedRole.GetFullName()
+                : "None";
+
+            return $"{countdownLine}\nSelected SCP: {selection}\nInteract with a coin to change selection.";
+        }
+
+        private static string GetCurrentCountdownLine()
+        {
+            int readyPlayers = ReadyWarmupPlayerCount();
+            int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(readyPlayers, 1);
+            return BuildCountdownLine(GetNativeLobbyTimer(), readyPlayers, maxPlayers);
+        }
+
+        private static string BuildCountdownLine(short nativeTimer, int readyPlayers, int maxPlayers)
+        {
+            if (nativeTimer == -2)
+            {
+                return $"Countdown: Waiting for players ({readyPlayers}/{maxPlayers})";
+            }
+
+            return nativeTimer <= 0
+                ? "Countdown: Round starting"
+                : $"Countdown: {nativeTimer}s";
+        }
+
+        private static bool IsWarmupParticipant(Player player)
+        {
+            return player.IsConnected && (player.IsVerified || player.IsNPC);
         }
 
         private static void SetNativeLobbyTimer(short value)
