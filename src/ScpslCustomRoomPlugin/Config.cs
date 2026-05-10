@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
+using Exiled.API.Enums;
 using Exiled.API.Interfaces;
 using PlayerRoles;
 
@@ -13,11 +14,11 @@ namespace ScpslCustomRoomPlugin
         [Description("Whether debug logging is enabled.")]
         public bool Debug { get; set; }
 
-        [Description("Lock the lobby during non-forced warmup.")]
+        [Description("Lock the vanilla lobby countdown while the plugin warmup is active.")]
         public bool LockLobbyDuringWarmup { get; set; } = true;
 
-        [Description("Force-start a temporary round for warmup. This avoids the vanilla waiting-for-players UI.")]
-        public bool ForceRoundStartForWarmup { get; set; } = true;
+        [Description("Force-start a temporary round for warmup. Disabled by default; the Lobby-style existing-room warmup runs during waiting-for-players.")]
+        public bool ForceRoundStartForWarmup { get; set; }
 
         [Description("Prevent round-end checks while the selector warmup is active.")]
         public bool SuppressRoundEndDuringWarmup { get; set; } = true;
@@ -26,7 +27,22 @@ namespace ScpslCustomRoomPlugin
         public int WarmupSeconds { get; set; } = 90;
 
         [Description("Minimum verified players required before the warmup countdown decreases.")]
-        public int MinimumPlayersToCountdown { get; set; } = 1;
+        public int MinimumPlayersToCountdown { get; set; } = 2;
+
+        [Description("Use an existing generated map room instead of spawning a floating primitive room.")]
+        public bool UseExistingLobbyRoom { get; set; } = true;
+
+        [Description("Existing room used as the warmup selector lobby.")]
+        public RoomType ExistingLobbyRoomType { get; set; } = RoomType.Lcz173;
+
+        [Description("Local position inside ExistingLobbyRoomType for the selector lobby origin. Default matches the Lobby plugin SCP173 location.")]
+        public string ExistingLobbyRoomOffset { get; set; } = "17, 13, 8";
+
+        [Description("Local rotation inside ExistingLobbyRoomType for the selector lobby origin.")]
+        public string ExistingLobbyRoomRotation { get; set; } = "0, -90, 0";
+
+        [Description("Hide the vanilla waiting-for-players start-round UI object while the selector lobby is active.")]
+        public bool HideNativeWaitingUi { get; set; } = true;
 
         [Description("Show plugin countdown hints while the selector is active.")]
         public bool ShowCountdownHints { get; set; }

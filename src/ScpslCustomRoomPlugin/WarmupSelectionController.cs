@@ -36,6 +36,7 @@ namespace ScpslCustomRoomPlugin
         private int forceRoundStartAttempts;
         private bool countdownPausedLogged;
         private Vector3 roomOrigin;
+        private Quaternion roomRotation = Quaternion.identity;
 
         public WarmupSelectionController(Plugin plugin)
         {
@@ -115,13 +116,14 @@ namespace ScpslCustomRoomPlugin
 
             warmupActive = true;
             roundSelectionPending = false;
-            roomOrigin = VectorParser.ParseVector3(plugin.Config.RoomOrigin, new Vector3(0f, 1030f, 0f));
+            ResolveRoomOrigin();
 
             if (plugin.Config.LockLobbyDuringWarmup)
             {
                 Round.IsLobbyLocked = true;
             }
 
+            HideNativeWaitingUi();
             BuildSelectionRoom();
             Log.Info($"Selector room spawned {spawnedPrimitives.Count} collidable primitive(s), {spawnedToys.Count} text toy(s), and {spawnedPickups.Count} selector pickup(s).");
 
@@ -267,22 +269,25 @@ namespace ScpslCustomRoomPlugin
 
         private void BuildSelectionRoom()
         {
-            AddPrimitive(roomOrigin + new Vector3(0f, -0.15f, 0f), new Vector3(24f, 0.3f, 18f), new Color(0.16f, 0.16f, 0.18f, 1f));
-            AddPrimitive(roomOrigin + new Vector3(0f, -0.7f, 0f), new Vector3(30f, 0.6f, 24f), new Color(0.16f, 0.16f, 0.18f, 1f));
-            AddPrimitive(roomOrigin + new Vector3(0f, 3.1f, 8.8f), new Vector3(24f, 6.5f, 0.3f), new Color(0.08f, 0.08f, 0.1f, 1f));
-            AddPrimitive(roomOrigin + new Vector3(0f, 3.1f, -8.8f), new Vector3(24f, 6.5f, 0.3f), new Color(0.08f, 0.08f, 0.1f, 1f));
-            AddPrimitive(roomOrigin + new Vector3(-11.8f, 3.1f, 0f), new Vector3(0.3f, 6.5f, 18f), new Color(0.08f, 0.08f, 0.1f, 1f));
-            AddPrimitive(roomOrigin + new Vector3(11.8f, 3.1f, 0f), new Vector3(0.3f, 6.5f, 18f), new Color(0.08f, 0.08f, 0.1f, 1f));
+            if (!plugin.Config.UseExistingLobbyRoom)
+            {
+                AddPrimitive(TransformLobbyOffset(new Vector3(0f, -0.15f, 0f)), new Vector3(24f, 0.3f, 18f), new Color(0.16f, 0.16f, 0.18f, 1f));
+                AddPrimitive(TransformLobbyOffset(new Vector3(0f, -0.7f, 0f)), new Vector3(30f, 0.6f, 24f), new Color(0.16f, 0.16f, 0.18f, 1f));
+                AddPrimitive(TransformLobbyOffset(new Vector3(0f, 3.1f, 8.8f)), new Vector3(24f, 6.5f, 0.3f), new Color(0.08f, 0.08f, 0.1f, 1f));
+                AddPrimitive(TransformLobbyOffset(new Vector3(0f, 3.1f, -8.8f)), new Vector3(24f, 6.5f, 0.3f), new Color(0.08f, 0.08f, 0.1f, 1f));
+                AddPrimitive(TransformLobbyOffset(new Vector3(-11.8f, 3.1f, 0f)), new Vector3(0.3f, 6.5f, 18f), new Color(0.08f, 0.08f, 0.1f, 1f));
+                AddPrimitive(TransformLobbyOffset(new Vector3(11.8f, 3.1f, 0f)), new Vector3(0.3f, 6.5f, 18f), new Color(0.08f, 0.08f, 0.1f, 1f));
+            }
 
             Vector2 displaySize = VectorParser.ParseVector2(plugin.Config.FloatingTextDisplaySize, new Vector2(2.5f, 1f));
             foreach (ScpClassOption option in plugin.Config.ScpClassOptions.Where(option => option.Role.IsScp()))
             {
-                Vector3 textPosition = roomOrigin + VectorParser.ParseVector3(option.TextOffset, Vector3.zero);
-                Text text = Text.Create(textPosition, Quaternion.Euler(0f, 180f, 0f), Vector3.one, option.Label, displaySize, null, true);
+                Vector3 textPosition = TransformLobbyOffset(VectorParser.ParseVector3(option.TextOffset, Vector3.zero));
+                Text text = Text.Create(textPosition, roomRotation * Quaternion.Euler(0f, 180f, 0f), Vector3.one, option.Label, displaySize, null, true);
                 spawnedToys.Add(text);
 
-                Vector3 coinPosition = roomOrigin + VectorParser.ParseVector3(option.CoinOffset, Vector3.zero);
-                Pickup coin = Pickup.CreateAndSpawn(plugin.Config.SelectorItemType, coinPosition, Quaternion.identity, null);
+                Vector3 coinPosition = TransformLobbyOffset(VectorParser.ParseVector3(option.CoinOffset, Vector3.zero));
+                Pickup coin = Pickup.CreateAndSpawn(plugin.Config.SelectorItemType, coinPosition, roomRotation, null);
                 coin.IsLocked = false;
                 spawnedPickups.Add(coin);
                 selectorCoins[coin.Serial] = option.Role;
@@ -328,7 +333,7 @@ namespace ScpslCustomRoomPlugin
             {
                 foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
                 {
-                    if (player.Role.Type != RoleTypeId.Tutorial || Vector3.Distance(player.Position, GetTutorialSpawnPosition()) > 3f)
+                    if (player.Role.Type != RoleTypeId.Tutorial || Vector3.Distance(player.Position, roomOrigin) > 24f)
                     {
                         MovePlayerToWarmupRoom(player);
                     }
@@ -589,7 +594,55 @@ namespace ScpslCustomRoomPlugin
 
         private Vector3 GetTutorialSpawnPosition()
         {
-            return roomOrigin + VectorParser.ParseVector3(plugin.Config.TutorialSpawnOffset, new Vector3(0f, 1.2f, -7f));
+            return TransformLobbyOffset(VectorParser.ParseVector3(plugin.Config.TutorialSpawnOffset, new Vector3(0f, 1.2f, -7f)));
+        }
+
+        private void ResolveRoomOrigin()
+        {
+            if (!plugin.Config.UseExistingLobbyRoom)
+            {
+                roomOrigin = VectorParser.ParseVector3(plugin.Config.RoomOrigin, new Vector3(0f, 1030f, 0f));
+                roomRotation = Quaternion.identity;
+                Log.Info($"Using floating selector room at {roomOrigin}.");
+                return;
+            }
+
+            Room? lobbyRoom = Room.Get(plugin.Config.ExistingLobbyRoomType) ?? Room.Get(RoomType.Lcz173);
+            if (lobbyRoom is null)
+            {
+                roomOrigin = VectorParser.ParseVector3(plugin.Config.RoomOrigin, new Vector3(0f, 1030f, 0f));
+                roomRotation = Quaternion.identity;
+                Log.Warn($"Existing lobby room {plugin.Config.ExistingLobbyRoomType} was not found; falling back to floating selector room at {roomOrigin}.");
+                return;
+            }
+
+            Vector3 localOffset = VectorParser.ParseVector3(plugin.Config.ExistingLobbyRoomOffset, new Vector3(17f, 13f, 8f));
+            Vector3 localRotation = VectorParser.ParseVector3(plugin.Config.ExistingLobbyRoomRotation, new Vector3(0f, -90f, 0f));
+            roomOrigin = lobbyRoom.Transform.TransformPoint(localOffset);
+            roomRotation = lobbyRoom.Rotation * Quaternion.Euler(localRotation);
+            Log.Info($"Using existing selector lobby room {lobbyRoom.Type} at {roomOrigin}.");
+        }
+
+        private Vector3 TransformLobbyOffset(Vector3 localOffset)
+        {
+            return roomOrigin + (roomRotation * localOffset);
+        }
+
+        private void HideNativeWaitingUi()
+        {
+            if (!plugin.Config.HideNativeWaitingUi)
+            {
+                return;
+            }
+
+            GameObject startRound = GameObject.Find("StartRound");
+            if (startRound is null)
+            {
+                Log.Debug("Native StartRound UI object was not found.");
+                return;
+            }
+
+            startRound.transform.localScale = Vector3.zero;
         }
 
         private static int ReadyWarmupPlayerCount()
@@ -602,10 +655,6 @@ namespace ScpslCustomRoomPlugin
             if (RoundStart.singleton is not null && !RoundStart.RoundStarted)
             {
                 RoundStart.singleton.NetworkTimer = value;
-                if (value == -1)
-                {
-                    RoundStart.RoundStartTimer.Restart();
-                }
             }
         }
 
