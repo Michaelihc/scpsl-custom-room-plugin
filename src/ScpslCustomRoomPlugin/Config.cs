@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using Exiled.API.Interfaces;
+using PlayerRoles;
 
 namespace ScpslCustomRoomPlugin
 {
@@ -12,19 +13,37 @@ namespace ScpslCustomRoomPlugin
         [Description("Whether debug logging is enabled.")]
         public bool Debug { get; set; }
 
-        [Description("Whether custom room setup should run when a round starts.")]
-        public bool SpawnRoomsOnRoundStart { get; set; } = true;
+        [Description("Lock the lobby during warmup and use the plugin countdown instead of the vanilla start flow.")]
+        public bool LockLobbyDuringWarmup { get; set; } = true;
 
-        [Description("Custom room definitions. Coordinates are placeholders for future spawn/build logic.")]
-        public List<CustomRoomDefinition> CustomRooms { get; set; } = new List<CustomRoomDefinition>
+        [Description("Manual warmup duration in seconds.")]
+        public int WarmupSeconds { get; set; } = 90;
+
+        [Description("Seconds after vanilla round start before selected SCPs are swapped in.")]
+        public float RoleSwapDelaySeconds { get; set; } = 1.5f;
+
+        [Description("World-space origin of the custom class selection room.")]
+        public string RoomOrigin { get; set; } = "0, 1030, 0";
+
+        [Description("Tutorial spawn offset from RoomOrigin.")]
+        public string TutorialSpawnOffset { get; set; } = "0, 1.2, -7";
+
+        [Description("Coin item type used as an interaction trigger. The pickup is cancelled so it stays in the room.")]
+        public ItemType SelectorItemType { get; set; } = ItemType.Coin;
+
+        [Description("Display size for floating SCP class labels.")]
+        public string FloatingTextDisplaySize { get; set; } = "2.5, 1";
+
+        [Description("SCP classes exposed in the warmup selector room.")]
+        public List<ScpClassOption> ScpClassOptions { get; set; } = new List<ScpClassOption>
         {
-            new CustomRoomDefinition
-            {
-                Name = "example_room",
-                Enabled = false,
-                Position = "0, 1000, 0",
-                Rotation = "0, 0, 0",
-            },
+            new ScpClassOption(RoleTypeId.Scp049, "SCP-049", "-9, 2.4, 2", "-9, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp079, "SCP-079", "-6, 2.4, 2", "-6, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp096, "SCP-096", "-3, 2.4, 2", "-3, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp106, "SCP-106", "0, 2.4, 2", "0, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp173, "SCP-173", "3, 2.4, 2", "3, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp939, "SCP-939", "6, 2.4, 2", "6, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp3114, "SCP-3114", "9, 2.4, 2", "9, 1.05, 0.6"),
         };
     }
 }

@@ -1,12 +1,15 @@
 using System;
 using Exiled.API.Features;
+using HarmonyLib;
+using PlayerHandlers = Exiled.Events.Handlers.Player;
 using ServerHandlers = Exiled.Events.Handlers.Server;
 
 namespace ScpslCustomRoomPlugin
 {
     public sealed class Plugin : Plugin<Config>
     {
-        private Handlers.ServerEventHandlers? serverEventHandlers;
+        private WarmupSelectionController? warmupSelectionController;
+        private Harmony? harmony;
 
         public override string Name => "SCP:SL Custom Room Plugin";
 
@@ -20,21 +23,36 @@ namespace ScpslCustomRoomPlugin
 
         public override void OnEnabled()
         {
-            serverEventHandlers = new Handlers.ServerEventHandlers(this);
-            ServerHandlers.WaitingForPlayers += serverEventHandlers.OnWaitingForPlayers;
-            ServerHandlers.RoundStarted += serverEventHandlers.OnRoundStarted;
+            harmony = new Harmony($"scpsl_custom_room_plugin.{DateTime.UtcNow.Ticks}");
+            harmony.PatchAll();
+
+            warmupSelectionController = new WarmupSelectionController(this);
+            ServerHandlers.WaitingForPlayers += warmupSelectionController.BeginWarmup;
+            ServerHandlers.RoundStarted += warmupSelectionController.OnRoundStarted;
+            PlayerHandlers.Verified += warmupSelectionController.OnVerified;
+            PlayerHandlers.Left += warmupSelectionController.OnLeft;
+            PlayerHandlers.Spawning += warmupSelectionController.OnSpawning;
+            PlayerHandlers.PickingUpItem += warmupSelectionController.OnPickingUpItem;
 
             base.OnEnabled();
         }
 
         public override void OnDisabled()
         {
-            if (serverEventHandlers is not null)
+            if (warmupSelectionController is not null)
             {
-                ServerHandlers.WaitingForPlayers -= serverEventHandlers.OnWaitingForPlayers;
-                ServerHandlers.RoundStarted -= serverEventHandlers.OnRoundStarted;
-                serverEventHandlers = null;
+                ServerHandlers.WaitingForPlayers -= warmupSelectionController.BeginWarmup;
+                ServerHandlers.RoundStarted -= warmupSelectionController.OnRoundStarted;
+                PlayerHandlers.Verified -= warmupSelectionController.OnVerified;
+                PlayerHandlers.Left -= warmupSelectionController.OnLeft;
+                PlayerHandlers.Spawning -= warmupSelectionController.OnSpawning;
+                PlayerHandlers.PickingUpItem -= warmupSelectionController.OnPickingUpItem;
+                warmupSelectionController.CleanupRoom();
+                warmupSelectionController = null;
             }
+
+            harmony?.UnpatchAll(harmony.Id);
+            harmony = null;
 
             base.OnDisabled();
         }

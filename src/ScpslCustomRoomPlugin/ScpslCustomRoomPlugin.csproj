@@ -9,5 +9,26 @@
 
   <ItemGroup>
     <PackageReference Include="ExMod.Exiled" Version="9.13.3" PrivateAssets="all" />
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" PrivateAssets="all" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" PrivateAssets="all" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ScpSlManagedPath Condition="'$(ScpSlManagedPath)' == ''">C:\Users\Michael\source\repos\unity\sl-halloween\server-files\windows\SCPSL_Data\Managed</ScpSlManagedPath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="Exists('$(ScpSlManagedPath)\Assembly-CSharp-firstpass.dll')">
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(ScpSlManagedPath)\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Mirror">
+      <HintPath>$(ScpSlManagedPath)\Mirror.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(ScpSlManagedPath)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 </Project>
