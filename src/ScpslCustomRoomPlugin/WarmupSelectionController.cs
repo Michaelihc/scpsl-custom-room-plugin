@@ -463,9 +463,19 @@ namespace ScpslCustomRoomPlugin
 
         private void QueueSelectionApply(string reason)
         {
+            bool applyImmediately = reason == "all players spawned";
             if (selectionApplyScheduled)
             {
-                Log.Debug($"Selector swap application is already queued; ignoring {reason} trigger.");
+                if (applyImmediately && roundSelectionPending)
+                {
+                    Log.Info("Applying selector swaps immediately because all players spawned.");
+                    ApplySelectionsAfterVanillaAssignment();
+                }
+                else
+                {
+                    Log.Debug($"Selector swap application is already queued; ignoring {reason} trigger.");
+                }
+
                 return;
             }
 
@@ -476,7 +486,13 @@ namespace ScpslCustomRoomPlugin
 
             roundSelectionPending = true;
             selectionApplyScheduled = true;
-            Log.Info($"Queued selector swap application ({reason}).");
+            Log.Info($"{(applyImmediately ? "Applying" : "Queued")} selector swap application ({reason}).");
+            if (applyImmediately)
+            {
+                ApplySelectionsAfterVanillaAssignment();
+                return;
+            }
+
             Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, ApplySelectionsAfterVanillaAssignment);
         }
 
