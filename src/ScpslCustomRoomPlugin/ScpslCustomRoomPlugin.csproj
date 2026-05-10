@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <ScpSlManagedPath Condition="'$(ScpSlManagedPath)' == ''">C:\Users\Michael\source\repos\unity\sl-halloween\server-files\windows\SCPSL_Data\Managed</ScpSlManagedPath>
+    <ScpSlManagedPath Condition="'$(ScpSlManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</ScpSlManagedPath>
   </PropertyGroup>
 
   <ItemGroup Condition="Exists('$(ScpSlManagedPath)\Assembly-CSharp-firstpass.dll')">
