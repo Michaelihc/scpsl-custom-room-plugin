@@ -281,6 +281,8 @@ namespace ScpslCustomRoomPlugin
 
         public void OnRoundStarted()
         {
+            Log.Info($"RoundStarted event received (warmupActive={warmupActive}, released={releasedPlayersForRoundStart}, pending={roundSelectionPending}).");
+
             if (pendingForcedWarmupRoundStart)
             {
                 pendingForcedWarmupRoundStart = false;
@@ -302,6 +304,8 @@ namespace ScpslCustomRoomPlugin
 
         public void OnAllPlayersSpawned()
         {
+            Log.Info($"AllPlayersSpawned event received (warmupActive={warmupActive}, released={releasedPlayersForRoundStart}, pending={roundSelectionPending}).");
+
             if (!warmupActive && !releasedPlayersForRoundStart && !roundSelectionPending)
             {
                 return;
@@ -400,8 +404,14 @@ namespace ScpslCustomRoomPlugin
         {
             short lastLoggedTimer = short.MinValue;
 
-            while (warmupActive && !IsRoundStarted())
+            while (warmupActive)
             {
+                if (IsRoundStarted())
+                {
+                    QueueSelectionApply("native round start observed");
+                    yield break;
+                }
+
                 int playerCount = CurrentServerPlayerCount();
                 int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(playerCount, 1);
                 short nativeTimer = GetNativeLobbyTimer();
