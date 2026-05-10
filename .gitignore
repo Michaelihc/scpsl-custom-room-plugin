@@ -1,0 +1,18 @@
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.rsuser
+*.nupkg
+*.snupkg
+
+# Local SCP:SL / EXILED server artifacts
+Exiled/
+EXILED/
+Plugins/
+configs/
+logs/
+LocalAdminLogs/
+ServerConsole.log

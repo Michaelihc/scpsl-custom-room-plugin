@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>ScpslCustomRoomPlugin</AssemblyName>
+    <RootNamespace>ScpslCustomRoomPlugin</RootNamespace>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ExMod.Exiled" Version="9.13.3" PrivateAssets="all" />
+  </ItemGroup>
+</Project>
