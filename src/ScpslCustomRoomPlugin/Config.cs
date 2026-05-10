@@ -42,7 +42,7 @@ namespace ScpslCustomRoomPlugin
         public string ExistingLobbyAnchorDoorOffset { get; set; } = "0, 0, -2";
 
         [Description("Open the selector lobby anchor gate while warmup is active.")]
-        public bool OpenExistingLobbyAnchorDoor { get; set; }
+        public bool OpenExistingLobbyAnchorDoor { get; set; } = true;
 
         [Description("Local position inside ExistingLobbyRoomType for the selector lobby origin. Default matches the Lobby plugin SCP173 location.")]
         public string ExistingLobbyRoomOffset { get; set; } = "17, 13, 8";
@@ -80,13 +80,13 @@ namespace ScpslCustomRoomPlugin
         [Description("SCP classes exposed in the warmup selector room.")]
         public List<ScpClassOption> ScpClassOptions { get; set; } = new List<ScpClassOption>
         {
-            new ScpClassOption(RoleTypeId.Scp049, "049", "-5, 2.0, 2", "-6, 1.05, 2.0"),
-            new ScpClassOption(RoleTypeId.Scp079, "079", "-3, 2.0, 2", "-4, 1.05, 2.0"),
-            new ScpClassOption(RoleTypeId.Scp096, "096", "-1, 2.0, 2", "-2, 1.05, 2.0"),
-            new ScpClassOption(RoleTypeId.Scp106, "106", "1, 2.0, 2", "0, 1.05, 2.0"),
-            new ScpClassOption(RoleTypeId.Scp173, "173", "3, 2.0, 2", "2, 1.05, 2.0"),
-            new ScpClassOption(RoleTypeId.Scp939, "939", "5, 2.0, 2", "4, 1.05, 2.0"),
-            new ScpClassOption(RoleTypeId.Scp3114, "3114", "7, 2.0, 2", "6, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp049, "049", "-8, 2.0, 2", "-8, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp079, "079", "-6, 2.0, 2", "-6, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp096, "096", "-4, 2.0, 2", "-4, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp106, "106", "-2, 2.0, 2", "-2, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp173, "173", "0, 2.0, 2", "0, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp939, "939", "2, 2.0, 2", "2, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp3114, "3114", "4, 2.0, 2", "4, 1.05, 2.0"),
         };
     }
 }
