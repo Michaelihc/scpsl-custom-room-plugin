@@ -10,6 +10,7 @@ namespace ScpslCustomRoomPlugin
     {
         private WarmupSelectionController? warmupSelectionController;
         private Harmony? harmony;
+        private bool eventsRegistered;
 
         public override string Name => "SCP:SL Custom Room Plugin";
 
@@ -27,12 +28,20 @@ namespace ScpslCustomRoomPlugin
             harmony.PatchAll();
 
             warmupSelectionController = new WarmupSelectionController(this);
-            ServerHandlers.WaitingForPlayers += warmupSelectionController.BeginWarmup;
-            ServerHandlers.RoundStarted += warmupSelectionController.OnRoundStarted;
-            PlayerHandlers.Verified += warmupSelectionController.OnVerified;
-            PlayerHandlers.Left += warmupSelectionController.OnLeft;
-            PlayerHandlers.Spawning += warmupSelectionController.OnSpawning;
-            PlayerHandlers.PickingUpItem += warmupSelectionController.OnPickingUpItem;
+            try
+            {
+                ServerHandlers.WaitingForPlayers += warmupSelectionController.BeginWarmup;
+                ServerHandlers.RoundStarted += warmupSelectionController.OnRoundStarted;
+                PlayerHandlers.Verified += warmupSelectionController.OnVerified;
+                PlayerHandlers.Left += warmupSelectionController.OnLeft;
+                PlayerHandlers.Spawning += warmupSelectionController.OnSpawning;
+                PlayerHandlers.PickingUpItem += warmupSelectionController.OnPickingUpItem;
+                eventsRegistered = true;
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"Unable to register EXILED events. The plugin will stay loaded, but warmup room features are disabled. {exception}");
+            }
 
             base.OnEnabled();
         }
@@ -41,12 +50,17 @@ namespace ScpslCustomRoomPlugin
         {
             if (warmupSelectionController is not null)
             {
-                ServerHandlers.WaitingForPlayers -= warmupSelectionController.BeginWarmup;
-                ServerHandlers.RoundStarted -= warmupSelectionController.OnRoundStarted;
-                PlayerHandlers.Verified -= warmupSelectionController.OnVerified;
-                PlayerHandlers.Left -= warmupSelectionController.OnLeft;
-                PlayerHandlers.Spawning -= warmupSelectionController.OnSpawning;
-                PlayerHandlers.PickingUpItem -= warmupSelectionController.OnPickingUpItem;
+                if (eventsRegistered)
+                {
+                    ServerHandlers.WaitingForPlayers -= warmupSelectionController.BeginWarmup;
+                    ServerHandlers.RoundStarted -= warmupSelectionController.OnRoundStarted;
+                    PlayerHandlers.Verified -= warmupSelectionController.OnVerified;
+                    PlayerHandlers.Left -= warmupSelectionController.OnLeft;
+                    PlayerHandlers.Spawning -= warmupSelectionController.OnSpawning;
+                    PlayerHandlers.PickingUpItem -= warmupSelectionController.OnPickingUpItem;
+                    eventsRegistered = false;
+                }
+
                 warmupSelectionController.CleanupRoom();
                 warmupSelectionController = null;
             }
