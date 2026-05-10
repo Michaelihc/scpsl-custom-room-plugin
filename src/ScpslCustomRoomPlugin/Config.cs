@@ -41,6 +41,9 @@ namespace ScpslCustomRoomPlugin
         [Description("Local offset from ExistingLobbyAnchorDoorType used as the selector lobby origin.")]
         public string ExistingLobbyAnchorDoorOffset { get; set; } = "0, 0, -2";
 
+        [Description("Open the selector lobby anchor gate while warmup is active.")]
+        public bool OpenExistingLobbyAnchorDoor { get; set; } = true;
+
         [Description("Local position inside ExistingLobbyRoomType for the selector lobby origin. Default matches the Lobby plugin SCP173 location.")]
         public string ExistingLobbyRoomOffset { get; set; } = "17, 13, 8";
 
@@ -69,18 +72,21 @@ namespace ScpslCustomRoomPlugin
         public ItemType SelectorItemType { get; set; } = ItemType.Coin;
 
         [Description("Display size for floating SCP class labels.")]
-        public string FloatingTextDisplaySize { get; set; } = "2.5, 1";
+        public string FloatingTextDisplaySize { get; set; } = "0.9, 0.35";
+
+        [Description("Scale applied to each selector coin pickup.")]
+        public string SelectorCoinScale { get; set; } = "2.5, 2.5, 2.5";
 
         [Description("SCP classes exposed in the warmup selector room.")]
         public List<ScpClassOption> ScpClassOptions { get; set; } = new List<ScpClassOption>
         {
-            new ScpClassOption(RoleTypeId.Scp049, "SCP-049", "-9, 2.4, 2", "-9, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp079, "SCP-079", "-6, 2.4, 2", "-6, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp096, "SCP-096", "-3, 2.4, 2", "-3, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp106, "SCP-106", "0, 2.4, 2", "0, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp173, "SCP-173", "3, 2.4, 2", "3, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp939, "SCP-939", "6, 2.4, 2", "6, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp3114, "SCP-3114", "9, 2.4, 2", "9, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp049, "049", "-9, 2.0, 2", "-9, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp079, "079", "-6, 2.0, 2", "-6, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp096, "096", "-3, 2.0, 2", "-3, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp106, "106", "0, 2.0, 2", "0, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp173, "173", "3, 2.0, 2", "3, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp939, "939", "6, 2.0, 2", "6, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp3114, "3114", "9, 2.0, 2", "9, 1.05, 0.6"),
         };
     }
 }
