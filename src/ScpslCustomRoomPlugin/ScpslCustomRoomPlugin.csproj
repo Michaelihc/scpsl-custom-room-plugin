@@ -21,6 +21,14 @@
       <HintPath>$(ScpSlManagedPath)\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ScpSlManagedPath)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="LabApi">
+      <HintPath>$(ScpSlManagedPath)\LabApi.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Mirror">
       <HintPath>$(ScpSlManagedPath)\Mirror.dll</HintPath>
       <Private>false</Private>

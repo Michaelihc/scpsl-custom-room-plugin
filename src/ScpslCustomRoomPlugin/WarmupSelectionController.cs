@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using AdminToys;
 using Exiled.API.Enums;
 using Exiled.API.Extensions;
 using Exiled.API.Features;
@@ -12,6 +13,7 @@ using GameCore;
 using MEC;
 using PlayerRoles;
 using UnityEngine;
+using LabPrimitive = LabApi.Features.Wrappers.PrimitiveObjectToy;
 
 namespace ScpslCustomRoomPlugin
 {
@@ -22,6 +24,7 @@ namespace ScpslCustomRoomPlugin
         private readonly Dictionary<string, RoleTypeId> playerSelections = new Dictionary<string, RoleTypeId>();
         private readonly Dictionary<string, RoleTypeId> vanillaRoleAssignments = new Dictionary<string, RoleTypeId>();
         private readonly List<AdminToy> spawnedToys = new List<AdminToy>();
+        private readonly List<LabPrimitive> spawnedPrimitives = new List<LabPrimitive>();
         private readonly List<Pickup> spawnedPickups = new List<Pickup>();
         private readonly System.Random random = new System.Random();
 
@@ -30,6 +33,7 @@ namespace ScpslCustomRoomPlugin
         private bool warmupActive;
         private bool roundSelectionPending;
         private bool pendingForcedWarmupRoundStart;
+        private int forceRoundStartAttempts;
         private bool countdownPausedLogged;
         private Vector3 roomOrigin;
 
@@ -45,6 +49,7 @@ namespace ScpslCustomRoomPlugin
                 if (ReadyWarmupPlayerCount() == 0)
                 {
                     pendingForcedWarmupRoundStart = true;
+                    forceRoundStartAttempts = 0;
                     Log.Info("Waiting for a verified player before force-starting selector warmup.");
                     return;
                 }
@@ -59,8 +64,9 @@ namespace ScpslCustomRoomPlugin
         private void ForceStartWarmupRound(string reason)
         {
             pendingForcedWarmupRoundStart = true;
-            Log.Info($"Force-starting a warmup round to avoid vanilla waiting-for-players UI ({reason}).");
-            Round.Start();
+            forceRoundStartAttempts++;
+            Log.Info($"Force-starting a warmup round to avoid vanilla waiting-for-players UI ({reason}, attempt {forceRoundStartAttempts}).");
+            SetNativeLobbyTimer(-1);
             Timing.CallDelayed(1.5f, () =>
             {
                 if (!pendingForcedWarmupRoundStart)
@@ -70,14 +76,35 @@ namespace ScpslCustomRoomPlugin
 
                 if (!IsRoundStarted())
                 {
-                    Log.Warn("Forced warmup round has not started yet; selector room will wait for the round-start event.");
+                    if (forceRoundStartAttempts >= 5)
+                    {
+                        Log.Error("Forced warmup round did not start after 5 attempts; selector warmup is still pending.");
+                        return;
+                    }
+
+                    Log.Warn("Forced warmup round has not started yet; retrying native timer start.");
+                    ForceStartWarmupRound(reason);
                     return;
                 }
 
                 pendingForcedWarmupRoundStart = false;
-                CaptureVanillaRoleAssignments();
-                StartWarmup($"{reason}; delayed forced round start");
+                forceRoundStartAttempts = 0;
+                StartWarmupAfterRoleCapture($"{reason}; delayed forced round start");
             });
+        }
+
+        private void StartWarmupAfterRoleCapture(string reason)
+        {
+            try
+            {
+                CaptureVanillaRoleAssignments();
+                StartWarmup(reason);
+            }
+            catch (Exception exception)
+            {
+                Log.Error($"Failed to start selector warmup ({reason}): {exception}");
+                CleanupRoom();
+            }
         }
 
         private void StartWarmup(string reason)
@@ -96,6 +123,7 @@ namespace ScpslCustomRoomPlugin
             }
 
             BuildSelectionRoom();
+            Log.Info($"Selector room spawned {spawnedPrimitives.Count} collidable primitive(s), {spawnedToys.Count} text toy(s), and {spawnedPickups.Count} selector pickup(s).");
 
             foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
             {
@@ -129,11 +157,20 @@ namespace ScpslCustomRoomPlugin
                 pickup.Destroy();
             }
 
+            foreach (LabPrimitive primitive in spawnedPrimitives)
+            {
+                if (!primitive.IsDestroyed)
+                {
+                    primitive.Destroy();
+                }
+            }
+
             foreach (AdminToy toy in spawnedToys)
             {
                 toy.Destroy();
             }
 
+            spawnedPrimitives.Clear();
             spawnedPickups.Clear();
             spawnedToys.Clear();
             selectorCoins.Clear();
@@ -147,7 +184,7 @@ namespace ScpslCustomRoomPlugin
             if (pendingForcedWarmupRoundStart && !warmupActive && plugin.Config.ForceRoundStartForWarmup)
             {
                 Log.Info($"{ev.Player.Nickname} ({ev.Player.UserId}) verified; starting forced selector warmup round.");
-                Timing.CallDelayed(0.25f, () =>
+                Timing.CallDelayed(1.5f, () =>
                 {
                     if (pendingForcedWarmupRoundStart && !warmupActive && !IsRoundStarted())
                     {
@@ -202,10 +239,10 @@ namespace ScpslCustomRoomPlugin
             if (pendingForcedWarmupRoundStart)
             {
                 pendingForcedWarmupRoundStart = false;
+                forceRoundStartAttempts = 0;
                 Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, () =>
                 {
-                    CaptureVanillaRoleAssignments();
-                    StartWarmup("forced round started");
+                    StartWarmupAfterRoleCapture("forced round started");
                 });
                 return;
             }
@@ -231,6 +268,7 @@ namespace ScpslCustomRoomPlugin
         private void BuildSelectionRoom()
         {
             AddPrimitive(roomOrigin + new Vector3(0f, -0.15f, 0f), new Vector3(24f, 0.3f, 18f), new Color(0.16f, 0.16f, 0.18f, 1f));
+            AddPrimitive(roomOrigin + new Vector3(0f, -0.7f, 0f), new Vector3(30f, 0.6f, 24f), new Color(0.16f, 0.16f, 0.18f, 1f));
             AddPrimitive(roomOrigin + new Vector3(0f, 3.1f, 8.8f), new Vector3(24f, 6.5f, 0.3f), new Color(0.08f, 0.08f, 0.1f, 1f));
             AddPrimitive(roomOrigin + new Vector3(0f, 3.1f, -8.8f), new Vector3(24f, 6.5f, 0.3f), new Color(0.08f, 0.08f, 0.1f, 1f));
             AddPrimitive(roomOrigin + new Vector3(-11.8f, 3.1f, 0f), new Vector3(0.3f, 6.5f, 18f), new Color(0.08f, 0.08f, 0.1f, 1f));
@@ -253,11 +291,11 @@ namespace ScpslCustomRoomPlugin
 
         private void AddPrimitive(Vector3 position, Vector3 scale, Color color)
         {
-            Primitive primitive = Primitive.Create(PrimitiveType.Cube, position, Vector3.zero, scale, true, color);
-            primitive.Collidable = true;
-            primitive.Visible = true;
-            primitive.IsStatic = true;
-            spawnedToys.Add(primitive);
+            LabPrimitive primitive = LabPrimitive.Create(position, Quaternion.identity, scale);
+            primitive.Type = PrimitiveType.Cube;
+            primitive.Color = color;
+            primitive.Flags = PrimitiveFlags.Collidable | PrimitiveFlags.Visible;
+            spawnedPrimitives.Add(primitive);
         }
 
         private void MovePlayerToWarmupRoom(Player player)
@@ -564,6 +602,10 @@ namespace ScpslCustomRoomPlugin
             if (RoundStart.singleton is not null && !RoundStart.RoundStarted)
             {
                 RoundStart.singleton.NetworkTimer = value;
+                if (value == -1)
+                {
+                    RoundStart.RoundStartTimer.Restart();
+                }
             }
         }
 
