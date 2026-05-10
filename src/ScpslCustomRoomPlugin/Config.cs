@@ -19,6 +19,12 @@ namespace ScpslCustomRoomPlugin
         [Description("Manual warmup duration in seconds.")]
         public int WarmupSeconds { get; set; } = 90;
 
+        [Description("Minimum verified players required before the warmup countdown decreases.")]
+        public int MinimumPlayersToCountdown { get; set; } = 2;
+
+        [Description("Show plugin countdown hints. The vanilla lobby timer remains visible, so this is disabled by default to avoid duplicate countdown UI.")]
+        public bool ShowCountdownHints { get; set; }
+
         [Description("Seconds after vanilla round start before selected SCPs are swapped in.")]
         public float RoleSwapDelaySeconds { get; set; } = 1.5f;
 

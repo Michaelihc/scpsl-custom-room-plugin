@@ -1,6 +1,5 @@
 using System;
 using Exiled.API.Features;
-using HarmonyLib;
 using PlayerHandlers = Exiled.Events.Handlers.Player;
 using ServerHandlers = Exiled.Events.Handlers.Server;
 
@@ -9,7 +8,6 @@ namespace ScpslCustomRoomPlugin
     public sealed class Plugin : Plugin<Config>
     {
         private WarmupSelectionController? warmupSelectionController;
-        private Harmony? harmony;
 
         public override string Name => "SCP:SL Custom Room Plugin";
 
@@ -23,9 +21,6 @@ namespace ScpslCustomRoomPlugin
 
         public override void OnEnabled()
         {
-            harmony = new Harmony($"scpsl_custom_room_plugin.{DateTime.UtcNow.Ticks}");
-            harmony.PatchAll();
-
             warmupSelectionController = new WarmupSelectionController(this);
             ServerHandlers.WaitingForPlayers += warmupSelectionController.BeginWarmup;
             ServerHandlers.RoundStarted += warmupSelectionController.OnRoundStarted;
@@ -50,9 +45,6 @@ namespace ScpslCustomRoomPlugin
                 warmupSelectionController.CleanupRoom();
                 warmupSelectionController = null;
             }
-
-            harmony?.UnpatchAll(harmony.Id);
-            harmony = null;
 
             base.OnDisabled();
         }

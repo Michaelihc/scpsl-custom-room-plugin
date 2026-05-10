@@ -7,6 +7,7 @@ using Exiled.API.Features;
 using Exiled.API.Features.Pickups;
 using Exiled.API.Features.Toys;
 using Exiled.Events.EventArgs.Player;
+using GameCore;
 using MEC;
 using PlayerRoles;
 using UnityEngine;
@@ -23,8 +24,10 @@ namespace ScpslCustomRoomPlugin
         private readonly System.Random random = new System.Random();
 
         private CoroutineHandle countdownCoroutine;
+        private CoroutineHandle playerMaintenanceCoroutine;
         private bool warmupActive;
         private bool roundSelectionPending;
+        private bool countdownPausedLogged;
         private Vector3 roomOrigin;
 
         public static bool SuppressVanillaWaitingUi { get; private set; }
@@ -58,6 +61,7 @@ namespace ScpslCustomRoomPlugin
             }
 
             countdownCoroutine = Timing.RunCoroutine(WarmupCountdown());
+            playerMaintenanceCoroutine = Timing.RunCoroutine(MaintainWarmupPlayers());
             Log.Info("Warmup SCP class selector room is active.");
         }
 
@@ -66,6 +70,7 @@ namespace ScpslCustomRoomPlugin
             warmupActive = false;
             SuppressVanillaWaitingUi = false;
             Timing.KillCoroutines(countdownCoroutine);
+            Timing.KillCoroutines(playerMaintenanceCoroutine);
 
             if (plugin.Config.LockLobbyDuringWarmup)
             {
@@ -76,6 +81,7 @@ namespace ScpslCustomRoomPlugin
         public void CleanupRoom()
         {
             Timing.KillCoroutines(countdownCoroutine);
+            Timing.KillCoroutines(playerMaintenanceCoroutine);
             SuppressVanillaWaitingUi = false;
 
             foreach (Pickup pickup in spawnedPickups)
@@ -92,6 +98,7 @@ namespace ScpslCustomRoomPlugin
             spawnedToys.Clear();
             selectorCoins.Clear();
             warmupActive = false;
+            countdownPausedLogged = false;
         }
 
         public void OnVerified(VerifiedEventArgs ev)
@@ -101,6 +108,7 @@ namespace ScpslCustomRoomPlugin
                 return;
             }
 
+            Log.Info($"{ev.Player.Nickname} ({ev.Player.UserId}) verified during warmup; moving to selector room.");
             Timing.CallDelayed(0.5f, () => MovePlayerToWarmupRoom(ev.Player));
         }
 
@@ -192,9 +200,26 @@ namespace ScpslCustomRoomPlugin
                 {
                     player.ClearInventory();
                     player.Position = GetTutorialSpawnPosition();
-                    player.ShowHint("Choose an SCP class by interacting with its coin.", 5f);
+                    player.ShowHint("Choose an SCP class by interacting with its coin.", 4f);
+                    Log.Debug($"Moved {player.Nickname} ({player.UserId}) to selector room at {player.Position}.");
                 }
             });
+        }
+
+        private IEnumerator<float> MaintainWarmupPlayers()
+        {
+            while (warmupActive)
+            {
+                foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+                {
+                    if (player.Role.Type != RoleTypeId.Tutorial || Vector3.Distance(player.Position, GetTutorialSpawnPosition()) > 3f)
+                    {
+                        MovePlayerToWarmupRoom(player);
+                    }
+                }
+
+                yield return Timing.WaitForSeconds(1f);
+            }
         }
 
         private IEnumerator<float> WarmupCountdown()
@@ -203,10 +228,42 @@ namespace ScpslCustomRoomPlugin
 
             while (warmupActive && remainingSeconds > 0)
             {
-                string message = $"Round starts in {remainingSeconds}s\nChoose an SCP class in the selector room.";
-                foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+                int readyPlayers = ReadyWarmupPlayerCount();
+                int minimumPlayers = Math.Max(1, plugin.Config.MinimumPlayersToCountdown);
+
+                if (readyPlayers < minimumPlayers)
                 {
-                    player.ShowHint(message, 1.25f);
+                    SetNativeLobbyTimer(-2);
+                    if (!countdownPausedLogged)
+                    {
+                        Log.Info($"Warmup countdown paused; waiting for {minimumPlayers} verified players ({readyPlayers}/{minimumPlayers}).");
+                        countdownPausedLogged = true;
+                    }
+
+                    foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+                    {
+                        player.ShowHint($"Waiting for players ({readyPlayers}/{minimumPlayers})\nChoose an SCP class in the selector room.", 1.25f);
+                    }
+
+                    yield return Timing.WaitForSeconds(1f);
+                    continue;
+                }
+
+                if (countdownPausedLogged)
+                {
+                    Log.Info($"Warmup countdown resumed with {readyPlayers} verified players.");
+                    countdownPausedLogged = false;
+                }
+
+                SetNativeLobbyTimer((short)Math.Min(short.MaxValue, remainingSeconds));
+
+                if (plugin.Config.ShowCountdownHints)
+                {
+                    string message = $"Round starts in {remainingSeconds}s\nChoose an SCP class in the selector room.";
+                    foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+                    {
+                        player.ShowHint(message, 1.25f);
+                    }
                 }
 
                 yield return Timing.WaitForSeconds(1f);
@@ -333,6 +390,19 @@ namespace ScpslCustomRoomPlugin
         private Vector3 GetTutorialSpawnPosition()
         {
             return roomOrigin + VectorParser.ParseVector3(plugin.Config.TutorialSpawnOffset, new Vector3(0f, 1.2f, -7f));
+        }
+
+        private static int ReadyWarmupPlayerCount()
+        {
+            return Player.List.Count(player => player.IsConnected && player.IsVerified);
+        }
+
+        private static void SetNativeLobbyTimer(short value)
+        {
+            if (RoundStart.singleton is not null && !RoundStart.RoundStarted)
+            {
+                RoundStart.singleton.NetworkTimer = value;
+            }
         }
 
         private static string GetPlayerKey(Player player)

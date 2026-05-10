@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <PackageReference Include="ExMod.Exiled" Version="9.13.3" PrivateAssets="all" />
-    <PackageReference Include="Lib.Harmony" Version="2.2.2" PrivateAssets="all" />
     <PackageReference Include="UnityEngine.Modules" Version="2021.3.33" PrivateAssets="all" />
   </ItemGroup>
 
