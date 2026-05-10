@@ -31,6 +31,7 @@ namespace ScpslCustomRoomPlugin.Tests
                 MultipleVanillaSlotsCanFillMultipleSelectors,
                 NaturalHolderIsPreferredOverOtherPoolCandidate,
                 EmptySelectionPoolsLeaveRolesUnchanged,
+                Selected173DoesNotStayVanilla049When173Spawned,
             };
 
             int failed = 0;
@@ -259,6 +260,26 @@ namespace ScpslCustomRoomPlugin.Tests
             AssertRole(plan, "vanilla079", RoleTypeId.Scp079);
             AssertEqual(0, plan.Swaps.Count, "swap count");
             AssertEqual(0, plan.SkippedUnspawnedRoles.Count, "skipped count");
+        }
+
+        private static void Selected173DoesNotStayVanilla049When173Spawned()
+        {
+            SelectionSwapPlan<string> plan = BuildPlan(
+                new Dictionary<string, RoleTypeId>
+                {
+                    ["you"] = RoleTypeId.Scp049,
+                    ["vanilla173"] = RoleTypeId.Scp173,
+                    ["classD"] = RoleTypeId.ClassD,
+                },
+                new Dictionary<RoleTypeId, IReadOnlyList<string>>
+                {
+                    [RoleTypeId.Scp173] = new[] { "you" },
+                });
+
+            AssertRole(plan, "you", RoleTypeId.Scp173);
+            AssertRole(plan, "vanilla173", RoleTypeId.Scp049);
+            AssertRole(plan, "classD", RoleTypeId.ClassD);
+            AssertEqual(1, plan.Swaps.Count, "swap count");
         }
 
         private static SelectionSwapPlan<string> BuildPlan(
