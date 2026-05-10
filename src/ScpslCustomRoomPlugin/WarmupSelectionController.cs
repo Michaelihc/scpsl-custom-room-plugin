@@ -38,6 +38,7 @@ namespace ScpslCustomRoomPlugin
         private bool countdownPausedLogged;
         private bool releasedPlayersForRoundStart;
         private bool applyingSelectionSwaps;
+        private bool selectionApplyScheduled;
         private Vector3 roomOrigin;
         private Quaternion roomRotation = Quaternion.identity;
         private Door? lockedConnectorDoor;
@@ -123,6 +124,7 @@ namespace ScpslCustomRoomPlugin
             roundSelectionPending = false;
             releasedPlayersForRoundStart = false;
             applyingSelectionSwaps = false;
+            selectionApplyScheduled = false;
             ResolveRoomOrigin();
 
             if (plugin.Config.LockLobbyDuringWarmup)
@@ -197,6 +199,7 @@ namespace ScpslCustomRoomPlugin
             countdownPausedLogged = false;
             releasedPlayersForRoundStart = false;
             applyingSelectionSwaps = false;
+            selectionApplyScheduled = false;
         }
 
         public void OnVerified(VerifiedEventArgs ev)
@@ -294,9 +297,17 @@ namespace ScpslCustomRoomPlugin
                 return;
             }
 
-            EndWarmup();
-            roundSelectionPending = true;
-            Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, ApplySelectionsAfterVanillaAssignment);
+            QueueSelectionApply("round started");
+        }
+
+        public void OnAllPlayersSpawned()
+        {
+            if (!warmupActive && !releasedPlayersForRoundStart && !roundSelectionPending)
+            {
+                return;
+            }
+
+            QueueSelectionApply("all players spawned");
         }
 
         public void OnEndingRound(EndingRoundEventArgs ev)
@@ -450,6 +461,25 @@ namespace ScpslCustomRoomPlugin
             Log.Info("Released warmup players to spectator for vanilla round role assignment.");
         }
 
+        private void QueueSelectionApply(string reason)
+        {
+            if (selectionApplyScheduled)
+            {
+                Log.Debug($"Selector swap application is already queued; ignoring {reason} trigger.");
+                return;
+            }
+
+            if (warmupActive || releasedPlayersForRoundStart)
+            {
+                EndWarmup();
+            }
+
+            roundSelectionPending = true;
+            selectionApplyScheduled = true;
+            Log.Info($"Queued selector swap application ({reason}).");
+            Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, ApplySelectionsAfterVanillaAssignment);
+        }
+
         private void MovePlayerToSpectatorForRoundStart(Player player)
         {
             if (!IsWarmupParticipant(player))
@@ -468,6 +498,7 @@ namespace ScpslCustomRoomPlugin
             }
 
             roundSelectionPending = false;
+            selectionApplyScheduled = false;
             CleanupRoom();
 
             Dictionary<RoleTypeId, List<Player>> selectedPools = BuildSelectedPools();
