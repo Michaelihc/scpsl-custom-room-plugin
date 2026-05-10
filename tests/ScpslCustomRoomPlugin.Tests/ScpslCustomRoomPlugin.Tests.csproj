@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ScpslCustomRoomPlugin.Tests</AssemblyName>
+    <RootNamespace>ScpslCustomRoomPlugin.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ScpslCustomRoomPlugin\ScpslCustomRoomPlugin.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ScpSlManagedPath Condition="'$(ScpSlManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</ScpSlManagedPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ScpSlManagedPath)\Assembly-CSharp.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

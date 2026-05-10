@@ -7,6 +7,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScpslCustomRoomPlugin", "src\ScpslCustomRoomPlugin\ScpslCustomRoomPlugin.csproj", "{737A0B83-CFB2-4A80-A0B5-BB5B7F47AD69}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScpslCustomRoomPlugin.Tests", "tests\ScpslCustomRoomPlugin.Tests\ScpslCustomRoomPlugin.Tests.csproj", "{61C8D6BE-3169-460D-9E04-258B29CA0F87}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,11 +33,24 @@ Global
 		{737A0B83-CFB2-4A80-A0B5-BB5B7F47AD69}.Release|x64.Build.0 = Release|Any CPU
 		{737A0B83-CFB2-4A80-A0B5-BB5B7F47AD69}.Release|x86.ActiveCfg = Release|Any CPU
 		{737A0B83-CFB2-4A80-A0B5-BB5B7F47AD69}.Release|x86.Build.0 = Release|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Debug|x64.Build.0 = Debug|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Debug|x86.Build.0 = Debug|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Release|x64.ActiveCfg = Release|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Release|x64.Build.0 = Release|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Release|x86.ActiveCfg = Release|Any CPU
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{737A0B83-CFB2-4A80-A0B5-BB5B7F47AD69} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{61C8D6BE-3169-460D-9E04-258B29CA0F87} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 EndGlobal

@@ -538,57 +538,40 @@ namespace ScpslCustomRoomPlugin
                 return;
             }
 
-            HashSet<Player> alreadyChosen = new HashSet<Player>();
+            List<RoleTypeId> roleOrder = plugin.Config.ScpClassOptions
+                .Where(option => option.Role.IsScp())
+                .Select(option => option.Role)
+                .ToList();
 
-            foreach (ScpClassOption option in plugin.Config.ScpClassOptions.Where(option => option.Role.IsScp()))
+            Dictionary<RoleTypeId, IReadOnlyList<Player>> plannerPools = selectedPools
+                .ToDictionary(pair => pair.Key, pair => (IReadOnlyList<Player>)pair.Value);
+            SelectionSwapPlan<Player> plan = SelectionSwapPlanner.BuildPlan(
+                roleOrder,
+                originalRoles,
+                plannerPools,
+                candidates => candidates[random.Next(candidates.Count)]);
+
+            foreach (RoleTypeId skippedRole in plan.SkippedUnspawnedRoles)
             {
-                RoleTypeId targetRole = option.Role;
-                if (!selectedPools.TryGetValue(targetRole, out List<Player> pool))
-                {
-                    continue;
-                }
-
-                List<Player> currentHolders = finalRoles
-                    .Where(pair => pair.Value == targetRole)
-                    .Select(pair => pair.Key)
-                    .ToList();
-
-                if (currentHolders.Count == 0)
-                {
-                    Log.Info($"Skipping {targetRole.GetFullName()} selections because vanilla round start did not assign that SCP role. Available SCP roles: {FormatScpRoleDistribution(originalRoles)}.");
-                    continue;
-                }
-
-                foreach (Player holder in currentHolders)
-                {
-                    Player? selectedPlayer = ChooseSelectedPlayer(pool, alreadyChosen, holder);
-                    if (selectedPlayer is null)
-                    {
-                        break;
-                    }
-
-                    alreadyChosen.Add(selectedPlayer);
-
-                    if (selectedPlayer == holder)
-                    {
-                        Log.Info($"{holder.Nickname} naturally received their selected {targetRole.GetFullName()} role.");
-                        continue;
-                    }
-
-                    if (!originalRoles.TryGetValue(selectedPlayer, out RoleTypeId replacementRole))
-                    {
-                        Log.Warn($"Skipping {selectedPlayer.Nickname}'s {targetRole.GetFullName()} swap because their vanilla role could not be resolved.");
-                        continue;
-                    }
-
-                    finalRoles[holder] = replacementRole;
-                    finalRoles[selectedPlayer] = targetRole;
-
-                    Log.Info($"{selectedPlayer.Nickname} was selected from the {targetRole.GetFullName()} pool and swapped with {holder.Nickname}.");
-                }
+                Log.Info($"Skipping {skippedRole.GetFullName()} selections because vanilla round start did not assign that SCP role. Available SCP roles: {FormatScpRoleDistribution(originalRoles)}.");
             }
 
-            ApplyChangedRoles(originalRoles, finalRoles);
+            foreach (SelectionNatural<Player> naturalSelection in plan.NaturalSelections)
+            {
+                Log.Info($"{naturalSelection.Player.Nickname} naturally received their selected {naturalSelection.TargetRole.GetFullName()} role.");
+            }
+
+            foreach (SelectionUnresolved<Player> unresolvedSelection in plan.UnresolvedSelections)
+            {
+                Log.Warn($"Skipping {unresolvedSelection.SelectedPlayer.Nickname}'s {unresolvedSelection.TargetRole.GetFullName()} swap because their vanilla role could not be resolved.");
+            }
+
+            foreach (SelectionSwap<Player> swap in plan.Swaps)
+            {
+                Log.Info($"{swap.SelectedPlayer.Nickname} was selected from the {swap.TargetRole.GetFullName()} pool and swapped with {swap.Holder.Nickname}.");
+            }
+
+            ApplyChangedRoles(originalRoles, plan.FinalRoles);
         }
 
         private Dictionary<RoleTypeId, List<Player>> BuildSelectedPools()
@@ -619,7 +602,7 @@ namespace ScpslCustomRoomPlugin
         {
             vanillaRoleAssignments.Clear();
 
-            foreach (Player player in Player.List.Where(IsVanillaRoleHolder))
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
                 RoleTypeId role = player.Role.Type;
                 if (role is RoleTypeId.None or RoleTypeId.Spectator or RoleTypeId.Tutorial)
@@ -637,7 +620,7 @@ namespace ScpslCustomRoomPlugin
         {
             Dictionary<Player, RoleTypeId> originalRoles = new Dictionary<Player, RoleTypeId>();
 
-            foreach (Player player in Player.List.Where(IsVanillaRoleHolder))
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
                 if (vanillaRoleAssignments.TryGetValue(GetPlayerKey(player), out RoleTypeId capturedRole))
                 {
@@ -686,25 +669,6 @@ namespace ScpslCustomRoomPlugin
                 .ToList();
 
             return roleCounts.Count == 0 ? "none" : string.Join(", ", roleCounts);
-        }
-
-        private Player? ChooseSelectedPlayer(List<Player> pool, HashSet<Player> alreadyChosen, Player currentHolder)
-        {
-            if (pool.Contains(currentHolder) && !alreadyChosen.Contains(currentHolder))
-            {
-                return currentHolder;
-            }
-
-            List<Player> candidates = pool
-                .Where(player => player.IsConnected && !alreadyChosen.Contains(player))
-                .ToList();
-
-            if (candidates.Count == 0)
-            {
-                return null;
-            }
-
-            return candidates[random.Next(candidates.Count)];
         }
 
         private Vector3 GetTutorialSpawnPosition()
@@ -881,12 +845,7 @@ namespace ScpslCustomRoomPlugin
 
         private static bool IsWarmupParticipant(Player player)
         {
-            return player.IsConnected && player.IsVerified;
-        }
-
-        private static bool IsVanillaRoleHolder(Player player)
-        {
-            return player.Role.Type is not RoleTypeId.None and not RoleTypeId.Spectator and not RoleTypeId.Tutorial;
+            return !player.IsHost;
         }
 
         private static void SetNativeLobbyTimer(short value)
