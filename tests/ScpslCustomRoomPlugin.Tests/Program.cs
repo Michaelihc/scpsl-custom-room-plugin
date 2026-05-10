@@ -32,6 +32,9 @@ namespace ScpslCustomRoomPlugin.Tests
                 NaturalHolderIsPreferredOverOtherPoolCandidate,
                 EmptySelectionPoolsLeaveRolesUnchanged,
                 Selected173DoesNotStayVanilla049When173Spawned,
+                LiveRoundRoleBeatsStaleCapturedRole,
+                CapturedRoleIsFallbackWhenLiveRoleIsSpectator,
+                TutorialRoleWithoutCaptureIsUnresolved,
             };
 
             int failed = 0;
@@ -280,6 +283,30 @@ namespace ScpslCustomRoomPlugin.Tests
             AssertRole(plan, "vanilla173", RoleTypeId.Scp049);
             AssertRole(plan, "classD", RoleTypeId.ClassD);
             AssertEqual(1, plan.Swaps.Count, "swap count");
+        }
+
+        private static void LiveRoundRoleBeatsStaleCapturedRole()
+        {
+            bool resolved = VanillaRoleAssignmentResolver.TryResolve(RoleTypeId.Scp173, RoleTypeId.ClassD, out RoleTypeId resolvedRole);
+
+            AssertEqual(true, resolved, "resolved");
+            AssertEqual(RoleTypeId.Scp173, resolvedRole, "resolved role");
+        }
+
+        private static void CapturedRoleIsFallbackWhenLiveRoleIsSpectator()
+        {
+            bool resolved = VanillaRoleAssignmentResolver.TryResolve(RoleTypeId.Spectator, RoleTypeId.Scp106, out RoleTypeId resolvedRole);
+
+            AssertEqual(true, resolved, "resolved");
+            AssertEqual(RoleTypeId.Scp106, resolvedRole, "resolved role");
+        }
+
+        private static void TutorialRoleWithoutCaptureIsUnresolved()
+        {
+            bool resolved = VanillaRoleAssignmentResolver.TryResolve(RoleTypeId.Tutorial, null, out RoleTypeId resolvedRole);
+
+            AssertEqual(false, resolved, "resolved");
+            AssertEqual(RoleTypeId.None, resolvedRole, "resolved role");
         }
 
         private static SelectionSwapPlan<string> BuildPlan(

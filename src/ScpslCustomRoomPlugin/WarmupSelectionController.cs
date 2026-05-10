@@ -249,7 +249,7 @@ namespace ScpslCustomRoomPlugin
 
         public void OnChangingRole(ChangingRoleEventArgs ev)
         {
-            if (applyingSelectionSwaps || (!warmupActive && !roundSelectionPending))
+            if (applyingSelectionSwaps || (!releasedPlayersForRoundStart && !roundSelectionPending && !IsRoundStarted()))
             {
                 return;
             }
@@ -606,16 +606,13 @@ namespace ScpslCustomRoomPlugin
 
             foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
-                if (vanillaRoleAssignments.TryGetValue(GetPlayerKey(player), out RoleTypeId capturedRole))
-                {
-                    originalRoles[player] = capturedRole;
-                    continue;
-                }
-
                 RoleTypeId currentRole = player.Role.Type;
-                if (currentRole is not RoleTypeId.None and not RoleTypeId.Spectator and not RoleTypeId.Tutorial)
+                vanillaRoleAssignments.TryGetValue(GetPlayerKey(player), out RoleTypeId capturedRole);
+                RoleTypeId? fallbackRole = vanillaRoleAssignments.ContainsKey(GetPlayerKey(player)) ? capturedRole : null;
+
+                if (VanillaRoleAssignmentResolver.TryResolve(currentRole, fallbackRole, out RoleTypeId resolvedRole))
                 {
-                    originalRoles[player] = currentRole;
+                    originalRoles[player] = resolvedRole;
                 }
             }
 
