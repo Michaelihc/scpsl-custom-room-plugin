@@ -1,10 +1,14 @@
 # SCP:SL Custom Room Plugin
 
+[中文](#中文说明) | [English](#english)
+
 适用于 SCP: Secret Laboratory 的 EXILED 暖场 SCP 选择插件。
 
 状态：公开草稿版本。
 
 ## 中文说明
+
+[English version](#english)
 
 在等待玩家阶段，插件会把玩家移动到 SCP-173 门附近的选择大厅。玩家通过与硬币互动选择想要的 SCP。回合倒计时和原版职业分配仍由游戏本身处理。
 
@@ -55,6 +59,8 @@ use_chinese_localization: true
 - `src/ScpslCustomRoomPlugin/WarmupSelectionController.cs` - 选择大厅、原版倒计时状态、玩家选择和回合开始后的交换逻辑。
 
 ## English
+
+[中文版](#中文说明)
 
 EXILED plugin for SCP: Secret Laboratory warmup SCP class selection.
 
