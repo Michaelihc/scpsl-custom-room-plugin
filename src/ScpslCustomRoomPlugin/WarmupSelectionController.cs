@@ -36,6 +36,7 @@ namespace ScpslCustomRoomPlugin
         private bool pendingForcedWarmupRoundStart;
         private int forceRoundStartAttempts;
         private bool countdownPausedLogged;
+        private bool releasedPlayersForRoundStart;
         private Vector3 roomOrigin;
         private Quaternion roomRotation = Quaternion.identity;
         private Door? lockedConnectorDoor;
@@ -119,6 +120,7 @@ namespace ScpslCustomRoomPlugin
 
             warmupActive = true;
             roundSelectionPending = false;
+            releasedPlayersForRoundStart = false;
             ResolveRoomOrigin();
 
             if (plugin.Config.LockLobbyDuringWarmup)
@@ -145,6 +147,7 @@ namespace ScpslCustomRoomPlugin
         public void EndWarmup()
         {
             warmupActive = false;
+            releasedPlayersForRoundStart = false;
             Timing.KillCoroutines(countdownCoroutine);
             Timing.KillCoroutines(playerMaintenanceCoroutine);
 
@@ -189,6 +192,7 @@ namespace ScpslCustomRoomPlugin
             warmupActive = false;
             roundSelectionPending = false;
             countdownPausedLogged = false;
+            releasedPlayersForRoundStart = false;
         }
 
         public void OnVerified(VerifiedEventArgs ev)
@@ -208,6 +212,12 @@ namespace ScpslCustomRoomPlugin
 
             if (!warmupActive)
             {
+                return;
+            }
+
+            if (releasedPlayersForRoundStart)
+            {
+                MovePlayerToSpectatorForRoundStart(ev.Player);
                 return;
             }
 
@@ -317,7 +327,7 @@ namespace ScpslCustomRoomPlugin
 
         private void MovePlayerToWarmupRoom(Player player)
         {
-            if (!player.IsConnected)
+            if (!player.IsConnected || releasedPlayersForRoundStart)
             {
                 return;
             }
@@ -329,7 +339,7 @@ namespace ScpslCustomRoomPlugin
 
             Timing.CallDelayed(0.1f, () =>
             {
-                if (player.IsConnected && warmupActive)
+                if (player.IsConnected && warmupActive && !releasedPlayersForRoundStart)
                 {
                     player.ClearInventory();
                     player.Position = GetTutorialSpawnPosition();
@@ -341,7 +351,7 @@ namespace ScpslCustomRoomPlugin
 
         private IEnumerator<float> MaintainWarmupPlayers()
         {
-            while (warmupActive)
+            while (warmupActive && !releasedPlayersForRoundStart)
             {
                 foreach (Player player in Player.List.Where(IsWarmupParticipant))
                 {
@@ -391,10 +401,43 @@ namespace ScpslCustomRoomPlugin
                     lastLoggedTimer = nativeTimer;
                 }
 
+                if (nativeTimer is >= 0 and <= 1)
+                {
+                    ReleaseWarmupPlayersForVanillaAssignment();
+                }
+
                 ShowWarmupStatusHint(countdownLine);
 
                 yield return Timing.WaitForSeconds(1f);
             }
+        }
+
+        private void ReleaseWarmupPlayersForVanillaAssignment()
+        {
+            if (releasedPlayersForRoundStart)
+            {
+                return;
+            }
+
+            releasedPlayersForRoundStart = true;
+            Timing.KillCoroutines(playerMaintenanceCoroutine);
+
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
+            {
+                MovePlayerToSpectatorForRoundStart(player);
+            }
+
+            Log.Info("Released warmup players to spectator for vanilla round role assignment.");
+        }
+
+        private void MovePlayerToSpectatorForRoundStart(Player player)
+        {
+            if (!IsWarmupParticipant(player))
+            {
+                return;
+            }
+
+            player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass);
         }
 
         private void ApplySelectionsAfterVanillaAssignment()
