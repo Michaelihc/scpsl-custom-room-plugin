@@ -7,6 +7,7 @@ using Exiled.API.Extensions;
 using Exiled.API.Features;
 using Exiled.API.Features.Pickups;
 using Exiled.API.Features.Toys;
+using Exiled.API.Features.Doors;
 using Exiled.Events.EventArgs.Player;
 using Exiled.Events.EventArgs.Server;
 using GameCore;
@@ -37,6 +38,7 @@ namespace ScpslCustomRoomPlugin
         private bool countdownPausedLogged;
         private Vector3 roomOrigin;
         private Quaternion roomRotation = Quaternion.identity;
+        private Door? lockedConnectorDoor;
 
         public WarmupSelectionController(Plugin plugin)
         {
@@ -123,6 +125,7 @@ namespace ScpslCustomRoomPlugin
                 Round.IsLobbyLocked = true;
             }
 
+            LockWarmupDoors();
             HideNativeWaitingUi();
             BuildSelectionRoom();
             Log.Info($"Selector room spawned {spawnedPrimitives.Count} collidable primitive(s), {spawnedToys.Count} text toy(s), and {spawnedPickups.Count} selector pickup(s).");
@@ -147,6 +150,8 @@ namespace ScpslCustomRoomPlugin
             {
                 Round.IsLobbyLocked = false;
             }
+
+            UnlockWarmupDoors();
         }
 
         public void CleanupRoom()
@@ -176,6 +181,7 @@ namespace ScpslCustomRoomPlugin
             spawnedPickups.Clear();
             spawnedToys.Clear();
             selectorCoins.Clear();
+            UnlockWarmupDoors();
             warmupActive = false;
             roundSelectionPending = false;
             countdownPausedLogged = false;
@@ -616,6 +622,16 @@ namespace ScpslCustomRoomPlugin
                 return;
             }
 
+            Door? anchorDoor = Door.Get(plugin.Config.ExistingLobbyAnchorDoorType);
+            if (anchorDoor is not null)
+            {
+                Vector3 anchorOffset = VectorParser.ParseVector3(plugin.Config.ExistingLobbyAnchorDoorOffset, new Vector3(0f, 0f, -2f));
+                roomOrigin = anchorDoor.Transform.TransformPoint(anchorOffset);
+                roomRotation = anchorDoor.Rotation;
+                Log.Info($"Using existing selector lobby anchor door {anchorDoor.Type} at {roomOrigin}.");
+                return;
+            }
+
             Vector3 localOffset = VectorParser.ParseVector3(plugin.Config.ExistingLobbyRoomOffset, new Vector3(17f, 13f, 8f));
             Vector3 localRotation = VectorParser.ParseVector3(plugin.Config.ExistingLobbyRoomRotation, new Vector3(0f, -90f, 0f));
             roomOrigin = lobbyRoom.Transform.TransformPoint(localOffset);
@@ -643,6 +659,36 @@ namespace ScpslCustomRoomPlugin
             }
 
             startRound.transform.localScale = Vector3.zero;
+        }
+
+        private void LockWarmupDoors()
+        {
+            if (!plugin.Config.LockScp173ConnectorDuringWarmup)
+            {
+                return;
+            }
+
+            lockedConnectorDoor = Door.Get(DoorType.Scp173Connector);
+            if (lockedConnectorDoor is null)
+            {
+                Log.Warn("Could not find SCP-173 connector door to lock.");
+                return;
+            }
+
+            lockedConnectorDoor.IsOpen = false;
+            lockedConnectorDoor.Lock(DoorLockType.AdminCommand);
+            Log.Info("Locked SCP-173 connector door for selector lobby.");
+        }
+
+        private void UnlockWarmupDoors()
+        {
+            if (lockedConnectorDoor is null)
+            {
+                return;
+            }
+
+            lockedConnectorDoor.Unlock();
+            lockedConnectorDoor = null;
         }
 
         private static int ReadyWarmupPlayerCount()

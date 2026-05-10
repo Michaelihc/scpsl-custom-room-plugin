@@ -35,6 +35,12 @@ namespace ScpslCustomRoomPlugin
         [Description("Existing room used as the warmup selector lobby.")]
         public RoomType ExistingLobbyRoomType { get; set; } = RoomType.Lcz173;
 
+        [Description("Use this door as the selector lobby anchor when available.")]
+        public DoorType ExistingLobbyAnchorDoorType { get; set; } = DoorType.Scp173Gate;
+
+        [Description("Local offset from ExistingLobbyAnchorDoorType used as the selector lobby origin.")]
+        public string ExistingLobbyAnchorDoorOffset { get; set; } = "0, 0, -2";
+
         [Description("Local position inside ExistingLobbyRoomType for the selector lobby origin. Default matches the Lobby plugin SCP173 location.")]
         public string ExistingLobbyRoomOffset { get; set; } = "17, 13, 8";
 
@@ -43,6 +49,9 @@ namespace ScpslCustomRoomPlugin
 
         [Description("Hide the vanilla waiting-for-players start-round UI object while the selector lobby is active.")]
         public bool HideNativeWaitingUi { get; set; } = true;
+
+        [Description("Lock the SCP-173 connector door while the selector lobby is active.")]
+        public bool LockScp173ConnectorDuringWarmup { get; set; } = true;
 
         [Description("Show plugin countdown hints while the selector is active.")]
         public bool ShowCountdownHints { get; set; }
