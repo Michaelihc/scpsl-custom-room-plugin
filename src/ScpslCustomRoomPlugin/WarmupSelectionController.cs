@@ -408,11 +408,11 @@ namespace ScpslCustomRoomPlugin
             CleanupRoom();
 
             Dictionary<RoleTypeId, List<Player>> selectedPools = BuildSelectedPools();
-            Dictionary<Player, RoleTypeId> finalRoles = BuildFinalRoleAssignments();
+            Dictionary<Player, RoleTypeId> originalRoles = BuildVanillaRoleAssignments();
+            Dictionary<Player, RoleTypeId> finalRoles = new Dictionary<Player, RoleTypeId>(originalRoles);
             if (selectedPools.Count == 0)
             {
                 Log.Info("No SCP class selections were made during warmup.");
-                ApplyFinalRoles(finalRoles);
                 return;
             }
 
@@ -453,9 +453,10 @@ namespace ScpslCustomRoomPlugin
                         continue;
                     }
 
-                    if (!finalRoles.TryGetValue(selectedPlayer, out RoleTypeId replacementRole))
+                    if (!originalRoles.TryGetValue(selectedPlayer, out RoleTypeId replacementRole))
                     {
-                        replacementRole = RoleTypeId.ClassD;
+                        Log.Warn($"Skipping {selectedPlayer.Nickname}'s {targetRole.GetFullName()} swap because their vanilla role could not be resolved.");
+                        continue;
                     }
 
                     finalRoles[holder] = replacementRole;
@@ -465,7 +466,7 @@ namespace ScpslCustomRoomPlugin
                 }
             }
 
-            ApplyFinalRoles(finalRoles);
+            ApplyChangedRoles(originalRoles, finalRoles);
         }
 
         private Dictionary<RoleTypeId, List<Player>> BuildSelectedPools()
@@ -474,7 +475,7 @@ namespace ScpslCustomRoomPlugin
 
             foreach (KeyValuePair<string, RoleTypeId> selection in playerSelections)
             {
-                Player player = Player.List.FirstOrDefault(candidate => candidate.IsConnected && GetPlayerKey(candidate) == selection.Key);
+                Player player = Player.List.FirstOrDefault(candidate => IsWarmupParticipant(candidate) && GetPlayerKey(candidate) == selection.Key);
                 if (player is null)
                 {
                     continue;
@@ -510,39 +511,38 @@ namespace ScpslCustomRoomPlugin
             Log.Info($"Captured {vanillaRoleAssignments.Count} vanilla role assignment(s) before selector warmup.");
         }
 
-        private Dictionary<Player, RoleTypeId> BuildFinalRoleAssignments()
+        private Dictionary<Player, RoleTypeId> BuildVanillaRoleAssignments()
         {
-            Dictionary<Player, RoleTypeId> finalRoles = new Dictionary<Player, RoleTypeId>();
+            Dictionary<Player, RoleTypeId> originalRoles = new Dictionary<Player, RoleTypeId>();
 
             foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
-                finalRoles[player] = ResolveRoundRole(player);
+                if (vanillaRoleAssignments.TryGetValue(GetPlayerKey(player), out RoleTypeId capturedRole))
+                {
+                    originalRoles[player] = capturedRole;
+                    continue;
+                }
+
+                RoleTypeId currentRole = player.Role.Type;
+                if (currentRole is not RoleTypeId.None and not RoleTypeId.Spectator and not RoleTypeId.Tutorial)
+                {
+                    originalRoles[player] = currentRole;
+                }
             }
 
-            return finalRoles;
+            return originalRoles;
         }
 
-        private RoleTypeId ResolveRoundRole(Player player)
-        {
-            if (vanillaRoleAssignments.TryGetValue(GetPlayerKey(player), out RoleTypeId capturedRole))
-            {
-                return capturedRole;
-            }
-
-            RoleTypeId currentRole = player.Role.Type;
-            if (currentRole is not RoleTypeId.None and not RoleTypeId.Spectator and not RoleTypeId.Tutorial)
-            {
-                return currentRole;
-            }
-
-            return RoleTypeId.ClassD;
-        }
-
-        private static void ApplyFinalRoles(Dictionary<Player, RoleTypeId> finalRoles)
+        private static void ApplyChangedRoles(Dictionary<Player, RoleTypeId> originalRoles, Dictionary<Player, RoleTypeId> finalRoles)
         {
             foreach (KeyValuePair<Player, RoleTypeId> finalRole in finalRoles)
             {
                 if (!finalRole.Key.IsConnected)
+                {
+                    continue;
+                }
+
+                if (!originalRoles.TryGetValue(finalRole.Key, out RoleTypeId originalRole) || originalRole == finalRole.Value)
                 {
                     continue;
                 }
