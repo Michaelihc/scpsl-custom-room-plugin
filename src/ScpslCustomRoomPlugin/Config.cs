@@ -75,18 +75,18 @@ namespace ScpslCustomRoomPlugin
         public string FloatingTextDisplaySize { get; set; } = "0.9, 0.35";
 
         [Description("Scale applied to each selector coin pickup.")]
-        public string SelectorCoinScale { get; set; } = "2.5, 2.5, 2.5";
+        public string SelectorCoinScale { get; set; } = "7.5, 7.5, 7.5";
 
         [Description("SCP classes exposed in the warmup selector room.")]
         public List<ScpClassOption> ScpClassOptions { get; set; } = new List<ScpClassOption>
         {
-            new ScpClassOption(RoleTypeId.Scp049, "049", "-9, 2.0, 2", "-9, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp079, "079", "-6, 2.0, 2", "-6, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp096, "096", "-3, 2.0, 2", "-3, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp106, "106", "0, 2.0, 2", "0, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp173, "173", "3, 2.0, 2", "3, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp939, "939", "6, 2.0, 2", "6, 1.05, 0.6"),
-            new ScpClassOption(RoleTypeId.Scp3114, "3114", "9, 2.0, 2", "9, 1.05, 0.6"),
+            new ScpClassOption(RoleTypeId.Scp049, "049", "-6, 2.0, 2", "-6, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp079, "079", "-4, 2.0, 2", "-4, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp096, "096", "-2, 2.0, 2", "-2, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp106, "106", "0, 2.0, 2", "0, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp173, "173", "2, 2.0, 2", "2, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp939, "939", "4, 2.0, 2", "4, 1.05, 2.0"),
+            new ScpClassOption(RoleTypeId.Scp3114, "3114", "6, 2.0, 2", "6, 1.05, 2.0"),
         };
     }
 }
