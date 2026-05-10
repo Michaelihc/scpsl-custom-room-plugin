@@ -249,7 +249,7 @@ namespace ScpslCustomRoomPlugin
 
         public void OnChangingRole(ChangingRoleEventArgs ev)
         {
-            if (applyingSelectionSwaps || (!warmupActive && !roundSelectionPending) || !IsVanillaRoleHolder(ev.Player))
+            if (applyingSelectionSwaps || (!warmupActive && !roundSelectionPending))
             {
                 return;
             }
@@ -531,6 +531,7 @@ namespace ScpslCustomRoomPlugin
             Dictionary<Player, RoleTypeId> originalRoles = BuildVanillaRoleAssignments();
             Dictionary<Player, RoleTypeId> finalRoles = new Dictionary<Player, RoleTypeId>(originalRoles);
             Log.Info($"Applying selector swaps with {selectedPools.Sum(pair => pair.Value.Count)} selected player(s) and {originalRoles.Count} resolved vanilla role(s).");
+            Log.Info($"Resolved vanilla SCP distribution: {FormatScpRoleDistribution(originalRoles)}.");
             if (selectedPools.Count == 0)
             {
                 Log.Info("No SCP class selections were made during warmup.");
@@ -548,13 +549,13 @@ namespace ScpslCustomRoomPlugin
                 }
 
                 List<Player> currentHolders = finalRoles
-                    .Where(pair => pair.Value == targetRole && pair.Key.IsConnected)
+                    .Where(pair => pair.Value == targetRole)
                     .Select(pair => pair.Key)
                     .ToList();
 
                 if (currentHolders.Count == 0)
                 {
-                    Log.Info($"Skipping {targetRole.GetFullName()} selections because vanilla round start did not assign that SCP role.");
+                    Log.Info($"Skipping {targetRole.GetFullName()} selections because vanilla round start did not assign that SCP role. Available SCP roles: {FormatScpRoleDistribution(originalRoles)}.");
                     continue;
                 }
 
@@ -661,11 +662,6 @@ namespace ScpslCustomRoomPlugin
             {
                 foreach (KeyValuePair<Player, RoleTypeId> finalRole in finalRoles)
                 {
-                    if (!finalRole.Key.IsConnected)
-                    {
-                        continue;
-                    }
-
                     if (!originalRoles.TryGetValue(finalRole.Key, out RoleTypeId originalRole) || originalRole == finalRole.Value)
                     {
                         continue;
@@ -678,6 +674,18 @@ namespace ScpslCustomRoomPlugin
             {
                 applyingSelectionSwaps = false;
             }
+        }
+
+        private static string FormatScpRoleDistribution(Dictionary<Player, RoleTypeId> roles)
+        {
+            List<string> roleCounts = roles
+                .Where(pair => pair.Value.IsScp())
+                .GroupBy(pair => pair.Value)
+                .OrderBy(group => group.Key.ToString())
+                .Select(group => $"{group.Key.GetFullName()}={group.Count()}")
+                .ToList();
+
+            return roleCounts.Count == 0 ? "none" : string.Join(", ", roleCounts);
         }
 
         private Player? ChooseSelectedPlayer(List<Player> pool, HashSet<Player> alreadyChosen, Player currentHolder)
@@ -873,12 +881,12 @@ namespace ScpslCustomRoomPlugin
 
         private static bool IsWarmupParticipant(Player player)
         {
-            return player.IsConnected && player.IsVerified && !player.IsNPC;
+            return player.IsConnected && player.IsVerified;
         }
 
         private static bool IsVanillaRoleHolder(Player player)
         {
-            return player.IsConnected && (player.IsVerified || player.IsNPC);
+            return player.Role.Type is not RoleTypeId.None and not RoleTypeId.Spectator and not RoleTypeId.Tutorial;
         }
 
         private static void SetNativeLobbyTimer(short value)
