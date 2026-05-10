@@ -433,14 +433,7 @@ namespace ScpslCustomRoomPlugin
 
                 if (currentHolders.Count == 0)
                 {
-                    Player? selectedPlayer = pool.FirstOrDefault(player => player.IsConnected && !alreadyChosen.Contains(player));
-                    if (selectedPlayer is not null)
-                    {
-                        alreadyChosen.Add(selectedPlayer);
-                        finalRoles[selectedPlayer] = targetRole;
-                        Log.Info($"{selectedPlayer.Nickname} was selected from the {targetRole.GetFullName()} pool and assigned directly.");
-                    }
-
+                    Log.Info($"Skipping {targetRole.GetFullName()} selections because vanilla round start did not assign that SCP role.");
                     continue;
                 }
 
