@@ -13,16 +13,22 @@ namespace ScpslCustomRoomPlugin
         [Description("Whether debug logging is enabled.")]
         public bool Debug { get; set; }
 
-        [Description("Lock the lobby during warmup and use the plugin countdown instead of the vanilla start flow.")]
+        [Description("Lock the lobby during non-forced warmup.")]
         public bool LockLobbyDuringWarmup { get; set; } = true;
+
+        [Description("Force-start a temporary round for warmup. This avoids the vanilla waiting-for-players UI.")]
+        public bool ForceRoundStartForWarmup { get; set; } = true;
+
+        [Description("Prevent round-end checks while the selector warmup is active.")]
+        public bool SuppressRoundEndDuringWarmup { get; set; } = true;
 
         [Description("Manual warmup duration in seconds.")]
         public int WarmupSeconds { get; set; } = 90;
 
         [Description("Minimum verified players required before the warmup countdown decreases.")]
-        public int MinimumPlayersToCountdown { get; set; } = 2;
+        public int MinimumPlayersToCountdown { get; set; } = 1;
 
-        [Description("Show plugin countdown hints. The vanilla lobby timer remains visible, so this is disabled by default to avoid duplicate countdown UI.")]
+        [Description("Show plugin countdown hints while the selector is active.")]
         public bool ShowCountdownHints { get; set; }
 
         [Description("Seconds after vanilla round start before selected SCPs are swapped in.")]

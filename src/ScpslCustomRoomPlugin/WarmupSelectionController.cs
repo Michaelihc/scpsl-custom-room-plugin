@@ -7,6 +7,7 @@ using Exiled.API.Features;
 using Exiled.API.Features.Pickups;
 using Exiled.API.Features.Toys;
 using Exiled.Events.EventArgs.Player;
+using Exiled.Events.EventArgs.Server;
 using GameCore;
 using MEC;
 using PlayerRoles;
@@ -19,6 +20,7 @@ namespace ScpslCustomRoomPlugin
         private readonly Plugin plugin;
         private readonly Dictionary<ushort, RoleTypeId> selectorCoins = new Dictionary<ushort, RoleTypeId>();
         private readonly Dictionary<string, RoleTypeId> playerSelections = new Dictionary<string, RoleTypeId>();
+        private readonly Dictionary<string, RoleTypeId> vanillaRoleAssignments = new Dictionary<string, RoleTypeId>();
         private readonly List<AdminToy> spawnedToys = new List<AdminToy>();
         private readonly List<Pickup> spawnedPickups = new List<Pickup>();
         private readonly System.Random random = new System.Random();
@@ -27,10 +29,9 @@ namespace ScpslCustomRoomPlugin
         private CoroutineHandle playerMaintenanceCoroutine;
         private bool warmupActive;
         private bool roundSelectionPending;
+        private bool pendingForcedWarmupRoundStart;
         private bool countdownPausedLogged;
         private Vector3 roomOrigin;
-
-        public static bool SuppressVanillaWaitingUi { get; private set; }
 
         public WarmupSelectionController(Plugin plugin)
         {
@@ -39,13 +40,54 @@ namespace ScpslCustomRoomPlugin
 
         public void BeginWarmup()
         {
+            if (plugin.Config.ForceRoundStartForWarmup && !IsRoundStarted())
+            {
+                if (ReadyWarmupPlayerCount() == 0)
+                {
+                    pendingForcedWarmupRoundStart = true;
+                    Log.Info("Waiting for a verified player before force-starting selector warmup.");
+                    return;
+                }
+
+                ForceStartWarmupRound("waiting for players");
+                return;
+            }
+
+            StartWarmup("waiting for players");
+        }
+
+        private void ForceStartWarmupRound(string reason)
+        {
+            pendingForcedWarmupRoundStart = true;
+            Log.Info($"Force-starting a warmup round to avoid vanilla waiting-for-players UI ({reason}).");
+            Round.Start();
+            Timing.CallDelayed(1.5f, () =>
+            {
+                if (!pendingForcedWarmupRoundStart)
+                {
+                    return;
+                }
+
+                if (!IsRoundStarted())
+                {
+                    Log.Warn("Forced warmup round has not started yet; selector room will wait for the round-start event.");
+                    return;
+                }
+
+                pendingForcedWarmupRoundStart = false;
+                CaptureVanillaRoleAssignments();
+                StartWarmup($"{reason}; delayed forced round start");
+            });
+        }
+
+        private void StartWarmup(string reason)
+        {
             CleanupRoom();
             playerSelections.Clear();
             selectorCoins.Clear();
 
             warmupActive = true;
             roundSelectionPending = false;
-            SuppressVanillaWaitingUi = true;
             roomOrigin = VectorParser.ParseVector3(plugin.Config.RoomOrigin, new Vector3(0f, 1030f, 0f));
 
             if (plugin.Config.LockLobbyDuringWarmup)
@@ -60,15 +102,14 @@ namespace ScpslCustomRoomPlugin
                 MovePlayerToWarmupRoom(player);
             }
 
+            Log.Info($"Warmup SCP class selector room is active ({reason}).");
             countdownCoroutine = Timing.RunCoroutine(WarmupCountdown());
             playerMaintenanceCoroutine = Timing.RunCoroutine(MaintainWarmupPlayers());
-            Log.Info("Warmup SCP class selector room is active.");
         }
 
         public void EndWarmup()
         {
             warmupActive = false;
-            SuppressVanillaWaitingUi = false;
             Timing.KillCoroutines(countdownCoroutine);
             Timing.KillCoroutines(playerMaintenanceCoroutine);
 
@@ -82,7 +123,6 @@ namespace ScpslCustomRoomPlugin
         {
             Timing.KillCoroutines(countdownCoroutine);
             Timing.KillCoroutines(playerMaintenanceCoroutine);
-            SuppressVanillaWaitingUi = false;
 
             foreach (Pickup pickup in spawnedPickups)
             {
@@ -98,11 +138,25 @@ namespace ScpslCustomRoomPlugin
             spawnedToys.Clear();
             selectorCoins.Clear();
             warmupActive = false;
+            roundSelectionPending = false;
             countdownPausedLogged = false;
         }
 
         public void OnVerified(VerifiedEventArgs ev)
         {
+            if (pendingForcedWarmupRoundStart && !warmupActive && plugin.Config.ForceRoundStartForWarmup)
+            {
+                Log.Info($"{ev.Player.Nickname} ({ev.Player.UserId}) verified; starting forced selector warmup round.");
+                Timing.CallDelayed(0.25f, () =>
+                {
+                    if (pendingForcedWarmupRoundStart && !warmupActive && !IsRoundStarted())
+                    {
+                        ForceStartWarmupRound("first verified player");
+                    }
+                });
+                return;
+            }
+
             if (!warmupActive)
             {
                 return;
@@ -145,9 +199,33 @@ namespace ScpslCustomRoomPlugin
 
         public void OnRoundStarted()
         {
+            if (pendingForcedWarmupRoundStart)
+            {
+                pendingForcedWarmupRoundStart = false;
+                Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, () =>
+                {
+                    CaptureVanillaRoleAssignments();
+                    StartWarmup("forced round started");
+                });
+                return;
+            }
+
+            if (!warmupActive)
+            {
+                return;
+            }
+
             EndWarmup();
             roundSelectionPending = true;
             Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, ApplySelectionsAfterVanillaAssignment);
+        }
+
+        public void OnEndingRound(EndingRoundEventArgs ev)
+        {
+            if (warmupActive && plugin.Config.SuppressRoundEndDuringWarmup)
+            {
+                ev.IsAllowed = false;
+            }
         }
 
         private void BuildSelectionRoom()
@@ -280,6 +358,14 @@ namespace ScpslCustomRoomPlugin
                 Round.IsLobbyLocked = false;
             }
 
+            if (IsRoundStarted())
+            {
+                EndWarmup();
+                roundSelectionPending = true;
+                ApplySelectionsAfterVanillaAssignment();
+                yield break;
+            }
+
             Round.Start();
         }
 
@@ -294,15 +380,13 @@ namespace ScpslCustomRoomPlugin
             CleanupRoom();
 
             Dictionary<RoleTypeId, List<Player>> selectedPools = BuildSelectedPools();
+            Dictionary<Player, RoleTypeId> finalRoles = BuildFinalRoleAssignments();
             if (selectedPools.Count == 0)
             {
                 Log.Info("No SCP class selections were made during warmup.");
+                ApplyFinalRoles(finalRoles);
                 return;
             }
-
-            Dictionary<Player, RoleTypeId> currentRoles = Player.List
-                .Where(player => player.IsConnected)
-                .ToDictionary(player => player, player => player.Role.Type);
 
             HashSet<Player> alreadyChosen = new HashSet<Player>();
 
@@ -314,10 +398,23 @@ namespace ScpslCustomRoomPlugin
                     continue;
                 }
 
-                List<Player> currentHolders = currentRoles
+                List<Player> currentHolders = finalRoles
                     .Where(pair => pair.Value == targetRole && pair.Key.IsConnected)
                     .Select(pair => pair.Key)
                     .ToList();
+
+                if (currentHolders.Count == 0)
+                {
+                    Player? selectedPlayer = pool.FirstOrDefault(player => player.IsConnected && !alreadyChosen.Contains(player));
+                    if (selectedPlayer is not null)
+                    {
+                        alreadyChosen.Add(selectedPlayer);
+                        finalRoles[selectedPlayer] = targetRole;
+                        Log.Info($"{selectedPlayer.Nickname} was selected from the {targetRole.GetFullName()} pool and assigned directly.");
+                    }
+
+                    continue;
+                }
 
                 foreach (Player holder in currentHolders)
                 {
@@ -335,13 +432,19 @@ namespace ScpslCustomRoomPlugin
                         continue;
                     }
 
-                    RoleTypeId replacementRole = selectedPlayer.Role.Type;
-                    holder.Role.Set(replacementRole, SpawnReason.ForceClass);
-                    selectedPlayer.Role.Set(targetRole, SpawnReason.ForceClass);
+                    if (!finalRoles.TryGetValue(selectedPlayer, out RoleTypeId replacementRole))
+                    {
+                        replacementRole = RoleTypeId.ClassD;
+                    }
+
+                    finalRoles[holder] = replacementRole;
+                    finalRoles[selectedPlayer] = targetRole;
 
                     Log.Info($"{selectedPlayer.Nickname} was selected from the {targetRole.GetFullName()} pool and swapped with {holder.Nickname}.");
                 }
             }
+
+            ApplyFinalRoles(finalRoles);
         }
 
         private Dictionary<RoleTypeId, List<Player>> BuildSelectedPools()
@@ -366,6 +469,65 @@ namespace ScpslCustomRoomPlugin
             }
 
             return selectedPools;
+        }
+
+        private void CaptureVanillaRoleAssignments()
+        {
+            vanillaRoleAssignments.Clear();
+
+            foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+            {
+                RoleTypeId role = player.Role.Type;
+                if (role is RoleTypeId.None or RoleTypeId.Spectator or RoleTypeId.Tutorial)
+                {
+                    continue;
+                }
+
+                vanillaRoleAssignments[GetPlayerKey(player)] = role;
+            }
+
+            Log.Info($"Captured {vanillaRoleAssignments.Count} vanilla role assignment(s) before selector warmup.");
+        }
+
+        private Dictionary<Player, RoleTypeId> BuildFinalRoleAssignments()
+        {
+            Dictionary<Player, RoleTypeId> finalRoles = new Dictionary<Player, RoleTypeId>();
+
+            foreach (Player player in Player.List.Where(player => player.IsConnected && player.IsVerified))
+            {
+                finalRoles[player] = ResolveRoundRole(player);
+            }
+
+            return finalRoles;
+        }
+
+        private RoleTypeId ResolveRoundRole(Player player)
+        {
+            if (vanillaRoleAssignments.TryGetValue(GetPlayerKey(player), out RoleTypeId capturedRole))
+            {
+                return capturedRole;
+            }
+
+            RoleTypeId currentRole = player.Role.Type;
+            if (currentRole is not RoleTypeId.None and not RoleTypeId.Spectator and not RoleTypeId.Tutorial)
+            {
+                return currentRole;
+            }
+
+            return RoleTypeId.ClassD;
+        }
+
+        private static void ApplyFinalRoles(Dictionary<Player, RoleTypeId> finalRoles)
+        {
+            foreach (KeyValuePair<Player, RoleTypeId> finalRole in finalRoles)
+            {
+                if (!finalRole.Key.IsConnected)
+                {
+                    continue;
+                }
+
+                finalRole.Key.Role.Set(finalRole.Value, SpawnReason.ForceClass);
+            }
         }
 
         private Player? ChooseSelectedPlayer(List<Player> pool, HashSet<Player> alreadyChosen, Player currentHolder)
@@ -403,6 +565,11 @@ namespace ScpslCustomRoomPlugin
             {
                 RoundStart.singleton.NetworkTimer = value;
             }
+        }
+
+        private static bool IsRoundStarted()
+        {
+            return Round.IsStarted || RoundStart.RoundStarted;
         }
 
         private static string GetPlayerKey(Player player)

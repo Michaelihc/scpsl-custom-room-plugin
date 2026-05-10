@@ -24,6 +24,7 @@ namespace ScpslCustomRoomPlugin
             warmupSelectionController = new WarmupSelectionController(this);
             ServerHandlers.WaitingForPlayers += warmupSelectionController.BeginWarmup;
             ServerHandlers.RoundStarted += warmupSelectionController.OnRoundStarted;
+            ServerHandlers.EndingRound += warmupSelectionController.OnEndingRound;
             PlayerHandlers.Verified += warmupSelectionController.OnVerified;
             PlayerHandlers.Left += warmupSelectionController.OnLeft;
             PlayerHandlers.Spawning += warmupSelectionController.OnSpawning;
@@ -38,6 +39,7 @@ namespace ScpslCustomRoomPlugin
             {
                 ServerHandlers.WaitingForPlayers -= warmupSelectionController.BeginWarmup;
                 ServerHandlers.RoundStarted -= warmupSelectionController.OnRoundStarted;
+                ServerHandlers.EndingRound -= warmupSelectionController.OnEndingRound;
                 PlayerHandlers.Verified -= warmupSelectionController.OnVerified;
                 PlayerHandlers.Left -= warmupSelectionController.OnLeft;
                 PlayerHandlers.Spawning -= warmupSelectionController.OnSpawning;
