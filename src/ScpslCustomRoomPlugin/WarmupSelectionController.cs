@@ -249,7 +249,7 @@ namespace ScpslCustomRoomPlugin
 
         public void OnChangingRole(ChangingRoleEventArgs ev)
         {
-            if (applyingSelectionSwaps || (!warmupActive && !roundSelectionPending) || !IsWarmupParticipant(ev.Player))
+            if (applyingSelectionSwaps || (!warmupActive && !roundSelectionPending) || !IsVanillaRoleHolder(ev.Player))
             {
                 return;
             }
@@ -592,7 +592,7 @@ namespace ScpslCustomRoomPlugin
         {
             vanillaRoleAssignments.Clear();
 
-            foreach (Player player in Player.List.Where(IsWarmupParticipant))
+            foreach (Player player in Player.List.Where(IsVanillaRoleHolder))
             {
                 RoleTypeId role = player.Role.Type;
                 if (role is RoleTypeId.None or RoleTypeId.Spectator or RoleTypeId.Tutorial)
@@ -610,7 +610,7 @@ namespace ScpslCustomRoomPlugin
         {
             Dictionary<Player, RoleTypeId> originalRoles = new Dictionary<Player, RoleTypeId>();
 
-            foreach (Player player in Player.List.Where(IsWarmupParticipant))
+            foreach (Player player in Player.List.Where(IsVanillaRoleHolder))
             {
                 if (vanillaRoleAssignments.TryGetValue(GetPlayerKey(player), out RoleTypeId capturedRole))
                 {
@@ -848,6 +848,11 @@ namespace ScpslCustomRoomPlugin
         private static bool IsWarmupParticipant(Player player)
         {
             return player.IsConnected && player.IsVerified && !player.IsNPC;
+        }
+
+        private static bool IsVanillaRoleHolder(Player player)
+        {
+            return player.IsConnected && (player.IsVerified || player.IsNPC);
         }
 
         private static void SetNativeLobbyTimer(short value)
