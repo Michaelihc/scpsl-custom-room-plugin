@@ -15,7 +15,7 @@ namespace ScpslCustomRoomPlugin
 
         public override string Prefix => "scpsl_custom_room_plugin";
 
-        public override Version Version => new Version(0, 1, 0);
+        public override Version Version => new Version(0, 1, 2);
 
         public override Version RequiredExiledVersion => new Version(9, 13, 3);
 

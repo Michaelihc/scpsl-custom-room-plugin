@@ -59,6 +59,21 @@ namespace ScpslCustomRoomPlugin
         [Description("Show plugin status hints while the selector is active.")]
         public bool ShowCountdownHints { get; set; } = true;
 
+        [Description("Seconds between selector status hint refreshes. Lower values can survive HUD plugins that overwrite hints, but may conflict with other hint UIs.")]
+        public float HintRefreshIntervalSeconds { get; set; } = 1f;
+
+        [Description("Duration in seconds for each selector status hint.")]
+        public float HintDurationSeconds { get; set; } = 1.25f;
+
+        [Description("Write periodic compatibility diagnostics while warmup is active.")]
+        public bool EnableCompatibilityDiagnostics { get; set; } = true;
+
+        [Description("Seconds between compatibility diagnostic log entries.")]
+        public float CompatibilityDiagnosticIntervalSeconds { get; set; } = 5f;
+
+        [Description("Seconds to keep watching for native round start after players are released for vanilla assignment.")]
+        public float RoundStartWatchdogSeconds { get; set; } = 45f;
+
         [Description("Use Simplified Chinese for player-facing selector hints and countdown text.")]
         public bool UseChineseLocalization { get; set; }
 

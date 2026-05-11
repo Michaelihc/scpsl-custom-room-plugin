@@ -31,6 +31,8 @@ namespace ScpslCustomRoomPlugin
 
         private CoroutineHandle countdownCoroutine;
         private CoroutineHandle playerMaintenanceCoroutine;
+        private CoroutineHandle roundStartWatchdogCoroutine;
+        private CoroutineHandle compatibilityDiagnosticsCoroutine;
         private bool warmupActive;
         private bool roundSelectionPending;
         private bool pendingForcedWarmupRoundStart;
@@ -51,6 +53,8 @@ namespace ScpslCustomRoomPlugin
 
         public void BeginWarmup()
         {
+            LogWarmupState("WaitingForPlayers event", true);
+
             if (plugin.Config.ForceRoundStartForWarmup && !IsRoundStarted())
             {
                 if (ReadyWarmupPlayerCount() == 0)
@@ -146,6 +150,7 @@ namespace ScpslCustomRoomPlugin
             Log.Info($"Warmup SCP class selector room is active ({reason}); using the game's native lobby countdown.");
             countdownCoroutine = Timing.RunCoroutine(WarmupCountdown());
             playerMaintenanceCoroutine = Timing.RunCoroutine(MaintainWarmupPlayers());
+            compatibilityDiagnosticsCoroutine = Timing.RunCoroutine(LogCompatibilityDiagnostics());
         }
 
         public void EndWarmup()
@@ -155,6 +160,8 @@ namespace ScpslCustomRoomPlugin
             applyingSelectionSwaps = false;
             Timing.KillCoroutines(countdownCoroutine);
             Timing.KillCoroutines(playerMaintenanceCoroutine);
+            Timing.KillCoroutines(roundStartWatchdogCoroutine);
+            Timing.KillCoroutines(compatibilityDiagnosticsCoroutine);
 
             if (plugin.Config.LockLobbyDuringWarmup)
             {
@@ -169,6 +176,8 @@ namespace ScpslCustomRoomPlugin
         {
             Timing.KillCoroutines(countdownCoroutine);
             Timing.KillCoroutines(playerMaintenanceCoroutine);
+            Timing.KillCoroutines(roundStartWatchdogCoroutine);
+            Timing.KillCoroutines(compatibilityDiagnosticsCoroutine);
 
             foreach (Pickup pickup in spawnedPickups)
             {
@@ -229,6 +238,7 @@ namespace ScpslCustomRoomPlugin
             }
 
             Log.Info($"{ev.Player.Nickname} ({ev.Player.UserId}) verified during warmup; moving to selector room.");
+            LogWarmupState($"Verified during warmup: {ev.Player.Nickname}", true);
             Timing.CallDelayed(0.5f, () => MovePlayerToWarmupRoom(ev.Player));
         }
 
@@ -276,12 +286,13 @@ namespace ScpslCustomRoomPlugin
 
             string roleName = selectedRole.GetFullName();
             Log.Info($"{ev.Player.Nickname} ({ev.Player.UserId}) selected {roleName} during warmup.");
-            ev.Player.ShowHint(BuildWarmupStatusHint(ev.Player, GetCurrentCountdownLine()), 1.25f);
+            ev.Player.ShowHint(BuildWarmupStatusHint(ev.Player, GetCurrentCountdownLine()), GetHintDuration());
         }
 
         public void OnRoundStarted()
         {
             Log.Info($"RoundStarted event received (warmupActive={warmupActive}, released={releasedPlayersForRoundStart}, pending={roundSelectionPending}).");
+            LogWarmupState("RoundStarted event", true);
 
             if (pendingForcedWarmupRoundStart)
             {
@@ -294,7 +305,7 @@ namespace ScpslCustomRoomPlugin
                 return;
             }
 
-            if (!warmupActive)
+            if (!warmupActive && !releasedPlayersForRoundStart && !roundSelectionPending)
             {
                 return;
             }
@@ -305,6 +316,7 @@ namespace ScpslCustomRoomPlugin
         public void OnAllPlayersSpawned()
         {
             Log.Info($"AllPlayersSpawned event received (warmupActive={warmupActive}, released={releasedPlayersForRoundStart}, pending={roundSelectionPending}).");
+            LogWarmupState("AllPlayersSpawned event", true);
 
             if (!warmupActive && !releasedPlayersForRoundStart && !roundSelectionPending)
             {
@@ -316,6 +328,11 @@ namespace ScpslCustomRoomPlugin
 
         public void OnEndingRound(EndingRoundEventArgs ev)
         {
+            if (warmupActive || releasedPlayersForRoundStart || roundSelectionPending)
+            {
+                Log.Info($"EndingRound event received during selector lifecycle (warmupActive={warmupActive}, released={releasedPlayersForRoundStart}, pending={roundSelectionPending}, suppress={plugin.Config.SuppressRoundEndDuringWarmup}).");
+            }
+
             if (warmupActive && plugin.Config.SuppressRoundEndDuringWarmup)
             {
                 ev.IsAllowed = false;
@@ -426,7 +443,7 @@ namespace ScpslCustomRoomPlugin
                     }
 
                     ShowWarmupStatusHint(countdownLine);
-                    yield return Timing.WaitForSeconds(1f);
+                    yield return Timing.WaitForSeconds(GetHintRefreshInterval());
                     continue;
                 }
 
@@ -449,7 +466,7 @@ namespace ScpslCustomRoomPlugin
 
                 ShowWarmupStatusHint(countdownLine);
 
-                yield return Timing.WaitForSeconds(1f);
+                yield return Timing.WaitForSeconds(GetHintRefreshInterval());
             }
         }
 
@@ -462,6 +479,7 @@ namespace ScpslCustomRoomPlugin
 
             releasedPlayersForRoundStart = true;
             Timing.KillCoroutines(playerMaintenanceCoroutine);
+            Timing.KillCoroutines(roundStartWatchdogCoroutine);
 
             foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
@@ -469,6 +487,8 @@ namespace ScpslCustomRoomPlugin
             }
 
             Log.Info("Released warmup players to spectator for vanilla round role assignment.");
+            LogWarmupState("released players for vanilla assignment", true);
+            roundStartWatchdogCoroutine = Timing.RunCoroutine(WatchForRoundStartAfterRelease());
         }
 
         private void QueueSelectionApply(string reason)
@@ -487,6 +507,7 @@ namespace ScpslCustomRoomPlugin
             roundSelectionPending = true;
             selectionApplyScheduled = true;
             Log.Info($"Queued selector swap application ({reason}) in {plugin.Config.RoleSwapDelaySeconds:0.##}s.");
+            LogWarmupState($"queued selector swap application ({reason})", true);
             Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, ApplySelectionsAfterVanillaAssignment);
         }
 
@@ -498,6 +519,36 @@ namespace ScpslCustomRoomPlugin
             }
 
             player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass);
+        }
+
+        private IEnumerator<float> WatchForRoundStartAfterRelease()
+        {
+            float elapsed = 0f;
+            float interval = Math.Max(0.5f, GetHintRefreshInterval());
+            float timeout = Math.Max(1f, plugin.Config.RoundStartWatchdogSeconds);
+
+            while (releasedPlayersForRoundStart && !roundSelectionPending && !selectionApplyScheduled && elapsed < timeout)
+            {
+                if (IsRoundStarted())
+                {
+                    QueueSelectionApply("round start watchdog observed native round start");
+                    yield break;
+                }
+
+                if (elapsed == 0f || Math.Abs(elapsed % Math.Max(1f, plugin.Config.CompatibilityDiagnosticIntervalSeconds)) < 0.01f)
+                {
+                    LogWarmupState($"round start watchdog waiting ({elapsed:0.#}/{timeout:0.#}s)", true);
+                }
+
+                elapsed += interval;
+                yield return Timing.WaitForSeconds(interval);
+            }
+
+            if (releasedPlayersForRoundStart && !roundSelectionPending && !selectionApplyScheduled)
+            {
+                Log.Warn($"Round start watchdog timed out after {timeout:0.#}s. Selector swaps were not queued because the native round never appeared started to this plugin.");
+                LogWarmupState("round start watchdog timeout", true);
+            }
         }
 
         private void ApplySelectionsAfterVanillaAssignment()
@@ -789,8 +840,65 @@ namespace ScpslCustomRoomPlugin
 
             foreach (Player player in Player.List.Where(IsWarmupParticipant))
             {
-                player.ShowHint(BuildWarmupStatusHint(player, countdownLine), 1.25f);
+                player.ShowHint(BuildWarmupStatusHint(player, countdownLine), GetHintDuration());
             }
+        }
+
+        private IEnumerator<float> LogCompatibilityDiagnostics()
+        {
+            if (!plugin.Config.EnableCompatibilityDiagnostics)
+            {
+                yield break;
+            }
+
+            float interval = Math.Max(1f, plugin.Config.CompatibilityDiagnosticIntervalSeconds);
+            while (warmupActive || releasedPlayersForRoundStart || roundSelectionPending)
+            {
+                LogWarmupState("compatibility diagnostic", true);
+                yield return Timing.WaitForSeconds(interval);
+            }
+        }
+
+        private void LogWarmupState(string reason, bool force = false)
+        {
+            if (!force && !plugin.Config.EnableCompatibilityDiagnostics)
+            {
+                return;
+            }
+
+            short nativeTimer = GetNativeLobbyTimer();
+            int playerCount = CurrentServerPlayerCount();
+            int maxPlayers = Server.MaxPlayerCount > 0 ? Server.MaxPlayerCount : Math.Max(playerCount, 1);
+            string roundStartState = RoundStart.singleton is null
+                ? "null"
+                : $"timer={nativeTimer}, roundStarted={RoundStart.RoundStarted}";
+            string participants = string.Join(", ", Player.List
+                .Where(IsWarmupParticipant)
+                .Select(player => $"{player.Nickname}:{player.Role.Type}"));
+
+            if (string.IsNullOrWhiteSpace(participants))
+            {
+                participants = "none";
+            }
+
+            Log.Info(
+                $"Selector state [{reason}]: warmupActive={warmupActive}, released={releasedPlayersForRoundStart}, pending={roundSelectionPending}, scheduled={selectionApplyScheduled}, " +
+                $"roundStarted={Round.IsStarted}, roundStart={roundStartState}, lobbyLocked={Round.IsLobbyLocked}, players={playerCount}/{maxPlayers}, selections={playerSelections.Count}, participants={participants}.");
+
+            if (nativeTimer == -2 && playerCount >= plugin.Config.MinimumPlayersToCountdown && !Round.IsLobbyLocked)
+            {
+                Log.Warn("Native lobby timer is still waiting (-2) even though the configured minimum player count is met and lobby lock is false. Another plugin or server setting may be holding the countdown.");
+            }
+        }
+
+        private float GetHintRefreshInterval()
+        {
+            return Math.Max(0.25f, plugin.Config.HintRefreshIntervalSeconds);
+        }
+
+        private float GetHintDuration()
+        {
+            return Math.Max(0.25f, plugin.Config.HintDurationSeconds);
         }
 
         private string BuildWarmupStatusHint(Player player, string countdownLine)

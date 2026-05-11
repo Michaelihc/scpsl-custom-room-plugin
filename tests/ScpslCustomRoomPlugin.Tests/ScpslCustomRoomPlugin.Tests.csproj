@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ScpslCustomRoomPlugin\ScpslCustomRoomPlugin.csproj" />
+    <PackageReference Include="ExMod.Exiled" Version="9.13.3" PrivateAssets="all" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -19,5 +20,6 @@
       <HintPath>$(ScpSlManagedPath)\Assembly-CSharp.dll</HintPath>
       <Private>true</Private>
     </Reference>
+    <None Include="$(ScpSlManagedPath)\Assembly-CSharp.dll" Link="Assembly-CSharp.dll" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

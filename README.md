@@ -4,7 +4,7 @@
 
 适用于 SCP: Secret Laboratory 的 EXILED 暖场 SCP 选择插件。
 
-状态：公开草稿版本。
+状态：公开草稿版本 v0.1.2。
 
 ## 中文说明
 
@@ -52,6 +52,29 @@ use_chinese_localization: true
 
 该开关会把倒计时提示、当前选择提示和初始选择说明切换为简体中文。SCP 标签默认仍为数字编号，可通过 `scp_class_options` 自行配置。
 
+兼容性/诊断相关配置：
+
+```yaml
+lock_lobby_during_warmup: false
+force_round_start_for_warmup: false
+show_countdown_hints: true
+hint_refresh_interval_seconds: 1
+hint_duration_seconds: 1.25
+enable_compatibility_diagnostics: true
+compatibility_diagnostic_interval_seconds: 5
+round_start_watchdog_seconds: 45
+```
+
+如果其他 HUD/信息插件覆盖了提示文本，可以尝试把 `hint_refresh_interval_seconds` 调小，例如 `0.5`。如果倒计时一直停在等待玩家，日志会输出 `Selector state`，包含原版计时器、玩家数、`lobbyLocked`、玩家职业和选择数量，用来判断是否有其他插件或服务器设置在控制倒计时。
+
+排查时请提供以下日志，而不是 Remote Admin 的 `ralog.txt`：
+
+```text
+%AppData%\SCP Secret Laboratory\LocalAdminLogs\<port>
+%AppData%\EXILED\Logs
+%AppData%\EXILED\Configs\Plugins\scpsl_custom_room_plugin\<port>.yml
+```
+
 ## 项目结构
 
 - `src/ScpslCustomRoomPlugin/Plugin.cs` - 插件入口和事件注册。
@@ -63,6 +86,8 @@ use_chinese_localization: true
 [中文版](#中文说明)
 
 EXILED plugin for SCP: Secret Laboratory warmup SCP class selection.
+
+Status: public draft version v0.1.2.
 
 During waiting-for-players, the plugin moves players into an SCP selector lobby anchored at the SCP-173 gate. Players select a preferred SCP by interacting with a coin. The game still owns the native lobby countdown and the vanilla round role distribution.
 
@@ -105,6 +130,29 @@ use_chinese_localization: true
 ```
 
 When enabled, countdown hints, selected-SCP status, and the initial selector instruction are shown in Simplified Chinese. The SCP selector labels remain configurable through `scp_class_options`; the default labels are numeric SCP IDs.
+
+Compatibility/diagnostic settings:
+
+```yaml
+lock_lobby_during_warmup: false
+force_round_start_for_warmup: false
+show_countdown_hints: true
+hint_refresh_interval_seconds: 1
+hint_duration_seconds: 1.25
+enable_compatibility_diagnostics: true
+compatibility_diagnostic_interval_seconds: 5
+round_start_watchdog_seconds: 45
+```
+
+If another HUD/info plugin overwrites hint text, try lowering `hint_refresh_interval_seconds`, for example to `0.5`. If the countdown remains stuck waiting for players, the plugin now writes `Selector state` diagnostics with the native timer, player count, `lobbyLocked`, player roles, and selection count so conflicts with other countdown/lobby plugins are visible.
+
+For troubleshooting, ask for these logs instead of Remote Admin `ralog.txt`:
+
+```text
+%AppData%\SCP Secret Laboratory\LocalAdminLogs\<port>
+%AppData%\EXILED\Logs
+%AppData%\EXILED\Configs\Plugins\scpsl_custom_room_plugin\<port>.yml
+```
 
 ## License
 

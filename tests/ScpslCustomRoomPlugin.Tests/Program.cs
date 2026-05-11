@@ -37,6 +37,7 @@ namespace ScpslCustomRoomPlugin.Tests
                 TutorialRoleWithoutCaptureIsUnresolved,
                 EnglishWarmupTextStaysDefault,
                 ChineseWarmupTextUsesSimplifiedChinese,
+                CompatibilityDefaultsAvoidForcedRoundControl,
             };
 
             int failed = 0;
@@ -331,6 +332,19 @@ namespace ScpslCustomRoomPlugin.Tests
             AssertEqual("倒计时：回合即将开始\n玩家：4/50", starting, "starting countdown");
             AssertEqual("倒计时：等待玩家\n玩家：1/50\n已选择SCP：无\n与硬币互动可更改选择。", hint, "hint");
             AssertEqual("与硬币互动来选择SCP职业。", WarmupText.InitialSelectionHint(true), "initial hint");
+        }
+
+        private static void CompatibilityDefaultsAvoidForcedRoundControl()
+        {
+            Config config = new Config();
+
+            AssertEqual(false, config.LockLobbyDuringWarmup, "lock lobby default");
+            AssertEqual(false, config.ForceRoundStartForWarmup, "force round start default");
+            AssertEqual(true, config.ShowCountdownHints, "show countdown hints default");
+            AssertEqual(1f, config.HintRefreshIntervalSeconds, "hint refresh interval default");
+            AssertEqual(1.25f, config.HintDurationSeconds, "hint duration default");
+            AssertEqual(true, config.EnableCompatibilityDiagnostics, "compatibility diagnostics default");
+            AssertEqual(45f, config.RoundStartWatchdogSeconds, "round start watchdog default");
         }
 
         private static SelectionSwapPlan<string> BuildPlan(
