@@ -24,6 +24,7 @@ namespace ScpslCustomRoomPlugin
         private readonly Dictionary<ushort, RoleTypeId> selectorCoins = new Dictionary<ushort, RoleTypeId>();
         private readonly Dictionary<string, RoleTypeId> playerSelections = new Dictionary<string, RoleTypeId>();
         private readonly Dictionary<string, RoleTypeId> vanillaRoleAssignments = new Dictionary<string, RoleTypeId>();
+        private readonly HashSet<string> preRoundResetPlayers = new HashSet<string>();
         private readonly List<AdminToy> spawnedToys = new List<AdminToy>();
         private readonly List<LabPrimitive> spawnedPrimitives = new List<LabPrimitive>();
         private readonly List<Pickup> spawnedPickups = new List<Pickup>();
@@ -123,6 +124,7 @@ namespace ScpslCustomRoomPlugin
             CleanupRoom();
             playerSelections.Clear();
             selectorCoins.Clear();
+            preRoundResetPlayers.Clear();
 
             warmupActive = true;
             roundSelectionPending = false;
@@ -201,6 +203,7 @@ namespace ScpslCustomRoomPlugin
             spawnedPickups.Clear();
             spawnedToys.Clear();
             selectorCoins.Clear();
+            preRoundResetPlayers.Clear();
             CloseWarmupAnchorDoor();
             UnlockWarmupDoors();
             warmupActive = false;
@@ -233,7 +236,7 @@ namespace ScpslCustomRoomPlugin
 
             if (releasedPlayersForRoundStart)
             {
-                MovePlayerToSpectatorForRoundStart(ev.Player);
+                MoveLateJoinerToSpectatorForRoundStart(ev.Player);
                 return;
             }
 
@@ -244,7 +247,9 @@ namespace ScpslCustomRoomPlugin
 
         public void OnLeft(LeftEventArgs ev)
         {
-            playerSelections.Remove(GetPlayerKey(ev.Player));
+            string playerKey = GetPlayerKey(ev.Player);
+            playerSelections.Remove(playerKey);
+            preRoundResetPlayers.Remove(playerKey);
         }
 
         public void OnSpawning(SpawningEventArgs ev)
@@ -379,7 +384,24 @@ namespace ScpslCustomRoomPlugin
 
         private void MovePlayerToWarmupRoom(Player player)
         {
-            if (!player.IsConnected || releasedPlayersForRoundStart)
+            if (!player.IsConnected || releasedPlayersForRoundStart || IsRoundStarted())
+            {
+                return;
+            }
+
+            string playerKey = GetPlayerKey(player);
+            if (preRoundResetPlayers.Add(playerKey) && player.Role.Type != RoleTypeId.Spectator)
+            {
+                player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass);
+                Log.Debug($"Pre-round reset moved {player.Nickname} ({player.UserId}) to spectator during countdown.");
+            }
+
+            Timing.CallDelayed(0.2f, () => MoveResetPlayerIntoSelector(player));
+        }
+
+        private void MoveResetPlayerIntoSelector(Player player)
+        {
+            if (!player.IsConnected || !warmupActive || releasedPlayersForRoundStart || IsRoundStarted())
             {
                 return;
             }
@@ -391,7 +413,7 @@ namespace ScpslCustomRoomPlugin
 
             Timing.CallDelayed(0.1f, () =>
             {
-                if (player.IsConnected && warmupActive && !releasedPlayersForRoundStart)
+                if (player.IsConnected && warmupActive && !releasedPlayersForRoundStart && !IsRoundStarted())
                 {
                     player.ClearInventory();
                     player.Position = GetTutorialSpawnPosition();
@@ -461,7 +483,7 @@ namespace ScpslCustomRoomPlugin
 
                 if (nativeTimer is >= 0 and <= 1)
                 {
-                    ReleaseWarmupPlayersForVanillaAssignment();
+                    PrepareWarmupPlayersForVanillaAssignment();
                 }
 
                 ShowWarmupStatusHint(countdownLine);
@@ -470,7 +492,7 @@ namespace ScpslCustomRoomPlugin
             }
         }
 
-        private void ReleaseWarmupPlayersForVanillaAssignment()
+        private void PrepareWarmupPlayersForVanillaAssignment()
         {
             if (releasedPlayersForRoundStart)
             {
@@ -481,14 +503,21 @@ namespace ScpslCustomRoomPlugin
             Timing.KillCoroutines(playerMaintenanceCoroutine);
             Timing.KillCoroutines(roundStartWatchdogCoroutine);
 
-            foreach (Player player in Player.List.Where(IsWarmupParticipant))
+            Log.Info("Prepared warmup players for vanilla round role assignment without changing roles.");
+            LogWarmupState("prepared players for vanilla assignment", true);
+            roundStartWatchdogCoroutine = Timing.RunCoroutine(WatchForRoundStartAfterRelease());
+        }
+
+        private void MoveLateJoinerToSpectatorForRoundStart(Player player)
+        {
+            if (!IsWarmupParticipant(player) || !player.IsConnected || IsRoundStarted() || !IsNativeCountdownStarting())
             {
-                MovePlayerToSpectatorForRoundStart(player);
+                Log.Info($"{player.Nickname} ({player.UserId}) verified during handoff, but countdown is no longer in the pre-start window; leaving role assignment to the game.");
+                return;
             }
 
-            Log.Info("Released warmup players to spectator for vanilla round role assignment.");
-            LogWarmupState("released players for vanilla assignment", true);
-            roundStartWatchdogCoroutine = Timing.RunCoroutine(WatchForRoundStartAfterRelease());
+            player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass);
+            Log.Info($"{player.Nickname} ({player.UserId}) verified during final countdown handoff; moved to spectator for vanilla round role assignment.");
         }
 
         private void QueueSelectionApply(string reason)
@@ -509,16 +538,6 @@ namespace ScpslCustomRoomPlugin
             Log.Info($"Queued selector swap application ({reason}) in {plugin.Config.RoleSwapDelaySeconds:0.##}s.");
             LogWarmupState($"queued selector swap application ({reason})", true);
             Timing.CallDelayed(plugin.Config.RoleSwapDelaySeconds, ApplySelectionsAfterVanillaAssignment);
-        }
-
-        private void MovePlayerToSpectatorForRoundStart(Player player)
-        {
-            if (!IsWarmupParticipant(player))
-            {
-                return;
-            }
-
-            player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass);
         }
 
         private IEnumerator<float> WatchForRoundStartAfterRelease()
@@ -939,6 +958,12 @@ namespace ScpslCustomRoomPlugin
         private static short GetNativeLobbyTimer()
         {
             return RoundStart.singleton is null ? (short)-2 : RoundStart.singleton.NetworkTimer;
+        }
+
+        private static bool IsNativeCountdownStarting()
+        {
+            short nativeTimer = GetNativeLobbyTimer();
+            return nativeTimer is >= 0 and <= 1;
         }
 
         private static bool IsRoundStarted()
