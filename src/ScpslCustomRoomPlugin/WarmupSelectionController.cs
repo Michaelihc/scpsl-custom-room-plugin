@@ -499,12 +499,29 @@ namespace ScpslCustomRoomPlugin
                 return;
             }
 
+            if (IsRoundStarted())
+            {
+                Log.Info("Skipped final spectator handoff because the round has already started.");
+                return;
+            }
+
+            if (!IsNativeCountdownStarting())
+            {
+                Log.Warn($"Skipped final spectator handoff because native timer is {GetNativeLobbyTimer()}, not in the final pre-start countdown window.");
+                return;
+            }
+
             releasedPlayersForRoundStart = true;
             Timing.KillCoroutines(playerMaintenanceCoroutine);
             Timing.KillCoroutines(roundStartWatchdogCoroutine);
 
-            Log.Info("Prepared warmup players for vanilla round role assignment without changing roles.");
-            LogWarmupState("prepared players for vanilla assignment", true);
+            foreach (Player player in Player.List.Where(IsWarmupParticipant))
+            {
+                MovePlayerToFinalCountdownSpectator(player);
+            }
+
+            Log.Info("Moved warmup players to spectator during final countdown for vanilla round role assignment.");
+            LogWarmupState("final countdown spectator handoff", true);
             roundStartWatchdogCoroutine = Timing.RunCoroutine(WatchForRoundStartAfterRelease());
         }
 
@@ -518,6 +535,19 @@ namespace ScpslCustomRoomPlugin
 
             player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass);
             Log.Info($"{player.Nickname} ({player.UserId}) verified during final countdown handoff; moved to spectator for vanilla round role assignment.");
+        }
+
+        private void MovePlayerToFinalCountdownSpectator(Player player)
+        {
+            if (!IsWarmupParticipant(player) || !player.IsConnected || IsRoundStarted() || !IsNativeCountdownStarting())
+            {
+                return;
+            }
+
+            if (player.Role.Type != RoleTypeId.Spectator)
+            {
+                player.Role.Set(RoleTypeId.Spectator, SpawnReason.ForceClass);
+            }
         }
 
         private void QueueSelectionApply(string reason)

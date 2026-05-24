@@ -4,7 +4,7 @@
 
 适用于 SCP: Secret Laboratory 的 EXILED 暖场 SCP 选择插件。
 
-状态：公开草稿版本 v0.1.3。
+状态：公开草稿版本 v0.1.4。
 
 ## 中文说明
 
@@ -87,7 +87,7 @@ round_start_watchdog_seconds: 45
 
 EXILED plugin for SCP: Secret Laboratory warmup SCP class selection.
 
-Status: public draft version v0.1.3.
+Status: public draft version v0.1.4.
 
 During waiting-for-players, the plugin moves players into an SCP selector lobby anchored at the SCP-173 gate. Players select a preferred SCP by interacting with a coin. The game still owns the native lobby countdown and the vanilla round role distribution.
 
