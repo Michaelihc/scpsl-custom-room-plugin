@@ -1,6 +1,6 @@
 using PlayerRoles;
 
-namespace ScpslCustomRoomPlugin
+namespace WarmupScpSelector.Selection
 {
     public static class VanillaRoleAssignmentResolver
     {

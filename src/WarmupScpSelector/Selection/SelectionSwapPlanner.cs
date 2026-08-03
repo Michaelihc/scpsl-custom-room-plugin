@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PlayerRoles;
 
-namespace ScpslCustomRoomPlugin
+namespace WarmupScpSelector.Selection
 {
     public sealed class SelectionSwapPlan<TPlayer>
         where TPlayer : notnull
@@ -115,23 +115,42 @@ namespace ScpslCustomRoomPlugin
                     continue;
                 }
 
+                HashSet<TPlayer> holderSet = new HashSet<TPlayer>(currentHolders);
+
+                // Phase 1: pickers who already hold this role keep it (natural). Reserve them FIRST so a
+                // different holder's slot can never consume one of them and then displace them later (which
+                // would drop a picker off an SCP they both had and picked when vanilla spawned duplicates).
                 foreach (TPlayer holder in currentHolders)
                 {
-                    TPlayer? selectedPlayer = ChooseSelectedPlayer(pool, alreadyChosen, holder, choosePlayer);
-                    if (selectedPlayer is null)
+                    if (pool.Contains(holder) && alreadyChosen.Add(holder))
+                    {
+                        naturalSelections.Add(new SelectionNatural<TPlayer>(holder, targetRole));
+                    }
+                }
+
+                // Phase 2: fill the remaining (non-natural) holder slots from pickers who are NOT current
+                // holders of this role. The holder's replacement is the selected player's CURRENT planned
+                // role (finalRoles, not originalRoles): a chained earlier pick may already have moved it off
+                // their original vanilla role, and reusing the original would duplicate that SCP.
+                foreach (TPlayer holder in currentHolders)
+                {
+                    if (alreadyChosen.Contains(holder))
+                    {
+                        continue; // kept their own role naturally in phase 1
+                    }
+
+                    List<TPlayer> candidates = pool
+                        .Where(player => !alreadyChosen.Contains(player) && !holderSet.Contains(player))
+                        .ToList();
+                    if (candidates.Count == 0)
                     {
                         break;
                     }
 
+                    TPlayer selectedPlayer = choosePlayer(candidates);
                     alreadyChosen.Add(selectedPlayer);
 
-                    if (EqualityComparer<TPlayer>.Default.Equals(selectedPlayer, holder))
-                    {
-                        naturalSelections.Add(new SelectionNatural<TPlayer>(holder, targetRole));
-                        continue;
-                    }
-
-                    if (!originalRoles.TryGetValue(selectedPlayer, out RoleTypeId replacementRole))
+                    if (!finalRoles.TryGetValue(selectedPlayer, out RoleTypeId replacementRole))
                     {
                         unresolvedSelections.Add(new SelectionUnresolved<TPlayer>(selectedPlayer, targetRole));
                         continue;
@@ -144,25 +163,6 @@ namespace ScpslCustomRoomPlugin
             }
 
             return new SelectionSwapPlan<TPlayer>(finalRoles, skippedUnspawnedRoles, naturalSelections, swaps, unresolvedSelections);
-        }
-
-        private static TPlayer? ChooseSelectedPlayer<TPlayer>(
-            IReadOnlyList<TPlayer> pool,
-            HashSet<TPlayer> alreadyChosen,
-            TPlayer currentHolder,
-            Func<IReadOnlyList<TPlayer>, TPlayer> choosePlayer)
-            where TPlayer : notnull
-        {
-            if (pool.Contains(currentHolder) && !alreadyChosen.Contains(currentHolder))
-            {
-                return currentHolder;
-            }
-
-            List<TPlayer> candidates = pool
-                .Where(player => !alreadyChosen.Contains(player))
-                .ToList();
-
-            return candidates.Count == 0 ? default : choosePlayer(candidates);
         }
     }
 }

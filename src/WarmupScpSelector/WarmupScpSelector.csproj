@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>WarmupScpSelector</AssemblyName>
+    <RootNamespace>WarmupScpSelector</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <ServerManagedPath Condition="'$(ServerManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</ServerManagedPath>
+    <HintServiceMeowPath Condition="'$(HintServiceMeowPath)' == ''">$(APPDATA)\SCP Secret Laboratory\LabAPI\plugins\7777</HintServiceMeowPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" HintPath="$(ServerManagedPath)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ServerManagedPath)\Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="CommandSystem.Core" HintPath="$(ServerManagedPath)\CommandSystem.Core.dll" Private="false" />
+    <Reference Include="LabApi" HintPath="$(ServerManagedPath)\LabApi.dll" Private="false" />
+    <Reference Include="Pooling" HintPath="$(ServerManagedPath)\Pooling.dll" Private="false" />
+    <Reference Include="HintServiceMeow" HintPath="$(HintServiceMeowPath)\HintServiceMeow.dll" Private="false" />
+    <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(ServerManagedPath)\UnityEngine.PhysicsModule.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- Each authored SCP model ships inside the DLL. WithCulture=false + LogicalName avoids the MSBuild
+       "mer = culture code" trap that would otherwise route *.mer.json into a satellite resources.dll. -->
+  <ItemGroup>
+    <EmbeddedResource Include="..\..\generated\models\*.mer.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>WarmupScpSelector.%(Filename)%(Extension)</LogicalName>
+      <Link>generated\models\%(Filename)%(Extension)</Link>
+    </EmbeddedResource>
+  </ItemGroup>
+</Project>
