@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    DEV-ONLY test plugin. NOT shipped: intentionally excluded from WarmupScpSelector.sln so a normal
+    `dotnet build` of the product never produces or deploys it. Build it on demand with:
+        dotnet build -c Release tests/WarmupDummyTester/WarmupDummyTester.csproj
+    then drop the DLL into a LOCAL test server's LabAPI/plugins/<port> folder. Remove it before production.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <AssemblyName>WarmupDummyTester</AssemblyName>
+    <RootNamespace>WarmupDummyTester</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <ServerManagedPath Condition="'$(ServerManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</ServerManagedPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" HintPath="$(ServerManagedPath)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ServerManagedPath)\Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="LabApi" HintPath="$(ServerManagedPath)\LabApi.dll" Private="false" />
+    <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(ServerManagedPath)\UnityEngine.PhysicsModule.dll" Private="false" />
+  </ItemGroup>
+
+  <!-- Reads the LIVE WarmupScpSelector config (SCP list + room origin) so dummy picks and placement match
+       the real selector. Private=false: the product DLL is already loaded by LabAPI at runtime; don't copy it. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WarmupScpSelector\WarmupScpSelector.csproj" Private="false" />
+  </ItemGroup>
+</Project>

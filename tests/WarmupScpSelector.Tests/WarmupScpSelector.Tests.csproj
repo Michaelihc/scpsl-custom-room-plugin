@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>WarmupScpSelector.Tests</AssemblyName>
+    <RootNamespace>WarmupScpSelector.Tests</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <ServerManagedPath Condition="'$(ServerManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</ServerManagedPath>
+  </PropertyGroup>
+
+  <!-- The swap planner, resolver, text, and the activity-suite lifecycle core are pure logic (no Unity/LabApi
+       types), so the headless test compiles those source files directly instead of referencing the plugin. -->
+  <ItemGroup>
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\SelectionSwapPlanner.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\VanillaRoleAssignmentResolver.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Text\WarmupText.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Text\AimRangeText.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Text\ActivityGlyphs.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Services\HintChangeCache.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\IActivityLane.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\ActivityManager.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\LaneFlashTracker.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\LaneHintIds.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\AimRangeSessions.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\AimRangeDeterminism.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\SlidingTargetLogic.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\SphereTargetLayout.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\SphereTargetSettings.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\SphereTargetState.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeTargetState.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\ActivityConfig.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\AimWeaponPresetRules.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotLogic.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotRegistry.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotValidatedSettings.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotLobbyPolicy.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\WeaponShelfState.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Warmup\ParticipantIdentity.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Models\MerWorldTransform.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeLayout.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeMarkerAlignment.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp" HintPath="$(ServerManagedPath)\Assembly-CSharp.dll" Private="true" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ServerManagedPath)\Assembly-CSharp-firstpass.dll" Private="true" />
+    <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="true" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="true" />
+  </ItemGroup>
+</Project>
