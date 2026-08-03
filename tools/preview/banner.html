@@ -1,0 +1,179 @@
+<!doctype html><html><head><meta charset="utf-8">
+<title>莺歌傲然 · warmup retheme preview</title>
+<style>
+  :root{--bg:#0b0e14;}
+  *{box-sizing:border-box}
+  body{margin:0;background:#05070b;color:#e7ecf3;font:15px/1.6 "Microsoft YaHei","Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1040px;margin:0 auto;padding:26px 20px 80px}
+  h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#8b95a6;margin:30px 0 10px;font-weight:600}
+  /* stage ≈ the dark night facility surface the room floats above (no flashlight) */
+  .stage{border:1px solid #232a37;border-radius:12px;padding:34px 22px;overflow-x:auto;text-align:center;
+    background:radial-gradient(120% 90% at 50% 0%,#141b28 0%,#0a0e15 55%,#05070b 100%)}
+  .stage.room{background:radial-gradient(90% 120% at 50% 60%,#12161f 0%,#0a0d13 60%,#06080c 100%)}
+  .tmp{white-space:pre-wrap;line-height:1.5;text-shadow:0 1px 2px rgba(0,0,0,.85),0 0 10px rgba(0,0,0,.5)}
+  b{font-weight:800}
+  .hint{color:#8b95a6;font-size:12px;margin:8px 2px 0}
+  pre{background:#0a0d12;border:1px solid #232a37;border-radius:8px;padding:12px;font:12px/1.5 Consolas,monospace;
+    color:#cdd6e3;white-space:pre-wrap;word-break:break-word;overflow-x:auto}
+</style></head><body>
+<div class="wrap">
+  <h2>World-text brand + welcome line — beneath the primitive logo</h2>
+  <div id="banner" class="stage tmp" style="font-size:26px"></div>
+  <p class="hint">The emblem itself is a MER primitive model; this previews the matching TMP TextToy copy below it.</p>
+
+  <h2>Warmup status panel (HSM) — bottom of screen</h2>
+  <div id="statusPanel" class="stage room tmp" style="font-size:17px"></div>
+
+  <h2>Aim Range HUD (HSM) — narrow left lane (x-1077) · EN</h2>
+  <p class="hint">The whole in-range HUD renders on one configurable left-lane HSM X (<b>AimRangeActivityConfig.HudX</b>,
+    default -1077) so its boxes land in the narrow ~px216..496 corridor between the native inventory list and the
+    inventory wheel at 1920x1080 — clear of both while TAB is held. Compact zones: force-shown flash (Y592),
+    persistent three-line hero (Y700: tiny weapon/target/bot eyebrow, short state rail, hits/accuracy strip), short
+    footer (Y805), and the collapsed status strip (Y900) that replaces the full draft panel while inside the range.
+    No nested <b>&lt;size&gt;</b> spans. Color obeys the plan HUD law (teal = you/live, white = values, dim/line =
+    not-yet track). Faithful mirror of <b>Text/AimRangeText.cs</b> + <b>WarmupText.BuildCollapsedStatusStrip</b>.</p>
+  <div id="aimEnFlash" class="stage room tmp" style="font-size:19px"></div>
+  <div id="aimEnHero" class="stage room tmp" style="font-size:17px;margin-top:8px"></div>
+  <div id="aimEnFooter" class="stage room tmp" style="font-size:17px;margin-top:8px"></div>
+  <div id="aimEnStatus" class="stage room tmp" style="font-size:17px;margin-top:8px"></div>
+
+  <h2>Aim Range HUD (HSM) — collision-free bands · CN</h2>
+  <div id="aimCnFlash" class="stage room tmp" style="font-size:19px"></div>
+  <div id="aimCnHero" class="stage room tmp" style="font-size:17px;margin-top:8px"></div>
+  <div id="aimCnFooter" class="stage room tmp" style="font-size:17px;margin-top:8px"></div>
+  <div id="aimCnStatus" class="stage room tmp" style="font-size:17px;margin-top:8px"></div>
+
+  <h2>Activity glyph gate — signature glyphs vs ASCII fallback</h2>
+  <p class="hint">Only <b>● ▶ | · —　</b> are proven in shipped SCP:SL TMP. The signature glyphs below are unvalidated
+    until confirmed here (no tofu boxes) in the real game font. Each has a registered ASCII fallback in
+    <b>ActivityGlyphs</b> (used when <b>Config.Activities.UseAsciiGlyphFallback</b> is set). If any glyph in the
+    "Unicode" row renders as a box, ship with the fallback.</p>
+  <div id="glyphGate" class="stage tmp" style="font-size:22px"></div>
+  <div id="glyphAscii" class="stage tmp" style="font-size:22px;margin-top:10px"></div>
+
+  <h2>Lane state-line — Ghost Rail (Aim) — Unicode then ASCII fallback</h2>
+  <div id="railUnicode" class="stage room tmp" style="font-size:20px"></div>
+  <div id="railAscii" class="stage room tmp" style="font-size:20px;margin-top:10px"></div>
+
+  <h2>Raw TMP strings</h2>
+  <pre id="raw"></pre>
+</div>
+<script>
+// EDIT these two strings to the final spec's TMP markup, then reload to inspect.
+const BANNER = `<align=center><size=135%><b><color=#6BFF6B>莺</color><color=#2DFFBE>歌</color><color=#3CE2E7>傲</color><color=#4FCBFF>然</color></b></size>
+<size=46%><color=#FFE08A>祝你玩得愉快　·　欢迎加入 QQ 群 860705092</color></size></align>`;
+
+const STATUS = `<align=center><size=165%><b><color=#4FCBFF>SCP</color><color=#FFD24D> 选择</color></b></size>
+<size=70%> </size>
+<color=#8B95A6>倒计时 </color><b><color=#FFD24D>12</color></b><color=#8B95A6>秒</color>   <color=#5B6270>|</color>   <color=#8B95A6>玩家 </color><b><color=#E7ECF3>7</color></b><color=#5B6270> / 30</color>
+<color=#232A37>———————————————</color>
+<color=#8B95A6>已选择</color>　<b><color=#4FCBFF>SCP-096</color></b><color=#5B6270>　·　</color><b><color=#E7ECF3>3</color></b><color=#8B95A6> 人</color>
+<size=92%><color=#5B6270>049</color>  <color=#5B6270>079</color>  <b><color=#62EE9C>[</color><color=#E7ECF3>096</color><color=#62EE9C>]</color></b><size=70%><color=#8B95A6>·3</color></size>  <color=#5B6270>106</color>  <color=#5B6270>173</color>  <color=#5B6270>939</color>  <color=#5B6270>3114</color></size>
+<size=70%> </size>
+<size=80%><color=#8B95A6>抓取硬币以选择或更改</color></size></align>`;
+
+// Aim Range HUD — faithful mirror of src/WarmupScpSelector/Text/AimRangeText.cs (+ WarmupText collapsed strip).
+const WS = (function () {
+  const Accent = "#4FCBFF", Gold = "#FFD24D", Urgent = "#FF5555", Ready = "#5BFF80",
+    White = "#E7ECF3", Muted = "#8B95A6", Dim = "#5B6270", Line = "#232A37";
+  const RAIL_CELLS = 5;
+  const col = (h, t) => "<color=" + h + ">" + t + "</color>";
+  const sep = () => col(Dim, " · ");
+  const wl = { com15: "COM-15", com18: "COM-18", fsp9: "FSP-9", crossvec: "Crossvec", ak: "AK", e11sr: "E11-SR" };
+  const weaponLabel = (id) => id ? (wl[String(id).toLowerCase()] || String(id).toUpperCase()) : "";
+  const targetText = (t, cn) => t === "static" ? (cn ? "静态靶" : "Static") : t === "moving" ? (cn ? "移动靶" : "Moving") : (cn ? "无靶" : "No target");
+  const clamp = (v, lo, hi) => v < lo ? lo : (v > hi ? hi : v);
+  function botText(p, cn) {
+    switch (p) { case "passive": return [Muted, cn ? "机器人待机" : "Bots idle"]; case "retaliating": return [Urgent, cn ? "机器人还击" : "Bots firing"]; case "respawning": return [Muted, cn ? "机器人重生" : "Bot respawning"]; default: return [Muted, ""]; }
+  }
+  function eyebrow(s, cn) {
+    let o = s.hasWeapon ? "<b>" + col(White, weaponLabel(s.preset) || (cn ? "武器" : "Gun")) + "</b>" : col(Dim, cn ? "未持枪" : "No gun");
+    o += sep() + col(Muted, targetText(s.target, cn));
+    const b = botText(s.bots, cn); if (b[1]) o += sep() + col(b[0], b[1]);
+    return o;
+  }
+  // The signature state rail: teal accuracy fill + teal "you" marker, dim/Line "not-yet" remainder.
+  function buildRail(s) {
+    const hits = s.targetHits + s.botHits;
+    let filled = s.shots > 0 ? Math.round(hits / s.shots * RAIL_CELLS) : 0;
+    filled = clamp(filled, 0, RAIL_CELLS);
+    return (filled > 0 ? col(Accent, "━".repeat(filled)) : "") + col(Accent, "◆")
+      + (filled < RAIL_CELLS ? col(Line, "━".repeat(RAIL_CELLS - filled)) : "");
+  }
+  // Line 3 of the hero: value-first session hits + accuracy (or TAKE A GUN when unarmed).
+  function statLine(s, cn) {
+    if (!s.hasWeapon) return "<b>" + col(Accent, cn ? "去取一把枪" : "TAKE A GUN") + "</b>";
+    const hits = s.targetHits + s.botHits;
+    let o = "<b>" + col(White, String(hits)) + "</b>" + col(Muted, cn ? " 命中" : " HITS");
+    if (s.shots > 0) {
+      const acc = clamp(Math.round(hits / s.shots * 100), 0, 100);
+      const av = "<b>" + col(White, acc + "%") + "</b>";
+      o += col(Dim, " · ") + av + col(Muted, cn ? " 命中率" : " ACC");
+    }
+    return o;
+  }
+  // Three sibling size spans (never nested) for the narrow lane: eyebrow, rail, stat.
+  function hero(s, cn) { return "<align=center><size=58%>" + eyebrow(s, cn) + "</size>\n<size=105%>" + buildRail(s) + "</size>\n<size=66%>" + statLine(s, cn) + "</size></align>"; }
+  function footer(s, cn) {
+    let t;
+    if (!s.hasWeapon) t = cn ? "去武器架取一把枪" : "Grab a gun off the rack";
+    else if (s.bots === "retaliating" || (s.incoming > 0 && s.bots !== "none")) t = cn ? "切断视线躲子弹" : "Break line of sight";
+    else if (s.target !== "none") t = cn ? "击中亮起的靶子" : "Hit the lit target";
+    else t = cn ? "射击机器人激怒它" : "Shoot a bot to engage it";
+    return "<align=center><size=80%>" + col(Muted, t) + "</size></align>";
+  }
+  function flash(k, cn) {
+    let c, t;
+    switch (k) { case "incoming": c = Urgent; t = cn ? "你被击中！" : "INCOMING!"; break; default: return ""; }
+    return "<align=center><size=120%><b>" + col(c, t) + "</b></size></align>";
+  }
+  function collapsed(timer, name, count, cn) {
+    let o = "<align=center><size=88%>" + col(Muted, cn ? "已选" : "PICK") + " " + "<b>" + col(Accent, name) + "</b>" + (count > 0 ? col(Dim, " ·" + count) : "");
+    let cd;
+    if (timer === -2) cd = col(Muted, cn ? "等待" : "Wait");
+    else if (timer <= 0) cd = "<b>" + col(Ready, cn ? "开始" : "Start") + "</b>";
+    else { const c = timer <= 5 ? Urgent : Gold, sec = "<b>" + col(c, String(timer)) + "</b>"; cd = sec + col(Muted, cn ? "秒" : "s"); }
+    o += col(Dim, " | ") + cd + "</size></align>";
+    return o;
+  }
+  return { hero, footer, flash, collapsed };
+})();
+
+const AIM_VIEW = { hasWeapon: true, preset: "ak", target: "none", bots: "retaliating", shots: 22, targetHits: 3, botHits: 6, incoming: 3 };
+
+// Signature glyphs + registered ASCII fallbacks — MUST match src/WarmupScpSelector/Text/ActivityGlyphs.cs.
+const GLYPHS=[
+  {u:"━",a:"--",use:"line track"},
+  {u:"╌",a:"··",use:"severed track"},
+  {u:"│",a:"|", use:"PB gate / separator"},
+  {u:"◆",a:"#", use:"you (race)"},
+  {u:"◇",a:"o", use:"rival (race)"},
+  {u:"▲",a:"+", use:"ahead"},
+  {u:"▼",a:"-", use:"behind"},
+];
+// Mirror of ActivityGlyphs.Resolve: swap every signature glyph for its fallback.
+function ascii(s){let o=s;for(const g of GLYPHS)o=o.split(g.u).join(g.a);return o;}
+
+const GLYPH_GATE="<align=center><size=70%><color=#8B95A6>UNICODE (validate: no tofu boxes)</color></size>\n"
+  +GLYPHS.map(g=>"<color=#E7ECF3>"+g.u+"</color><size=52%><color=#5B6270> "+g.use+"</color></size>").join("   ")
+  +"</align>";
+const GLYPH_ASCII="<align=center><size=70%><color=#8B95A6>ASCII FALLBACK</color></size>\n"
+  +GLYPHS.map(g=>"<color=#A8B0BC>"+g.a+"</color><size=52%><color=#5B6270> "+g.use+"</color></size>").join("   ")
+  +"</align>";
+
+// Ghost Rail (Aim) hero state line — you (◆) ahead of the PB gate (│) on a green→dim track.
+const RAIL="<align=center><color=#5BFF80>━━━━━</color><color=#FFD24D>│</color><color=#4FCBFF>━◆</color><color=#232A37>━━━━</color></align>";
+
+function tmp(s){return s
+  .replace(/<align=center>/g,'<div style="text-align:center">').replace(/<\/align>/g,'</div>')
+  .replace(/<color=(#[0-9A-Fa-f]{3,8})>/g,'<span style="color:$1">').replace(/<\/color>/g,'</span>')
+  .replace(/<size=([0-9]+)%>/g,'<span style="font-size:$1%">').replace(/<\/size>/g,'</span>');}
+banner.innerHTML=tmp(BANNER); statusPanel.innerHTML=tmp(STATUS);
+glyphGate.innerHTML=tmp(GLYPH_GATE); glyphAscii.innerHTML=tmp(GLYPH_ASCII);
+railUnicode.innerHTML=tmp(RAIL); railAscii.innerHTML=tmp(ascii(RAIL));
+aimEnFlash.innerHTML=tmp(WS.flash("incoming",false)); aimEnHero.innerHTML=tmp(WS.hero(AIM_VIEW,false));
+aimEnFooter.innerHTML=tmp(WS.footer(AIM_VIEW,false)); aimEnStatus.innerHTML=tmp(WS.collapsed(12,"SCP-096",3,false));
+aimCnFlash.innerHTML=tmp(WS.flash("incoming",true)); aimCnHero.innerHTML=tmp(WS.hero(AIM_VIEW,true));
+aimCnFooter.innerHTML=tmp(WS.footer(AIM_VIEW,true)); aimCnStatus.innerHTML=tmp(WS.collapsed(12,"SCP-096",3,true));
+raw.textContent="BANNER:\n"+BANNER+"\n\nSTATUS:\n"+STATUS+"\n\nRAIL (unicode):\n"+RAIL+"\n\nRAIL (ascii fallback):\n"+ascii(RAIL);
+</script></body></html>

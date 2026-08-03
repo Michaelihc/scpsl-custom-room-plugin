@@ -8,11 +8,20 @@ obj/
 *.nupkg
 *.snupkg
 
-# Local SCP:SL / EXILED server artifacts
-Exiled/
-EXILED/
+# Python pipeline artifacts
+__pycache__/
+*.pyc
+.venv/
+.playwright-mcp/
+CLAUDE.md
+generated/*.log
+
+# Local SCP:SL / LabAPI server artifacts
+LabApi/
 Plugins/
 configs/
 logs/
 LocalAdminLogs/
 ServerConsole.log
+
+# Generated model JSON + render previews are tracked on purpose (shipped assets + review aids).

@@ -1,0 +1,4 @@
+# Offline model pipeline (author .mer.json -> render contact sheets -> contract test).
+# Runtime plugin needs none of this; these are only for tools/ and tests/models/.
+numpy
+pillow
