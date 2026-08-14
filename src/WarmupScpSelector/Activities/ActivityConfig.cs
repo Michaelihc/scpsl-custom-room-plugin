@@ -14,6 +14,39 @@ namespace WarmupScpSelector.Activities
 
         [Description("Full warmup Aim Range settings.")]
         public AimRangeActivityConfig Aim { get; set; } = new AimRangeActivityConfig();
+
+        [Description("Parkour course settings for the empty far-left Aim-hall subarea.")]
+        public ParkourActivityConfig Parkour { get; set; } = new ParkourActivityConfig();
+    }
+
+    public sealed class ParkourActivityConfig
+    {
+        [Description("Offer Pulse Line parkour during warmup. Requires ActivitiesEnabled and the Aim hall. Default OFF.")]
+        public bool Enabled { get; set; } = false;
+
+        [Description("Parkour occupancy, gate, recovery, and HUD updates per second.")]
+        public float SchedulerRateHz { get; set; } = 20f;
+
+        [Description("Seconds a player must remain on the start plate before the countdown begins.")]
+        public float StartHoldSeconds { get; set; } = 0.6f;
+
+        [Description("Quiet countdown duration before the authoritative timer starts.")]
+        public float CountdownSeconds { get; set; } = 3f;
+
+        [Description("Seconds after recovery during which gates and another recovery are ignored.")]
+        public float RecoveryGraceSeconds { get; set; } = 0.35f;
+
+        [Description("HSM center-X for the parkour flash, hero, and footer.")]
+        public float HudX { get; set; } = -1077f;
+
+        [Description("HSM Y of parkour event flashes.")]
+        public float FlashY { get; set; } = 592f;
+
+        [Description("HSM Y of the persistent parkour timer and split spine.")]
+        public float HeroY { get; set; } = 700f;
+
+        [Description("HSM Y of the parkour instruction footer.")]
+        public float FooterY { get; set; } = 805f;
     }
 
     public sealed class AimRangeActivityConfig
@@ -24,16 +57,16 @@ namespace WarmupScpSelector.Activities
         [Description("Main scheduler updates per second.")]
         public float SchedulerRateHz { get; set; } = 20f;
 
-        [Description("Range occupancy checks per second.")]
+        [Description("Full-room activity occupancy checks per second.")]
         public float OccupancyRateHz { get; set; } = 5f;
 
         [Description("Stable salt combined with map/range/card generations.")]
         public int SeedSalt { get; set; } = 17031;
 
-        [Description("Seconds before a claimed shelf slot replenishes.")]
+        [Description("Legacy compatibility key; persistent shooting-counter pickups do not replenish.")]
         public float ShelfReplenishSeconds { get; set; } = 1.5f;
 
-        [Description("Authored physical shelf weapon presets. Invalid presets disable only their slot.")]
+        [Description("Persistent shooting-counter weapon presets. Picking one grants an owned inventory copy without removing the displayed pickup.")]
         public List<AimWeaponPresetConfig> WeaponPresets { get; set; } = new List<AimWeaponPresetConfig>
         {
             new AimWeaponPresetConfig("com15", ItemType.GunCOM15, ItemType.Ammo9x19, 60),
@@ -53,20 +86,11 @@ namespace WarmupScpSelector.Activities
         [Description("Number of cards in the deterministic target deck before it repeats. Legacy compatibility key; the three persistent sliding targets ignore it.")]
         public int TargetSequenceSize { get; set; } = 24;
 
-        [Description("Number of simultaneous Aim-Lab sphere targets in lane 3.")]
-        public int SphereActiveCount { get; set; } = 3;
+        [Description("Number of simultaneous Aim-Lab sphere targets in lane 3. The default 20 uses static toys and the shared hitscan callback; no per-frame raycasts are added.")]
+        public int SphereActiveCount { get; set; } = 20;
 
         [Description("Diameter in metres of each Aim-Lab sphere target.")]
         public float SphereDiameter { get; set; } = 0.72f;
-
-        [Description("Seconds after a sphere pops before it respawns at another deterministic point.")]
-        public float SphereRespawnSeconds { get; set; } = 0.32f;
-
-        [Description("Seconds before retrying a sphere spawn when no authored point is free.")]
-        public float SphereSpawnRetrySeconds { get; set; } = 0.5f;
-
-        [Description("Stable deterministic salt for lane-3 sphere relocation.")]
-        public int SphereSeedSalt { get; set; } = 37013;
 
         [Description("Number of authored native dummy bot slots enabled in lane 1 (0-2). Default 0; set explicitly to opt in.")]
         public int BotCount { get; set; } = 0;
@@ -83,16 +107,16 @@ namespace WarmupScpSelector.Activities
         [Description("Legacy compatibility timeout; direct native FPC movement does not use waypoint association.")]
         public float BotAssociationTimeoutSeconds { get; set; } = 1.5f;
 
-        [Description("Seconds before an alerted bot may begin returning fire.")]
-        public float BotAcquireDelaySeconds { get; set; } = 0.45f;
+        [Description("Pre-trigger alert stage before the bot snaps to the torso and holds native automatic fire. Clamped to 0.5-0.55 seconds.")]
+        public float BotAcquireDelaySeconds { get; set; } = 0.5f;
 
-        [Description("Maximum retry delay after native bot firing conditions are interrupted.")]
-        public float BotShotCadenceSeconds { get; set; } = 0.8f;
+        [Description("Native Shoot->Hold re-arm cadence. Clamped to 0.5-0.6 seconds so automatic retaliation stays consistent.")]
+        public float BotShotCadenceSeconds { get; set; } = 0.55f;
 
         [Description("Seconds allowed for native ShotWeapon plus ammo-consumption verification.")]
         public float BotShotVerificationSeconds { get; set; } = 0.65f;
 
-        [Description("Maximum distance at which an aggro bot may return fire.")]
+        [Description("Configured bot retaliation distance. Values shorter than the continuous hall diagonal are raised at runtime so every valid in-hall aggressor can receive return fire.")]
         public float BotMaxRetaliationDistance { get; set; } = 24f;
 
         [Description("Maximum camera angular error accepted before native automatic fire is held.")]
@@ -104,12 +128,10 @@ namespace WarmupScpSelector.Activities
         [Description("Seconds the first valid attacker remains locked as a bot's aggressor.")]
         public float BotAggroLeaseSeconds { get; set; } = 12f;
 
-        [Description("Automatic rifle presets selected deterministically per bot spawn (E11-SR, Logicer, or AK only).")]
+        [Description("Bot weapon preset. Range bots are forced to the Crossvec automatic preset; legacy non-Crossvec entries are ignored.")]
         public List<AimWeaponPresetConfig> BotWeaponPresets { get; set; } = new List<AimWeaponPresetConfig>
         {
-            new AimWeaponPresetConfig("bot-e11sr", ItemType.GunE11SR, ItemType.Ammo556x45, 180),
-            new AimWeaponPresetConfig("bot-logicer", ItemType.GunLogicer, ItemType.Ammo762x39, 200),
-            new AimWeaponPresetConfig("bot-ak", ItemType.GunAK, ItemType.Ammo762x39, 180),
+            new AimWeaponPresetConfig("bot-crossvec", ItemType.GunCrossvec, ItemType.Ammo9x19, 240),
         };
 
         [Description("Full positive health restored by a same-life Aim lethal intercept.")]

@@ -48,8 +48,6 @@ public sealed class SelectorRoom
     private static readonly Color CeilingColor = Hex("#0A0D13");
     private static readonly Color PedestalColor = Hex("#1A2130");
     private static readonly Color MainLightColor = Hex("#F4F3EE");   // overhead + spawn fill
-    private static readonly Color SpotLightColor = Hex("#F5F9FF");   // per-pedestal focus
-    private static readonly Color LogoLightColor = Hex("#FFF1D0");   // warm-neutral trigger for the HDR logo bloom
     private static readonly Color PlaceholderColor = Hex("#5A6472");
 
     // The logo's resolved bounds are 6.419467 x 7.950564; centering around this authored-space point makes
@@ -100,10 +98,16 @@ public sealed class SelectorRoom
     /// <summary>Resolved room origin (floor-surface center) for the current build; used to place activity stations.</summary>
     public Vector3 Origin { get; private set; }
 
-    /// <summary>World Z of the prepared rear doorway into the optional Aim Range.</summary>
+    /// <summary>Resolved width shared by the selector gallery and its continuous Aim hall.</summary>
+    public float Width { get; private set; }
+
+    /// <summary>Depth of the selector-gallery portion of the continuous hall.</summary>
+    public float Depth => FloorDepth;
+
+    /// <summary>World Z where the selector floor meets the optional Aim hall.</summary>
     public float AimRangeDoorPlaneZ { get; private set; }
 
-    /// <summary>Whether the room authored a fail-closed Aim doorway for this warmup.</summary>
+    /// <summary>Whether the room authored a fail-closed full-width seam for this warmup.</summary>
     public bool AimRangeDoorPrepared { get; private set; }
 
     public bool IsSpawned { get; private set; }
@@ -132,6 +136,7 @@ public sealed class SelectorRoom
         float pedestalWidth = Mathf.Min(spacing * 0.7f, 1.6f);
 
         Origin = origin;
+        Width = floorWidth;
         SpawnPosition = origin + new Vector3(0f, 0.5f, SpawnZ);
 
         // Floor (top surface at the room origin Y) and four perimeter walls so Tutorial players can't fall off.
@@ -146,7 +151,7 @@ public sealed class SelectorRoom
         AddBox(origin + new Vector3(0f, wallMidY, backZ), new Vector3(floorWidth, WallHeight, WallThickness), WallColor, collidable: true);
         if (Config.ActivitiesEnabled && Config.Activities?.Aim?.Enabled == true)
         {
-            BuildAimRangeDoorway(origin, floorWidth, frontZ);
+            BuildAimRangeSeam(origin, floorWidth, frontZ);
         }
         else
         {
@@ -163,15 +168,13 @@ public sealed class SelectorRoom
         SpawnLogo(origin + wallContentZ + new Vector3(0f, FloorTopY + 3.15f, 0f), LogoScale);
         AddBanner(origin + wallContentZ + new Vector3(0f, FloorTopY + 0.95f, -0.01f));
 
-        // Overhead point lights so the room is actually visible without a flashlight.
+        // Three strong, broad point lights illuminate the entire selector half. Do not regress to one
+        // light per model or HDR/emissive colors: the combined hall deliberately uses a few bright lights.
         float lightY = FloorTopY + WallHeight - 0.6f;
-        AddLight(origin + new Vector3(0f, lightY, FloorCenterZ), 3.2f, 18f);
-        if (rowWidth > 4f)
+        foreach (float x in new[] { -floorWidth / 3f, 0f, floorWidth / 3f })
         {
-            AddLight(origin + new Vector3(-rowWidth / 3f, lightY, FloorCenterZ), 2.8f, 16f);
-            AddLight(origin + new Vector3(rowWidth / 3f, lightY, FloorCenterZ), 2.8f, 16f);
+            AddLight(origin + new Vector3(x, lightY, FloorCenterZ), 24f, 18f);
         }
-        AddLight(origin + new Vector3(0f, lightY, SpawnZ), 2.4f, 15f);
 
         // Models face the players (who stand on -Z): rotate the +Z-authored models 180 degrees about Y.
         Quaternion facing = Quaternion.Euler(0f, 180f, 0f);
@@ -185,9 +188,6 @@ public sealed class SelectorRoom
 
             Vector3 modelBase = origin + new Vector3(x, FloorTopY + PedestalHeight, RowZ + 0.05f);
             float modelTop = SpawnModel(ResolveModelName(option), modelBase, facing, Sanitize(Config.ModelScale, 0.05f, 10f, 1f));
-
-            // A brighter focused near-white light in front of each SCP so the model pops out of the dark surface.
-            AddLight(origin + new Vector3(x, FloorTopY + PedestalHeight + modelTop * 0.5f + 0.6f, RowZ - 1.4f), 4.6f, 6.5f, SpotLightColor);
 
             // Label faces the player (-Z) with identity rotation; the 180-degree model facing mirrored the text.
             AddLabel(origin + new Vector3(x, FloorTopY + PedestalHeight + modelTop + 0.45f, RowZ), option.Label, Quaternion.identity);
@@ -220,31 +220,14 @@ public sealed class SelectorRoom
         _plugin.LogDebug($"Built selector room at {origin}: {_toys.Count} toys, {_pickups.Count} coins.");
     }
 
-    // The range is fail-closed: the gallery authors a real doorway but fills it with a collidable gate. The
-    // activity lane removes that gate only after the extension, shelves, targets and scheduler are ready.
-    private void BuildAimRangeDoorway(Vector3 origin, float floorWidth, float frontZ)
+    // The hall is fail-closed during synchronous setup. Its temporary full-width wall disappears only after the
+    // aligned continuation, counter guns, targets, and scheduler are ready; no doorway geometry remains afterward.
+    private void BuildAimRangeSeam(Vector3 origin, float floorWidth, float frontZ)
     {
-        float doorWidth = Mathf.Min(AimRangeLayout.DoorWidth, Mathf.Max(1f, floorWidth - 1f));
-        float stubWidth = (floorWidth - doorWidth) / 2f;
-        float wallMidY = FloorTopY + WallHeight / 2f;
-        if (stubWidth > 0f)
-        {
-            float offset = (doorWidth + stubWidth) / 2f;
-            AddBox(origin + new Vector3(-offset, wallMidY, frontZ), new Vector3(stubWidth, WallHeight, WallThickness), WallColor, collidable: true);
-            AddBox(origin + new Vector3(offset, wallMidY, frontZ), new Vector3(stubWidth, WallHeight, WallThickness), WallColor, collidable: true);
-        }
-
-        float lintelHeight = Mathf.Max(0.1f, WallHeight - AimRangeLayout.DoorHeight);
-        AddBox(
-            origin + new Vector3(0f, AimRangeLayout.DoorHeight + lintelHeight / 2f, frontZ),
-            new Vector3(doorWidth, lintelHeight, WallThickness),
-            WallColor,
-            collidable: true);
-
         AimRangeDoorPlaneZ = origin.z + frontZ;
         AimRangeDoorPrepared = true;
-        _aimDoorCenter = origin + new Vector3(0f, AimRangeLayout.DoorHeight / 2f, frontZ);
-        _aimDoorSize = new Vector3(doorWidth, AimRangeLayout.DoorHeight, WallThickness);
+        _aimDoorCenter = origin + new Vector3(0f, WallHeight / 2f, frontZ);
+        _aimDoorSize = new Vector3(floorWidth, WallHeight, WallThickness);
         _aimDoorGate = AddBox(_aimDoorCenter, _aimDoorSize, WallColor, collidable: true);
     }
 
@@ -320,6 +303,7 @@ public sealed class SelectorRoom
         _aimDoorSize = default;
         AimRangeDoorPlaneZ = 0f;
         AimRangeDoorPrepared = false;
+        Width = 0f;
         IsSpawned = false;
     }
 
@@ -428,10 +412,8 @@ public sealed class SelectorRoom
             toy.Spawn();
         }
 
-        // SCP:SL's primitive material has no networked emissive channel, but its _BaseColor accepts
-        // unclamped HDR values. A translucent HDR albedo plus one nearby real light triggers the same
-        // client bloom used by the Serpent's Hand spiky wall without multiplying lights per logo quad.
-        AddLight(centerWorld + new Vector3(0f, 0f, -0.4f), 5f, 3.5f, LogoLightColor);
+        // The center selector light is shared with the room instead of adding a fourth point light.
+        // Unclamped translucent base colors restore the branded logo bloom within that light budget.
     }
 
     private PrimitiveObjectToy AddBox(Vector3 center, Vector3 size, Color color, bool collidable)

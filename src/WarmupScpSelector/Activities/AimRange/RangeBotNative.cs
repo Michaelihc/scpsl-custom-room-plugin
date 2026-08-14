@@ -16,32 +16,50 @@ namespace WarmupScpSelector.Activities.AimRange
     {
         public static bool HasDummyAction(ReferenceHub hub, string actionName)
         {
-            if (hub == null || hub.gameObject == null || !hub.IsDummy || string.IsNullOrWhiteSpace(actionName))
+            try
             {
+                if (hub == null || hub.gameObject == null || !hub.IsDummy || string.IsNullOrWhiteSpace(actionName))
+                {
+                    return false;
+                }
+
+                return DummyActionCollector.ServerGetActions(hub).Any(action =>
+                    action.Action != null && string.Equals(action.Name, actionName, StringComparison.OrdinalIgnoreCase));
+            }
+            catch
+            {
+                // A round reset can invalidate the native dummy between the wrapper checks above and action
+                // enumeration. Teardown treats that as already released instead of poisoning the next Start().
                 return false;
             }
-
-            return DummyActionCollector.ServerGetActions(hub).Any(action =>
-                action.Action != null && string.Equals(action.Name, actionName, StringComparison.OrdinalIgnoreCase));
         }
 
         public static bool TryInvokeDummyAction(ReferenceHub hub, string actionName)
         {
-            if (hub == null || hub.gameObject == null || !hub.IsDummy || string.IsNullOrWhiteSpace(actionName))
+            try
             {
+                if (hub == null || hub.gameObject == null || !hub.IsDummy || string.IsNullOrWhiteSpace(actionName))
+                {
+                    return false;
+                }
+
+                foreach (DummyAction action in DummyActionCollector.ServerGetActions(hub))
+                {
+                    if (action.Action != null && string.Equals(action.Name, actionName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        action.Action.Invoke();
+                        return true;
+                    }
+                }
+
                 return false;
             }
-
-            foreach (DummyAction action in DummyActionCollector.ServerGetActions(hub))
+            catch
             {
-                if (action.Action != null && string.Equals(action.Name, actionName, StringComparison.OrdinalIgnoreCase))
-                {
-                    action.Action.Invoke();
-                    return true;
-                }
+                // Native action tables disappear with the dummy during a round reset. The caller will detach
+                // its bookkeeping regardless, so a stale native handle is equivalent to an unavailable action.
+                return false;
             }
-
-            return false;
         }
 
         public static int FirearmAmmoUnits(FirearmItem firearm) =>
@@ -50,6 +68,7 @@ namespace WarmupScpSelector.Activities.AimRange
         public static Vector3 AimPoint(ReferenceHub hub)
         {
             HitboxIdentity? best = null;
+            HitboxIdentity? head = null;
             int bestRank = int.MaxValue;
             foreach (HitboxIdentity hitbox in HitboxIdentity.Instances)
             {
@@ -58,7 +77,15 @@ namespace WarmupScpSelector.Activities.AimRange
                     continue;
                 }
 
-                int rank = hitbox.HitboxType == HitboxType.Headshot ? 0 : hitbox.HitboxType == HitboxType.Body ? 1 : 2;
+                // Retaliation deliberately never targets the head. If a role exposes no body/limb hitbox,
+                // the torso-height transform fallback below is safer than selecting its head collider.
+                if (hitbox.HitboxType == HitboxType.Headshot)
+                {
+                    head ??= hitbox;
+                    continue;
+                }
+
+                int rank = hitbox.HitboxType == HitboxType.Body ? 0 : 1;
                 if (rank < bestRank)
                 {
                     best = hitbox;
@@ -68,11 +95,54 @@ namespace WarmupScpSelector.Activities.AimRange
 
             if (best != null)
             {
+                // Human Body reference points can sit close to the model root in this build. Interpolate from
+                // that point toward the head reference to obtain a stable sternum point, still well below the
+                // headshot collider, instead of aiming at the attacker's feet.
+                if (head != null)
+                {
+                    return Vector3.Lerp(best.CenterOfMass, head.CenterOfMass, 0.55f);
+                }
+
+                // Body CenterOfMass is unusually low for some human roles and puts the return-fire ray
+                // through the shooting counter. Aim within the upper portion of the selected non-head
+                // collider instead. Keeping the point inside that collider makes the no-head contract
+                // explicit while giving the bot a practical upper-chest target over low cover.
+                Collider[] colliders = best.TargetColliders;
+                if (colliders != null)
+                {
+                    bool foundBounds = false;
+                    Bounds bodyBounds = default;
+                    foreach (Collider collider in colliders)
+                    {
+                        if (collider == null || !collider.enabled || collider.isTrigger)
+                        {
+                            continue;
+                        }
+
+                        if (!foundBounds)
+                        {
+                            bodyBounds = collider.bounds;
+                            foundBounds = true;
+                        }
+                        else
+                        {
+                            bodyBounds.Encapsulate(collider.bounds);
+                        }
+                    }
+
+                    if (foundBounds && bodyBounds.size.y > 0.08f)
+                    {
+                        Vector3 upperChest = bodyBounds.center;
+                        upperChest.y = Mathf.Lerp(bodyBounds.min.y, bodyBounds.max.y, 0.72f);
+                        return upperChest;
+                    }
+                }
+
                 return best.CenterOfMass;
             }
 
             Vector3 body = hub.transform.position;
-            return hub.PlayerCameraReference != null ? hub.PlayerCameraReference.position : body + Vector3.up * 1.65f;
+            return body + Vector3.up * 1.05f;
         }
 
         public static bool HasLineOfSight(ReferenceHub shooter, ReferenceHub victim, Vector3 aimPoint)

@@ -1,16 +1,17 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using InventorySystem.Items.Firearms.Attachments;
 using LabApi.Features.Wrappers;
+using MapGeneration.Distributors;
+using Mirror;
 using UnityEngine;
 using WarmupScpSelector.Activities.AimRange;
-using WarmupScpSelector.Models;
 using Logger = LabApi.Features.Console.Logger;
 using PrimitiveFlags = AdminToys.PrimitiveFlags;
 
 namespace WarmupScpSelector.Warmup
 {
-    /// <summary>Explicit collidable widened range shell plus validated visual-only MER weapon racks.</summary>
+    /// <summary>Explicit collidable continuation of the selector hall, with three centered training lanes.</summary>
     public sealed class AimRangeWorld
     {
         private static readonly Color FloorColor = Hex("#293140");
@@ -19,77 +20,65 @@ namespace WarmupScpSelector.Warmup
         private static readonly Color CeilingColor = Hex("#1B2230");
         private static readonly Color DividerColor = Hex("#35445C");
         private static readonly Color BackstopColor = Hex("#202735");
+        private static readonly Color CounterColor = Hex("#31445E");
         private static readonly Color LightColor = Hex("#FFFDF3");
         private static readonly Color BotCoverColor = Hex("#2D394D");
 
         private readonly List<AdminToy> _toys = new List<AdminToy>();
-        private readonly List<AimShelfAnchor> _shelfAnchors = new List<AimShelfAnchor>();
-        private readonly MerWorldSpawner _merSpawner = new MerWorldSpawner();
-
+        private readonly List<GameObject> _structures = new List<GameObject>();
         public AimRangeLayout? Layout { get; private set; }
-        public IReadOnlyList<AimShelfAnchor> ShelfAnchors => _shelfAnchors;
+        public IReadOnlyList<AimShelfAnchor> ShelfAnchors => Layout?.ShelfAnchors ?? Array.Empty<AimShelfAnchor>();
         public bool IsSpawned { get; private set; }
 
-        public bool Build(Vector3 galleryOrigin, float galleryFrontZ)
+        public bool Build(Vector3 galleryOrigin, float galleryFrontZ, float galleryWidth, float galleryDepth)
         {
             Despawn();
             try
             {
-                Layout = new AimRangeLayout(galleryOrigin, galleryFrontZ);
+                Layout = new AimRangeLayout(galleryOrigin, galleryFrontZ, galleryWidth, galleryDepth);
                 ValidateLayout(Layout);
-                _shelfAnchors.AddRange(Layout.ShelfAnchors);
                 float y = galleryOrigin.y;
                 float doorZ = Layout.DoorPlaneZ;
-                float halfWidth = AimRangeLayout.Width / 2f;
+                float shellWidth = Layout.ShellWidth;
+                float halfWidth = shellWidth / 2f;
                 float wall = 0.3f;
 
-                float stubWidth = (AimRangeLayout.Width - AimRangeLayout.DoorWidth) / 2f;
-                AddBox(new Vector3(galleryOrigin.x - (AimRangeLayout.DoorWidth + stubWidth) / 2f, y + 2.5f, doorZ),
-                    new Vector3(stubWidth, 5f, wall), WallColor, true);
-                AddBox(new Vector3(galleryOrigin.x + (AimRangeLayout.DoorWidth + stubWidth) / 2f, y + 2.5f, doorZ),
-                    new Vector3(stubWidth, 5f, wall), WallColor, true);
-                AddBox(new Vector3(galleryOrigin.x, y + AimRangeLayout.DoorHeight + (5f - AimRangeLayout.DoorHeight) / 2f, doorZ),
-                    new Vector3(AimRangeLayout.DoorWidth, 5f - AimRangeLayout.DoorHeight, wall), WallColor, true);
-
                 AddBox(new Vector3(galleryOrigin.x, y - 0.2f, doorZ - AimRangeLayout.Depth / 2f),
-                    new Vector3(AimRangeLayout.Width, 0.4f, AimRangeLayout.Depth), FloorColor, true);
+                    new Vector3(shellWidth, 0.4f, AimRangeLayout.Depth), FloorColor, true);
                 AddBox(new Vector3(galleryOrigin.x, y + 0.02f, doorZ - AimRangeLayout.Depth / 2f),
-                    new Vector3(AimRangeLayout.Width - 0.5f, 0.04f, AimRangeLayout.Depth - 0.5f), FloorSeamColor, false);
+                    new Vector3(shellWidth - 0.5f, 0.04f, AimRangeLayout.Depth - 0.5f), FloorSeamColor, false);
                 AddBox(new Vector3(galleryOrigin.x, y + 0.03f, doorZ - AimRangeLayout.Depth / 2f),
-                    new Vector3(AimRangeLayout.Width - 0.9f, 0.04f, AimRangeLayout.Depth - 0.9f), FloorColor, false);
+                    new Vector3(shellWidth - 0.9f, 0.04f, AimRangeLayout.Depth - 0.9f), FloorColor, false);
                 AddBox(new Vector3(galleryOrigin.x - halfWidth, y + 2.5f, doorZ - AimRangeLayout.Depth / 2f),
                     new Vector3(wall, 5f, AimRangeLayout.Depth), WallColor, true);
                 AddBox(new Vector3(galleryOrigin.x + halfWidth, y + 2.5f, doorZ - AimRangeLayout.Depth / 2f),
                     new Vector3(wall, 5f, AimRangeLayout.Depth), WallColor, true);
                 AddBox(new Vector3(galleryOrigin.x, y + 2.5f, doorZ - AimRangeLayout.Depth),
-                    new Vector3(AimRangeLayout.Width, 5f, 0.6f), BackstopColor, true);
+                    new Vector3(shellWidth, 5f, 0.6f), BackstopColor, true);
                 AddBox(new Vector3(galleryOrigin.x, y + 5f, doorZ - AimRangeLayout.Depth / 2f),
-                    new Vector3(AimRangeLayout.Width, 0.3f, AimRangeLayout.Depth), CeilingColor, true);
+                    new Vector3(shellWidth, 0.3f, AimRangeLayout.Depth), CeilingColor, true);
 
-                float shootingLineDepth = 6.8f;
+                float shootingLineDepth = AimRangeLayout.ShootingCounterDepth;
                 float dividerStartDepth = shootingLineDepth + 0.2f;
                 float dividerLength = AimRangeLayout.Depth - dividerStartDepth;
                 float dividerCenterDepth = dividerStartDepth + dividerLength / 2f;
-                AddBox(new Vector3(galleryOrigin.x, y + 0.55f, doorZ - shootingLineDepth),
-                    new Vector3(AimRangeLayout.Width - 1.2f, 1.1f, 0.25f), WallColor, true);
-                AddBox(new Vector3(galleryOrigin.x - AimRangeLayout.LaneWidth / 2f, y + 1.4f, doorZ - dividerCenterDepth),
-                    new Vector3(0.25f, 2.8f, dividerLength), DividerColor, true);
-                AddBox(new Vector3(galleryOrigin.x + AimRangeLayout.LaneWidth / 2f, y + 1.4f, doorZ - dividerCenterDepth),
-                    new Vector3(0.25f, 2.8f, dividerLength), DividerColor, true);
+                AddBox(new Vector3(galleryOrigin.x, y + AimRangeLayout.ShootingCounterHeight / 2f, doorZ - shootingLineDepth),
+                    new Vector3(Layout.ShootingCounterWidth, AimRangeLayout.ShootingCounterHeight, 0.4f), CounterColor, true);
+                AddBox(new Vector3(galleryOrigin.x - AimRangeLayout.LaneWidth / 2f, y + AimRangeLayout.Height / 2f, doorZ - dividerCenterDepth),
+                    new Vector3(0.25f, AimRangeLayout.Height, dividerLength), DividerColor, true);
+                AddBox(new Vector3(galleryOrigin.x + AimRangeLayout.LaneWidth / 2f, y + AimRangeLayout.Height / 2f, doorZ - dividerCenterDepth),
+                    new Vector3(0.25f, AimRangeLayout.Height, dividerLength), DividerColor, true);
+
+                BuildAttachmentWorkstations(Layout.AttachmentWorkstationAnchors);
 
                 BuildBotCover(Layout.BotCovers);
                 BuildSlidingRails(Layout.SlidingTargetTracks, y);
 
-                BuildShelfColliders(Layout.LeftRackOrigin, Vector3.right);
-                BuildShelfColliders(Layout.RightRackOrigin, Vector3.left);
-                BuildCradleColliders(Layout.ShelfAnchors);
-                SpawnRackVisuals();
-
-                foreach (float depth in new[] { 3.0f, 10.5f, 18.2f })
+                // Three deliberately strong point lights replace the old nine-light grid. They make the six
+                // physical counter guns obvious without HDR materials or a dense field of light toys.
+                foreach (float x in new[] { -AimRangeLayout.LaneWidth, 0f, AimRangeLayout.LaneWidth })
                 {
-                    AddLight(new Vector3(galleryOrigin.x - AimRangeLayout.LaneWidth, y + 3.9f, doorZ - depth), 5.2f, 10.8f);
-                    AddLight(new Vector3(galleryOrigin.x, y + 3.9f, doorZ - depth), 5.2f, 10.8f);
-                    AddLight(new Vector3(galleryOrigin.x + AimRangeLayout.LaneWidth, y + 3.9f, doorZ - depth), 5.2f, 10.8f);
+                    AddLight(new Vector3(galleryOrigin.x + x, y + 3.8f, doorZ - shootingLineDepth + 0.7f), 24f, 16f);
                 }
 
                 AddLabel(new Vector3(galleryOrigin.x, y + 3.9f, doorZ - 0.18f), "AIM RANGE · 瞄准训练场", 420f);
@@ -110,7 +99,33 @@ namespace WarmupScpSelector.Warmup
         public void Despawn()
         {
             IsSpawned = false;
-            _merSpawner.DespawnAll();
+            for (int i = _structures.Count - 1; i >= 0; i--)
+            {
+                try
+                {
+                    GameObject structure = _structures[i];
+                    if (structure == null)
+                    {
+                        continue;
+                    }
+
+                    NetworkIdentity identity = structure.GetComponent<NetworkIdentity>();
+                    if (NetworkServer.active && identity != null && identity.netId != 0)
+                    {
+                        NetworkServer.Destroy(structure);
+                    }
+                    else
+                    {
+                        UnityEngine.Object.Destroy(structure);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"[WarmupScpSelector] Aim attachment-workstation cleanup failed: {ex.Message}");
+                }
+            }
+
+            _structures.Clear();
             for (int i = _toys.Count - 1; i >= 0; i--)
             {
                 try
@@ -127,7 +142,6 @@ namespace WarmupScpSelector.Warmup
             }
 
             _toys.Clear();
-            _shelfAnchors.Clear();
             Layout = null;
         }
 
@@ -139,6 +153,72 @@ namespace WarmupScpSelector.Warmup
             }
         }
 
+        private void BuildAttachmentWorkstations(IReadOnlyList<AimWorkstationAnchor> anchors)
+        {
+            SpawnableStructure? prefab = ResolveAttachmentWorkstationPrefab();
+            if (prefab == null || anchors == null || anchors.Count != 2)
+            {
+                throw new InvalidOperationException("native attachment workstation prefab or symmetric anchors unavailable");
+            }
+
+            foreach (AimWorkstationAnchor anchor in anchors)
+            {
+                SpawnableStructure? instance = null;
+                try
+                {
+                    instance = UnityEngine.Object.Instantiate(prefab, anchor.Position, anchor.Rotation);
+                    _structures.Add(instance.gameObject); // own before spawn so partial setup still tears down
+                    WorkstationController controller = instance.GetComponentInChildren<WorkstationController>(true);
+                    if (controller == null)
+                    {
+                        throw new InvalidOperationException("workstation prefab has no controller");
+                    }
+
+                    controller.Status = (byte)WorkstationController.WorkstationStatus.Offline;
+                    controller.KnownUser = null;
+                    controller.ServerStopwatch.Reset();
+                    NetworkServer.Spawn(instance.gameObject);
+                }
+                catch
+                {
+                    if (instance != null && !_structures.Contains(instance.gameObject))
+                    {
+                        _structures.Add(instance.gameObject);
+                    }
+
+                    throw;
+                }
+            }
+        }
+
+        private static SpawnableStructure? ResolveAttachmentWorkstationPrefab()
+        {
+            foreach (GameObject candidate in NetworkClient.prefabs.Values)
+            {
+                if (candidate != null && candidate.TryGetComponent(out SpawnableStructure structure) &&
+                    structure.StructureType == StructureType.Workstation &&
+                    candidate.GetComponentInChildren<WorkstationController>(true) != null)
+                {
+                    return structure;
+                }
+            }
+
+            if (NetworkManager.singleton != null)
+            {
+                foreach (GameObject candidate in NetworkManager.singleton.spawnPrefabs)
+                {
+                    if (candidate != null && candidate.TryGetComponent(out SpawnableStructure structure) &&
+                        structure.StructureType == StructureType.Workstation &&
+                        candidate.GetComponentInChildren<WorkstationController>(true) != null)
+                    {
+                        return structure;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         private void BuildSlidingRails(IReadOnlyList<SlidingTargetTrackDefinition> tracks, float floorY)
         {
             foreach (SlidingTargetTrackDefinition track in tracks)
@@ -146,90 +226,6 @@ namespace WarmupScpSelector.Warmup
                 Vector3 center = Vector3.Lerp(track.EndpointA, track.EndpointB, 0.5f);
                 float length = Vector3.Distance(track.EndpointA, track.EndpointB) + 0.6f;
                 AddBox(new Vector3(center.x, floorY + 0.025f, center.z), new Vector3(length, 0.05f, 0.18f), DividerColor, false);
-            }
-        }
-
-        private void SpawnRackVisuals()
-        {
-            if (Layout == null)
-            {
-                return;
-            }
-
-            IReadOnlyList<MerPrimitive>? rackAsset = MerAssetCatalog.LoadValidated(
-                MerAssetCatalog.WeaponRackAsset,
-                MerAssetCatalog.WeaponRackMarkers);
-            if (rackAsset == null)
-            {
-                return;
-            }
-
-            TrySpawnRackVisual(rackAsset, true, Layout.LeftRackOrigin, Layout.LeftRackRotation);
-            TrySpawnRackVisual(rackAsset, false, Layout.RightRackOrigin, Layout.RightRackRotation);
-        }
-
-        private void TrySpawnRackVisual(IReadOnlyList<MerPrimitive> asset, bool left, Vector3 origin, Quaternion rotation)
-        {
-            if (Layout == null)
-            {
-                return;
-            }
-
-            string side = left ? "left" : "right";
-            MerWorldInstance? instance = null;
-            try
-            {
-                MerWorldTransform root = new MerWorldTransform(origin, rotation, Vector3.one);
-                if (!_merSpawner.TrySpawn(asset, MerAssetCatalog.WeaponRackMarkers, root, true, out instance, out string error) ||
-                    instance == null)
-                {
-                    Logger.Warn($"[WarmupScpSelector] {side} weapon-rack visual disabled: {error}");
-                    return;
-                }
-
-                if (!AimRangeMarkerAlignment.TryResolveRack(left, instance.Markers, Layout.ShelfAnchors,
-                        out IReadOnlyList<AimShelfAnchor> resolved, out error))
-                {
-                    _merSpawner.Despawn(instance);
-                    Logger.Warn($"[WarmupScpSelector] {side} weapon-rack visual disabled: {error}");
-                    return;
-                }
-
-                foreach (AimShelfAnchor anchor in resolved)
-                {
-                    int index = _shelfAnchors.FindIndex(candidate => candidate.SlotId == anchor.SlotId);
-                    if (index >= 0)
-                    {
-                        _shelfAnchors[index] = anchor;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _merSpawner.Despawn(instance);
-                Logger.Warn($"[WarmupScpSelector] {side} weapon-rack visual disabled: {ex.GetBaseException().Message}");
-            }
-        }
-
-        private void BuildShelfColliders(Vector3 rackOrigin, Vector3 inward)
-        {
-            AddColliderBox(rackOrigin + new Vector3(0f, 1.35f, 0f), new Vector3(0.35f, 2.7f, 4.3f));
-            AddColliderBox(rackOrigin + inward * 0.22f + new Vector3(0f, 0.85f, 0f), new Vector3(0.45f, 0.12f, 4f));
-            AddColliderBox(rackOrigin + inward * 0.22f + new Vector3(0f, 1.65f, 0f), new Vector3(0.45f, 0.12f, 4f));
-            AddColliderBox(rackOrigin + inward * 0.22f + new Vector3(0f, 2.45f, 0f), new Vector3(0.45f, 0.12f, 4f));
-        }
-
-        private void BuildCradleColliders(IReadOnlyList<AimShelfAnchor> anchors)
-        {
-            foreach (AimShelfAnchor anchor in anchors)
-            {
-                bool left = anchor.SlotId < 3;
-                Vector3 inward = left ? Vector3.right : Vector3.left;
-                float markerHeightOffset = anchor.SlotId == 1 || anchor.SlotId == 4 ? -0.05f : 0.03f;
-                Vector3 cradle = anchor.LocalPosition - inward * 0.25f + Vector3.up * markerHeightOffset;
-                AddColliderBox(cradle + Vector3.down * 0.05f, new Vector3(0.12f, 0.10f, 0.44f));
-                AddColliderBox(cradle + new Vector3(0f, 0.05f, -0.19f), new Vector3(0.10f, 0.18f, 0.08f));
-                AddColliderBox(cradle + new Vector3(0f, 0.05f, 0.19f), new Vector3(0.10f, 0.18f, 0.08f));
             }
         }
 
@@ -280,11 +276,10 @@ namespace WarmupScpSelector.Warmup
 
         private static void ValidateLayout(AimRangeLayout layout)
         {
-            if (layout == null || layout.ShelfAnchors.Count != 6 ||
-                layout.ShelfAnchors.Select(anchor => anchor.SlotId).Distinct().Count() != 6 ||
+            if (layout == null || layout.ShelfAnchors.Count != 6 || layout.AttachmentWorkstationAnchors.Count != 2 ||
                 layout.SlidingTargetTracks.Count != 3 || layout.BotPaths.Count != 2 ||
-                SphereTargetLayout.RequiredClearWidth > AimRangeLayout.LaneWidth - 0.5f ||
-                AimRangeLayout.Width > 19.21f || AimRangeLayout.Depth > 22.01f)
+                SphereTargetLayout.RequiredClearWidth > layout.SphereBayWidth - 0.5f ||
+                layout.ShellWidth < AimRangeLayout.Width || AimRangeLayout.Depth > 22.01f)
             {
                 throw new InvalidOperationException("authored widened range gameplay anchors are incomplete");
             }

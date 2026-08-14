@@ -11,7 +11,7 @@ namespace WarmupScpSelector.Activities.AimRange
         Replenishing,
     }
 
-    /// <summary>Pure shelf ownership/generation state used by the LabAPI shelf controller.</summary>
+    /// <summary>Pure persistent floor-pickup slot state used by the gallery armoury controller.</summary>
     public sealed class WeaponShelfState
     {
         public sealed class Slot
@@ -93,6 +93,15 @@ namespace WarmupScpSelector.Activities.AimRange
             slotId = id;
             generation = slot.Generation;
             return true;
+        }
+
+        /// <summary>Resolves a persistent display pickup without consuming or changing its slot.</summary>
+        public bool TryResolveAvailable(ushort pickupSerial, out int slotId)
+        {
+            slotId = -1;
+            return pickupSerial != 0 && _bySerial.TryGetValue(pickupSerial, out int id) &&
+                _slots.TryGetValue(id, out Slot slot) && slot.Phase == ShelfSlotPhase.Available &&
+                (slotId = id) >= 0;
         }
 
         public bool ConfirmClaim(int slotId, int generation, string userKey, ushort itemSerial, double now, double replenishDelay)

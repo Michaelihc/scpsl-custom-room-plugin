@@ -24,25 +24,40 @@ selected SCP slots over to the players who picked them.
 - The plugin never forces the native lobby countdown. The only exception is an ownership-safe temporary lobby lock
   while one human is using configured native bots, preventing counted dummies from falsely starting the round; it is
   released synchronously when another human joins, the last human leaves, or Aim stops.
-- The default-off **Aim Range** is a widened 19.2 m × 22 m rear extension of the gallery. Six real firearm pickups
-  sit on collidable shelves, followed by three 6.4 m lanes: cover-backed live bots, three parallel persistent sliding
-  native targets at different distances/speeds, and Aim-Lab spheres that pop on a valid hit and respawn elsewhere.
+- The default-off **Aim Range** turns the entire selector and training area into one uninterrupted full-width rectangular
+  hall—there is no doorway, choke point, or second room. Six persistent firearms sit visibly on the shooting counter
+  with two native attachment workstations placed symmetrically against the side walls;
+  the counter wall spans nearly the entire hall. Exactly three very bright point lights illuminate each half of the hall
+  (six total), using ordinary non-HDR light colors; the branded back-wall logo keeps its HDR albedo boost
+  and shares the selector's center light for bloom without adding another real-time light;
+  the centered 19.2 m × 22 m training area has three 6.4 m lanes: cover-backed live bots, three parallel persistent sliding
+  native targets at different distances/speeds, and Aim-Lab spheres that send a hitmarker/score on a valid hit and
+  immediately teleport the same always-hittable toy to the next authored point.
+  Grabbing a counter gun grants a separate owned inventory copy, so the displayed gun remains visible and immediately reusable.
   Both normal targets and spheres send the shooter a native hitmarker when a valid range hit is credited; sliding
   targets use client interpolation between 15 Hz network keyframes instead of snapping between scheduler updates.
 - Up to two explicitly enabled native RA bots continuously strafe through cover using small native FPC motor steps
-  with no waypoint binding. Each spawn deterministically randomizes an E11-SR, Logicer, or AK. Bots keep moving and
-  jump on bounded native-input cooldowns; a close attacker makes them jump more often, while a distant attacker makes
-  them hold native ADS. A genuine hit from a participant's owned range gun locks that first attacker's head for exactly
-  12 seconds: the bot tracks while strafing and holds native automatic fire until the lease or line of sight ends. At
+  with no waypoint binding. Both slots use Crossvec. Bots keep moving and
+  jump on bounded native-input cooldowns; a close attacker makes them jump more often. During retaliation they always
+  hold native ADS and use tighter combat steps for accurate return fire. A genuine hit from a participant's owned range gun locks that first attacker after a 0.5–0.6 second reaction delay for
+  12 seconds: the bot tracks an upper-chest point inside a non-head hitbox while strafing and holds native automatic fire until the lease or line of sight ends. At
   low ammo it releases fire/ADS, moves behind slot-owned 2.2 m cover, reloads there, then resumes combat. Bots die
-  normally and respawn with a new owned identity and randomized rifle.
+  normally and respawn with a new owned identity and Crossvec.
 - Bot shots deal real damage. A lethal hit on a range participant is cancelled before vanilla death, synchronously
   reinitializes the same player as `Tutorial`, and returns them to the range entrance without a spectator frame.
   Leaving the range or starting the round destroys every range-owned gun, pickup, target, carrier, bot, and hint.
-- Inside the range, the full draft panel collapses to one status line and a separate bilingual HSM range card uses
-  non-overlapping flash, hero, footer, and status bands. The whole in-range HUD renders on a narrow left lane
+- The former room seam is now UI-only. On the selector side, only the original SCP selection panel is shown; no Aim UI
+  appears. On the training side, the SCP panel is hidden completely and only the bilingual Aim flash, hero, and footer
+  are shown. Shooting, damage routing, gun ownership, and bot provocation remain active across the entire hall. The Aim HUD renders on a narrow left lane
   (`Activities.Aim.HudX`, default -1077) that sits between the native inventory list and the inventory wheel, so it
-  never overlaps them while TAB is held; outside the range the full draft panel stays centered.
+  never overlaps them while TAB is held; the original selector-side SCP panel keeps its centered layout.
+- The default-off **Pulse Line parkour** uses the previously empty far-left wing behind the shooting counter. A
+  full-height divider isolates it from bot fire. Step on START for 0.6 seconds, run the 3-second countdown, then clear
+  17 ordered cream platforms around four folded sectors and return to FIN beside START. Thin cyan/gold route strips
+  make the next line readable; swept-segment gate checks prevent fast crossings from being missed. Falling to the
+  hall floor immediately returns the runner to the last completed landing while the authoritative timer keeps running.
+  The reusable RESET coin restarts in place, and the compact bilingual HSM card shows timer, sector spine, progress,
+  and the best completed time for the current warmup. The course uses only static toys and one bounded scheduler loop.
 - When the round starts, the plugin hands players back so the game assigns vanilla roles, then **swaps**
   the selected SCP slots to the pickers:
   - If vanilla spawned an SCP that someone picked, one picker from that pool takes the slot, and the
@@ -101,28 +116,32 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   reaches round start, with a final fallback fade during the role-assignment handoff.
 - `ScpOptions` — the SCPs offered, each with a role, label, and embedded model name.
 - `ActivitiesEnabled` and `Activities.Aim.Enabled` — both must be `true` to open the Aim Range.
-- `Activities.Aim.WeaponPresets` — the six physical shelf firearms, attachment codes, and tracked reserve ammo.
+- `Activities.Parkour.Enabled` — additionally set this to `true` to build Pulse Line in the Aim hall's far-left bay.
+  Parkour remains default-off and requires the Aim hall because it reuses that shell and floor.
+- `Activities.Parkour.SchedulerRateHz`, `StartHoldSeconds`, `CountdownSeconds`, and `RecoveryGraceSeconds` — parkour
+  tick and run/recovery timing. `HudX`, `FlashY`, `HeroY`, and `FooterY` position its three stable HSM zones.
+- `Activities.Aim.WeaponPresets` — the six persistent shooting-counter presets, attachment codes, and tracked reserve ammo. Two native attachment workstations sit symmetrically at the side walls.
 - `Activities.Aim.BotCount` — owned native bot slots (`0..2`). It defaults to `0` and must be explicitly enabled.
   A solo human can use configured bots: the range temporarily owns the native lobby lock so dummy connections cannot
   start the round, then releases it when a second human joins or Aim stops. Bots always leave one public slot free.
 - `Activities.Aim.BotWeaponPresets`, `BotRespawnSeconds`, `BotAggroLeaseSeconds`, and related bot settings —
-  the bot pool accepts only E11-SR, Logicer, and AK presets; the default first-attacker lock is 12 seconds.
-- `Activities.Aim.SphereActiveCount`, `SphereDiameter`, `SphereRespawnSeconds`, `SphereSpawnRetrySeconds`, and
-  `SphereSeedSalt` — lane-3 Aim-Lab population, size, and deterministic pop/relocation timing.
-- `Activities.Aim.FlashY`, `HeroY`, `FooterY`, and `CollapsedStatusY` — the four non-overlapping HSM bands.
-- `Activities.Aim.HudX` — HSM center-X for the whole in-range HUD lane (default `-1077`). It keeps the flash,
-  hero, footer, and collapsed status in the narrow left corridor between the native inventory list and wheel so the
-  HUD never overlaps them while TAB is held. Outside the range the full draft panel keeps the centered default.
+  both bots use Crossvec only, react in 0.5–0.6 seconds, and keep the first-attacker lock for 12 seconds.
+- `Activities.Aim.SphereActiveCount` and `SphereDiameter` — lane-3 Aim-Lab population and size. Every credited hit
+  immediately teleports the same sphere to the next position in a fixed, irregular 50-point 3D deck.
+- `Activities.Aim.FlashY`, `HeroY`, and `FooterY` — the three non-overlapping Aim HSM bands. The retained
+  `CollapsedStatusY` setting is legacy compatibility and is not rendered.
+- `Activities.Aim.HudX` — HSM center-X for the training-side Aim HUD lane (default `-1077`). It keeps the flash,
+  hero, and footer in the narrow left corridor between the native inventory list and wheel so the HUD never overlaps
+  them while TAB is held. The selector side shows only the original centered SCP panel.
 
 ### Models
 
 Each SCP is a stylized primitive model authored offline as `generated/models/scp-*.mer.json` and
 embedded in the DLL. The back-wall server logo is embedded the same way; its ProjectMER empty-parent
 hierarchy is retained so the sheared quads render faithfully without a ProjectMER dependency. The Aim
-Range weapon rack and the retained legacy moving-target carrier are embedded MER assets too; the widened
-three-lane runtime now spawns only the rack because lane 2 moves the native targets directly without a support carrier.
-Runtime spawning preserves one-level parent transforms, never spawns marker primitives, and validates transformed
-rack markers before using them for visual/gameplay alignment. Collision remains explicit AdminToy box geometry. The
+Legacy Aim weapon-rack and moving-target-carrier MER assets remain embedded for compatibility, but the widened
+three-lane runtime spawns neither. Runtime spawning preserves one-level parent transforms and never spawns marker
+primitives. All active range collision remains explicit AdminToy box geometry. The
 authoring/verification pipeline lives in `tools/` and `tests/models/`:
 
 ```powershell
@@ -136,15 +155,18 @@ python tests/models/test_scp_173_model.py                        # geometry cont
 ### Tests
 
 - C# planner/activity/runtime-adjacent logic (headless): `dotnet build tests/WarmupScpSelector.Tests` then run
-  `WarmupScpSelector.Tests.exe` (`57/57` tests, including bot lifecycle/tactical contracts, lethal reset state, MER transforms,
-  widened lane bounds, deterministic sliding motion, one-credit sphere pop/respawn state, bilingual Aim text, and HSM cache behavior).
+  `WarmupScpSelector.Tests.exe` (`61/61` tests, including bot lifecycle/tactical contracts, lethal reset state, parkour route/gates/HUD, MER transforms,
+  widened lane bounds, deterministic sliding motion, one-credit immediate sphere relocation, bilingual Aim text, and HSM cache behavior).
 - Model geometry contracts: run each `tests/models/test_*_model.py` script (`10/10` current model contracts).
 - Shared HSM renderer: `node ../.tests/UI/smoke-test.js`; all 22 WarmupScp draft/Aim EN+CN fixtures parse with
   zero static issues against the shared native-background collision harness.
-- Dev-only isolated live harness: `tests/WarmupRangeVerifier` (`184/184` final checks on local port 7777). It verifies
-  the widened shell/rays/lights, dummy settling, two real product bots continuously walking/jumping, head tracking,
-  combat strafing, multi-round native held fire, far ADS, 2.2 m reload-cover traversal, exact 12-second input release,
-  all six shelf pickups, three smoothed sliding targets, three authored spheres, exact teardown, ambient isolation,
+- Dev-only isolated live harness: `tests/WarmupRangeVerifier`. Its current 253-check run verifies the full-width shell,
+  nearly hall-wide counter, two symmetric native attachment workstations, three bright non-HDR point lights per hall half, six persistent dispensers, dummy settling,
+  two real product bots continuously walking/jumping, non-head upper-chest tracking, a genuine participant firearm hit
+  from the real player side of the counter, a measured 0.5–0.6-second response and native held-fire ammo consumption,
+  combat strafing, multi-round native held fire, retaliation ADS, a stationary-attacker lethal reset within 2.5 seconds,
+  the UI-only seam, 2.2 m reload-cover traversal, exact 12-second input release,
+  all six weapon pickups, three smoothed sliding targets, 20 authored spheres, pooled same-toy sphere relocation, exact teardown, ambient isolation,
   and successful lane restart. It must never ship to production.
 
 ### Known limits / conflicts
@@ -152,7 +174,7 @@ python tests/models/test_scp_173_model.py                        # geometry cont
 - Player-facing text requires HintServiceMeow and uses stable HSM hint IDs.
 - Lobby music uses one filtered audio transmitter per player so join fade-in is per-player. Keep tracks
   reasonably short; `MusicMaxSeconds` caps accidental huge files.
-- The isolated live harness verifies AdminToy collision, widened lane geometry, shelf pivots, smoothed persistent-target
+- The isolated live harness verifies AdminToy collision, widened lane geometry, smoothed persistent-target
   replication, sphere spawning, real product-bot patrol/native retaliation ammo consumption, dummy floor behavior, and
   handoff leak cleanup. Authenticated-client pickup/fire sequencing, first-person presentation, repeated bot death/respawn,
   actual hitmarker and sphere-pop presentation, lethal-reset presentation, and final bilingual visual inspection still
@@ -179,13 +201,13 @@ SCP 名额交换给选择它的玩家。
   可随时更改。（提示只在文本变化时才重新发送，不会刷屏占用网络。）
 - 插件不会强制原版大厅倒计时。唯一例外是单人使用已启用的原生机器人时，训练场会临时持有大厅锁，
   防止计入人数的 dummy 错误触发开局；第二名真实玩家加入、最后一名玩家离开或训练场停止时会同步释放。
-- 默认关闭的**瞄准训练场**扩宽为展厅后方 19.2 米 × 22 米的自然延伸。六把真实枪械放在可碰撞枪架上，
-  后方分成三条 6.4 米宽训练道：带掩体的实战机器人、不同距离与速度的三条平行永久移动靶，以及命中后
+- 默认关闭的**瞄准训练场**会把 SCP 展厅和训练区合并成一个等宽、完整的长方形大厅，没有门洞、瓶颈或第二个房间。
+  六把永久保留的真实枪械清晰摆在射击台上；中央 19.2 米 × 22 米区域分成三条 6.4 米宽训练道：带掩体的实战机器人、不同距离与速度的三条平行永久移动靶，以及命中后
   立即消失并在其他位置重生的 Aim-Lab 球形反应靶。有效命中普通靶或球形靶时会向射手发送原生命中标记；
   移动靶在 15 Hz 网络关键帧之间使用客户端插值，不再按调度更新逐格跳动。
-- 可显式启用最多两名原生 RA 机器人。它们不绑定路点，而是通过原生 FPC 马达持续横向移动；每次生成会
-  确定性随机装备 E11-SR、Logicer 或 AK。机器人移动时会按受限冷却跳跃，近距离会更频繁跳跃，远距离则
-  按住原生开镜。只有训练玩家使用其受控枪械真正命中后，机器人才能锁定第一名攻击者，并持续瞄准头部、
+- 可显式启用最多两名原生 RA 机器人。它们不绑定路点，而是通过原生 FPC 马达持续横向移动；两个槽位都
+  只装备 Crossvec。机器人移动时会按受限冷却跳跃，近距离会更频繁跳跃，远距离则
+  按住原生开镜。只有训练玩家使用其受控枪械真正命中后，机器人才能锁定第一名攻击者，并持续瞄准躯干、
   横移和按住原生全自动开火；锁定固定 12 秒且不会被重复命中延长。弹匣将空时会停止射击/开镜，移动到
   对应槽位的 2.2 米高掩体后装弹，再恢复战斗。机器人可正常死亡，并以新的受控身份和随机步枪重生。
 - 机器人子弹造成真实伤害。对训练玩家的致命一击会在原版死亡前取消，同步把同一玩家重新初始化为
@@ -242,24 +264,29 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   职业分配交接时也会兜底淡出。
 - `ScpOptions`——可选 SCP 列表，每项包含职业、标签和嵌入模型名。
 - `ActivitiesEnabled` 与 `Activities.Aim.Enabled`——两项都必须为 `true` 才会开放训练场。
+- `Activities.Parkour.Enabled`——再将此项设为 `true`，即可在训练场最左侧原本空置的区域生成“脉冲路线”。
+  跑酷默认关闭，并复用 Aim 训练场的外壳、地板与照明。
+- `Activities.Parkour.SchedulerRateHz`、`StartHoldSeconds`、`CountdownSeconds`、`RecoveryGraceSeconds`——跑酷更新、
+  起点、倒计时与跌落恢复时序；`HudX`、`FlashY`、`HeroY`、`FooterY` 控制三个稳定 HSM 区域。
 - `Activities.Aim.WeaponPresets`——六个实体枪架槽位的枪械、配件代码和受控备用弹药。
 - `Activities.Aim.BotCount`——原生机器人槽位数（`0..2`），默认 `0`，必须显式启用。单人也可使用机器人：
   训练场会临时持有原生大厅锁，防止 dummy 连接触发开局；第二名真实玩家加入或训练场停止时自动释放，并始终保留一个公共空位。
 - `Activities.Aim.BotWeaponPresets`、`BotRespawnSeconds`、`BotAggroLeaseSeconds` 等——机器人确定性枪械和还击时序。
-- `Activities.Aim.SphereActiveCount`、`SphereDiameter`、`SphereRespawnSeconds`、`SphereSpawnRetrySeconds`、
-  `SphereSeedSalt`——第三训练道球形靶的数量、大小与确定性重生时序。
-- `Activities.Aim.FlashY`、`HeroY`、`FooterY`、`CollapsedStatusY`——四个互不重叠的 HSM 显示区域。
-- `Activities.Aim.HudX`——整个训练场内 HUD 通道的 HSM 中心 X（默认 `-1077`）。它让闪示、主卡、脚注和折叠状态栏
-  停留在原生物品栏列表与物品转盘之间的左侧窄通道内，因此按住 TAB 时 HUD 不会与两者重叠。离开训练场后完整的选择面板仍居中显示。
+- `Activities.Aim.SphereActiveCount` 与 `SphereDiameter`——第三训练道球形靶的数量和大小。每次有效命中
+  都会立即计分并把同一球体传送到固定 50 点不规则三维位置表中的下一点。
+- `Activities.Aim.FlashY`、`HeroY`、`FooterY`——三个互不重叠的 Aim HSM 显示区域；保留的
+  `CollapsedStatusY` 仅用于配置兼容，不再渲染。
+- `Activities.Aim.HudX`——训练侧 Aim HUD 通道的 HSM 中心 X（默认 `-1077`）。选择侧只显示原始居中的 SCP
+  选择面板；越过地面分界线后 SCP 面板完全隐藏，只显示位于原生物品栏列表与物品转盘之间的 Aim HUD。
 
 ### 测试
 
-- C# 纯逻辑与运行时邻接测试：`57/57` 通过。
+- C# 纯逻辑与运行时邻接测试：`61/61` 通过。
 - SCP、Logo、枪架和保留的移动靶载具模型契约：`10/10` 通过。
 - WarmupScp 选择/训练场中英文 HSM fixture：22 个全部为零静态问题。
-- 本地端口 `7777` 的 dev-only 实机验证：`184/184` 通过，覆盖扩宽场景、63 条地面射线、九盏灯、
-  dummy 落地、两名产品机器人持续行走/跳跃、头部跟踪、战斗横移、原生持续开火、远距离开镜、2.2 米
-  掩体后装弹、固定 12 秒释放、六把枪、三条平滑移动靶、三个球形靶、精确清理与训练场重启。
+- 隔离本地端口的 dev-only 实机验证：`253/253` 通过，覆盖全宽场景、全宽柜台、每半区三盏超亮非 HDR 点光源、
+  dummy 落地、两名产品机器人持续行走/跳跃、非头部上胸跟踪、从柜台玩家侧真实命中后立即还击、战斗横移、原生持续开火、全程开镜、静止攻击者约 2 秒内触发致命重置、UI 分界、2.2 米
+  掩体后装弹、固定 12 秒释放、六把枪、三条平滑移动靶、20 个球形靶、同一网络球体的池化换位、精确清理与训练场重启。
 
 ### 已知限制 / 冲突
 

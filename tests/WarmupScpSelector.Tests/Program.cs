@@ -5,6 +5,7 @@ using PlayerRoles;
 using UnityEngine;
 using WarmupScpSelector.Activities;
 using WarmupScpSelector.Activities.AimRange;
+using WarmupScpSelector.Activities.Parkour;
 using WarmupScpSelector.Models;
 using WarmupScpSelector.Selection;
 using WarmupScpSelector.Services;
@@ -73,11 +74,10 @@ namespace WarmupScpSelector.Tests
                 RangeBotRegistryUsesLiveIdentityIndexes,
                 ParticipantIdentityRulesRejectNonHumans,
                 MerWorldTransformComposesOneLevelParent,
-                AimRackMarkersAlignWithAllLayoutAnchors,
-                AimRackMarkerMismatchFailsClosed,
+                ContinuousHallUsesPersistentCounterArmoury,
                 WidenedAimLayoutDefinesThreeClearLanes,
                 SlidingTargetMotionIsDeterministicAndAbsolute,
-                SphereTargetStatePopsOnceAndRespawns,
+                SphereTargetStateCreditsOnceAndRelocates,
                 SphereTargetLayoutFitsThirdLane,
                 CollapsedStatusStripIsOneLineOneLanguageAndSafe,
                 AimRangeHeroRendersStateInOneLanguage,
@@ -85,6 +85,11 @@ namespace WarmupScpSelector.Tests
                 AimRangeFlashRendersEveryEventInOneLanguage,
                 AimRangeTextMarkupIsBalancedAndUnnested,
                 HintChangeCacheSkipsUnchangedButResendsOnChange,
+                ParkourDefaultsToExplicitOptIn,
+                ParkourRunRequiresOrderedGatesAndFreezesFinishTime,
+                ParkourLayoutFitsTheEmptyLeftWing,
+                ParkourSweptGateDetectionCatchesFastCrossings,
+                ParkourTextIsBilingualAndMarkupSafe,
             };
 
             int failed = 0;
@@ -775,6 +780,9 @@ namespace WarmupScpSelector.Tests
             state.Define(2, "fsp9");
             state.Enable(2);
             AssertEqual(true, state.Spawned(2, 200), "shelf pickup registered");
+            AssertEqual(true, state.TryResolveAvailable(200, out int persistentSlot), "persistent pickup resolves without a claim");
+            AssertEqual(2, persistentSlot, "persistent pickup keeps its authored slot");
+            AssertEqual(true, state.TryResolveAvailable(200, out _), "resolving does not consume the floor pickup");
             AssertEqual(true, state.BeginClaim(200, "u1", out int slotId, out int generation), "claim begins");
             AssertEqual(false, state.ConfirmClaim(slotId, generation + 1, "u1", 200, 5d, 1.5d), "stale claim generation rejected");
             AssertEqual(true, state.ConfirmClaim(slotId, generation, "u1", 200, 5d, 1.5d), "matching claim confirmed");
@@ -820,17 +828,17 @@ namespace WarmupScpSelector.Tests
         private static void RangeBotDefaultsUseExactAutomaticPresets()
         {
             AimRangeActivityConfig config = new AimRangeActivityConfig();
-            AssertEqual(3, config.BotWeaponPresets.Count, "three default bot presets");
+            AssertEqual(1, config.BotWeaponPresets.Count, "one forced default bot preset");
             AssertSequence(
-                new[] { "bot-e11sr", "bot-logicer", "bot-ak" },
+                new[] { "bot-crossvec" },
                 config.BotWeaponPresets.Select(preset => preset.Id).ToArray(),
                 "exact bot preset ids");
             AssertSequence(
-                new[] { ItemType.GunE11SR, ItemType.GunLogicer, ItemType.GunAK },
+                new[] { ItemType.GunCrossvec },
                 config.BotWeaponPresets.Select(preset => preset.Firearm).ToArray(),
                 "exact bot firearms");
             AssertSequence(
-                new[] { ItemType.Ammo556x45, ItemType.Ammo762x39, ItemType.Ammo762x39 },
+                new[] { ItemType.Ammo9x19 },
                 config.BotWeaponPresets.Select(preset => preset.Ammo).ToArray(),
                 "exact bot ammo types");
             AssertEqual(true, config.BotWeaponPresets.All(AimWeaponPresetRules.IsBotAutomatic),
@@ -998,12 +1006,13 @@ namespace WarmupScpSelector.Tests
             RangeBotValidatedSettings validated = RangeBotValidatedSettings.From(config);
             AssertEqual(2, validated.Count, "bot count clamped to authored slots");
             AssertEqual(250f, validated.Health, "NaN health uses safe default");
-            AssertEqual((double)0.1f, validated.ShotCadenceSeconds, "shot cadence clamped positive");
+            AssertEqual((double)0.5f, validated.ShotCadenceSeconds, "shot cadence clamped to response window");
             AssertEqual(24d, validated.MaxRetaliationDistance, "infinite distance uses safe default");
             AssertEqual(30f, validated.AimToleranceDegrees, "aim tolerance capped");
-            AssertEqual(3, validated.Presets.Count, "only E11-SR, Logicer, and AK automatic presets retained");
-            AssertSequence(new[] { "e11", "logicer", "ak" }, validated.Presets.Select(preset => preset.Id).ToArray(),
-                "automatic bot preset order retained");
+            AssertEqual((double)0.5f, validated.AcquireDelaySeconds, "default pre-trigger stage is half a second");
+            AssertEqual(1, validated.Presets.Count, "legacy non-Crossvec deck migrates to one Crossvec preset");
+            AssertSequence(new[] { "bot-crossvec" }, validated.Presets.Select(preset => preset.Id).ToArray(),
+                "forced Crossvec fallback installed");
             AssertEqual(true, validated.Presets.All(AimWeaponPresetRules.IsBotAutomatic),
                 "validated bot presets are all automatic");
         }
@@ -1059,52 +1068,64 @@ namespace WarmupScpSelector.Tests
                 "child world rotation includes parent");
         }
 
-        private static void AimRackMarkersAlignWithAllLayoutAnchors()
+        private static void ContinuousHallUsesPersistentCounterArmoury()
         {
-            AimRangeLayout layout = new AimRangeLayout(new Vector3(100f, 200f, 300f), -4.75f);
-            IReadOnlyDictionary<string, MerWorldTransform> leftMarkers = BuildRackMarkers(layout.LeftRackOrigin, layout.LeftRackRotation);
-            IReadOnlyDictionary<string, MerWorldTransform> rightMarkers = BuildRackMarkers(layout.RightRackOrigin, layout.RightRackRotation);
-
-            AssertEqual(true, AimRangeMarkerAlignment.TryResolveRack(true, leftMarkers, layout.ShelfAnchors, out IReadOnlyList<AimShelfAnchor> left, out string leftError), leftError);
-            AssertEqual(true, AimRangeMarkerAlignment.TryResolveRack(false, rightMarkers, layout.ShelfAnchors, out IReadOnlyList<AimShelfAnchor> right, out string rightError), rightError);
-            List<AimShelfAnchor> resolved = left.Concat(right).OrderBy(anchor => anchor.SlotId).ToList();
-            AssertEqual(6, resolved.Count, "all rack slots resolved");
-            for (int i = 0; i < layout.ShelfAnchors.Count; i++)
-            {
-                AssertEqual(layout.ShelfAnchors[i].SlotId, resolved[i].SlotId, $"rack slot {i} id");
-                AssertVectorNear(layout.ShelfAnchors[i].LocalPosition, resolved[i].LocalPosition, 0.001f, $"rack slot {i} position");
-                AssertEqual(true, MerWorldTransformComposer.RotationAngleDegrees(
-                    layout.ShelfAnchors[i].LocalRotation, resolved[i].LocalRotation) < 0.1f, $"rack slot {i} rotation");
-            }
-        }
-
-        private static void AimRackMarkerMismatchFailsClosed()
-        {
-            AimRangeLayout layout = new AimRangeLayout(new Vector3(0f, 0f, 0f), -4.75f);
-            Dictionary<string, MerWorldTransform> markers = BuildRackMarkers(layout.LeftRackOrigin, layout.LeftRackRotation)
-                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
-            MerWorldTransform original = markers["marker_shelf_0"];
-            markers["marker_shelf_0"] = new MerWorldTransform(
-                new Vector3(
-                    original.Position.x + AimRangeMarkerAlignment.PositionTolerance + 0.01f,
-                    original.Position.y,
-                    original.Position.z),
-                original.Rotation,
-                original.Scale);
-
-            bool valid = AimRangeMarkerAlignment.TryResolveRack(true, markers, layout.ShelfAnchors, out IReadOnlyList<AimShelfAnchor> resolved, out string error);
-            AssertEqual(false, valid, "mismatched rack marker rejected");
-            AssertEqual(0, resolved.Count, "failed rack does not supply gameplay anchors");
-            AssertContains(error, "does not match", "mismatch explains fail-closed result");
+            Vector3 origin = new Vector3(100f, 200f, 300f);
+            const float galleryWidth = 37f;
+            const float galleryDepth = 9f;
+            AimRangeLayout layout = new AimRangeLayout(origin, -4.75f, galleryWidth, galleryDepth);
+            AssertEqual(37f, layout.ShellWidth, "training shell expands to the full selector width");
+            AssertEqual(36.4f, layout.ShootingCounterWidth, "shooting counter spans the full hall inside the side walls");
+            AssertEqual(15.3f, layout.SphereBayWidth, "sphere bay spans from the lane divider to the outer wall");
+            AssertVectorNear(new Vector3(110.85f, 200f, 288.25f), layout.SphereLaneOrigin, 0.001f,
+                "sphere cloud is centered in the full right-hand wing");
+            AssertEqual(6, layout.ShelfAnchors.Count, "six counter armoury pickups");
+            AssertSequence(Enumerable.Range(0, 6).ToArray(), layout.ShelfAnchors.Select(anchor => anchor.SlotId).ToArray(),
+                "armoury slot ids remain deterministic");
+            AssertEqual(true, layout.ShelfAnchors.All(anchor => Math.Abs(anchor.LocalPosition.y - (200f + AimRangeLayout.ShootingCounterHeight + 0.28f)) < 0.001f),
+                "counter guns sit visibly above the counter top");
+            AssertEqual(true, layout.ShelfAnchors.All(anchor => Math.Abs(anchor.LocalPosition.z - (layout.DoorPlaneZ - AimRangeLayout.ShootingCounterDepth)) < 0.001f),
+                "counter guns share the shooting-counter line");
+            AssertEqual(3, layout.ShelfAnchors.Count(anchor => anchor.LocalPosition.x < origin.x), "three counter guns on the left half");
+            AssertEqual(3, layout.ShelfAnchors.Count(anchor => anchor.LocalPosition.x > origin.x), "three counter guns on the right half");
+            AssertEqual(2, layout.AttachmentWorkstationAnchors.Count, "two native attachment workstations");
+            AimWorkstationAnchor leftWorkstation = layout.AttachmentWorkstationAnchors[0];
+            AimWorkstationAnchor rightWorkstation = layout.AttachmentWorkstationAnchors[1];
+            AssertVectorNear(new Vector3(81.72f, 200f, 291.284f), leftWorkstation.Position, 0.001f,
+                "left attachment workstation sits against the wall");
+            AssertVectorNear(new Vector3(118.28f, 200f, 291.284f), rightWorkstation.Position, 0.001f,
+                "right attachment workstation mirrors the left");
+            AssertEqual(true, Math.Abs((leftWorkstation.Position.x - origin.x) + (rightWorkstation.Position.x - origin.x)) < 0.001f,
+                "attachment workstations are symmetric around hall center");
+            AssertEqual(true, MerWorldTransformComposer.RotationAngleDegrees(
+                leftWorkstation.Rotation, MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 90f, 0f))) < 0.1f,
+                "left workstation faces inward");
+            AssertEqual(true, MerWorldTransformComposer.RotationAngleDegrees(
+                rightWorkstation.Rotation, MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, -90f, 0f))) < 0.1f,
+                "right workstation faces inward");
+            AssertVectorNear(new Vector3(100f, 202.5f, 288.7f), layout.VerifiedBounds.center, 0.001f,
+                "full-room activity bounds are centered across gallery and training area");
+            AssertVectorNear(new Vector3(36.5f, 5.5f, 30.6f), layout.VerifiedBounds.size, 0.001f,
+                "full-room activity bounds cover the combined rectangle with only edge tolerance");
+            AssertEqual(true, layout.RequiredRetaliationDistance > 47f,
+                "bot retaliation covers the widened full-hall diagonal rather than the legacy 24 m cap");
+            Vector3 selectorSide = new Vector3(origin.x, origin.y + 0.5f, layout.DoorPlaneZ + 1f);
+            Vector3 aimSide = new Vector3(origin.x, origin.y + 0.5f, layout.DoorPlaneZ - 1f);
+            AssertEqual(false, layout.ContainsAimUi(selectorSide), "selector side keeps original SCP UI only");
+            AssertEqual(true, layout.ContainsAimUi(aimSide), "training side shows Aim UI only");
         }
 
         private static void WidenedAimLayoutDefinesThreeClearLanes()
         {
             Vector3 origin = new Vector3(25f, 50f, 75f);
             AimRangeLayout layout = new AimRangeLayout(origin, -4.75f);
-            AssertEqual(19.2f, AimRangeLayout.Width, "widened shell width");
+            AssertEqual(19.2f, AimRangeLayout.Width, "centered training-lane width");
             AssertEqual(6.4f, AimRangeLayout.LaneWidth, "each lane width");
             AssertEqual(3, layout.SlidingTargetTracks.Count, "three persistent sliding tracks");
+            AssertEqual(1.70f * 1.35f, layout.SlidingTargetTracks[2].MinimumSpeed,
+                "deepest sliding target minimum speed is 35 percent faster");
+            AssertEqual(2.15f * 1.35f, layout.SlidingTargetTracks[2].MaximumSpeed,
+                "deepest sliding target maximum speed is 35 percent faster");
             AssertEqual(2, layout.BotPaths.Count, "two authored bot patrol paths");
             AssertEqual(6, layout.BotCovers.Count, "three authored covers per bot slot");
             AssertEqual(true, SphereTargetLayout.RequiredClearWidth <= AimRangeLayout.LaneWidth - 0.5f, "sphere lane keeps required clear width");
@@ -1148,40 +1169,67 @@ namespace WarmupScpSelector.Tests
             AssertEqual(true, SlidingTargetLogic.TryBuildMotion(track, 1234, 7, 1, 17031, out SlidingTargetMotion first), "first motion builds");
             AssertEqual(true, SlidingTargetLogic.TryBuildMotion(track, 1234, 7, 1, 17031, out SlidingTargetMotion repeat), "repeat motion builds");
             AssertEqual(first.Speed, repeat.Speed, "same seed keeps speed");
+            AssertEqual(first.SpeedVariation, repeat.SpeedVariation, "same seed keeps speed variation depth");
+            AssertEqual(first.SpeedVariationPeriod, repeat.SpeedVariationPeriod, "same seed keeps speed variation period");
             AssertEqual(first.Phase, repeat.Phase, "same seed keeps phase");
             AssertEqual(first.Reversed, repeat.Reversed, "same seed keeps direction");
             AssertVectorNear(first.Evaluate(3.75d), repeat.Evaluate(3.75d), 0.0001f, "absolute evaluation is deterministic");
             AssertVectorNear(first.Evaluate(3.75d), first.Evaluate(1d + 2.75d), 0.0001f, "tick partition cannot affect position");
+            float minimumSpeed = Enumerable.Range(0, 80).Min(i => first.EvaluateSpeed(i * 0.1d));
+            float maximumSpeed = Enumerable.Range(0, 80).Max(i => first.EvaluateSpeed(i * 0.1d));
+            AssertEqual(true, maximumSpeed - minimumSpeed > first.Speed * 0.3f,
+                "sliding target visibly accelerates and decelerates over time");
         }
 
-        private static void SphereTargetStatePopsOnceAndRespawns()
+        private static void SphereTargetStateCreditsOnceAndRelocates()
         {
             SphereTargetState state = new SphereTargetState();
             state.Start(9, 2, 0d);
             AssertEqual(true, state.TryBeginSpawn(9, 0, 0d, out SphereTargetSpawnTicket first), "sphere spawn begins");
             AssertEqual(true, state.CommitSpawn(9, first, 4), "sphere spawn commits");
-            AssertEqual(true, state.TryPop(9, 0, first.Generation, 1d, 0.32d, out SphereTargetPop pop), "live sphere pops");
-            AssertEqual(4, pop.PointIndex, "popped authored point retained");
-            AssertEqual(false, state.TryPop(9, 0, first.Generation, 1d, 0.32d, out _), "duplicate hit rejected");
-            AssertEqual(false, state.GetDueSlots(9, 1.31d).Contains(0), "sphere does not respawn early");
-            AssertEqual(true, state.GetDueSlots(9, 1.32d).Contains(0), "sphere respawns at deadline");
-            AssertEqual(true, state.TryBeginSpawn(9, 0, 1.32d, out SphereTargetSpawnTicket second), "next sphere spawn begins");
-            AssertEqual(4, second.PreviousPointIndex, "immediate previous point is excluded by controller selection");
+            AssertEqual(true, state.TryCommitRelocation(9, 0, first.Generation, 5, out int relocatedGeneration), "live sphere commits immediate relocation");
+            AssertEqual(false, state.TryCommitRelocation(9, 0, first.Generation, 6, out _), "duplicate old-generation hit rejected");
+            AssertEqual(true, state.IsCurrentLive(9, 0, relocatedGeneration), "relocated generation remains live without an intermediate phase");
             state.Stop();
-            AssertEqual(false, state.IsCurrentLive(9, 0, second.Generation), "stop invalidates pending generation");
+            AssertEqual(false, state.IsCurrentLive(9, 0, relocatedGeneration), "stop invalidates relocated generation");
         }
 
         private static void SphereTargetLayoutFitsThirdLane()
         {
             SphereTargetLayout layout = SphereTargetLayout.CreateWidenedThirdLane(Vector3.zero, Quaternion.identity);
-            AssertEqual(12, layout.Points.Count, "authored sphere point count");
+            AssertEqual(50, layout.Points.Count, "fixed sphere deck provides thirty relocation gaps for 20 live targets");
+            AssertEqual(20, new AimRangeActivityConfig().SphereActiveCount, "twenty simultaneous spheres are the activity default");
+            AssertEqual(20, new SphereTargetSettings().ActiveCount, "isolated sphere settings share the twenty-target default");
             float minX = layout.Points.Min(point => point.x);
             float maxX = layout.Points.Max(point => point.x);
+            float minY = layout.Points.Min(point => point.y);
+            float maxY = layout.Points.Max(point => point.y);
             float minZ = layout.Points.Min(point => point.z);
             float maxZ = layout.Points.Max(point => point.z);
             AssertEqual(true, maxX - minX <= SphereTargetLayout.RequiredClearWidth, "sphere cloud fits lane width");
             AssertEqual(true, maxZ - minZ <= SphereTargetLayout.RequiredClearDepth, "sphere cloud fits lane depth");
+            AssertEqual(true, maxY - minY > 3f, "sphere cloud fills the usable vertical volume");
+            AssertEqual(true, maxZ - minZ > 10.5f, "sphere cloud fills the usable downrange volume");
+            AssertEqual(true, layout.Points.Select(point => point.z).Distinct().Count() >= 45,
+                "sphere cloud does not collapse onto repeated depth planes");
             AssertEqual(layout.Points.Count, layout.Points.Distinct().Count(), "sphere points are distinct");
+
+            int[] firstPass = Enumerable.Range(0, 50)
+                .Select(ordinal => SphereTargetLayout.GetSequencePointIndex(ordinal, layout.Points.Count))
+                .ToArray();
+            int[] secondPass = Enumerable.Range(50, 50)
+                .Select(ordinal => SphereTargetLayout.GetSequencePointIndex(ordinal, layout.Points.Count))
+                .ToArray();
+            AssertEqual(50, firstPass.Distinct().Count(), "the sequence visits every fixed deck point before wrapping");
+            AssertSequence(firstPass, secondPass, "the fixed 50-point sequence wraps without rerolling");
+
+            SphereTargetLayout widened = SphereTargetLayout.CreateWidenedThirdLane(Vector3.zero, Quaternion.identity, 15.3f);
+            float widenedMinX = widened.Points.Min(point => point.x);
+            float widenedMaxX = widened.Points.Max(point => point.x);
+            AssertEqual(true, widenedMaxX - widenedMinX > 14.5f,
+                "widened sphere cloud fills the formerly empty horizontal wing");
+            AssertEqual(true, widenedMaxX - widenedMinX <= 15.3f,
+                "widened sphere cloud stays inside the available bay");
         }
 
         private static IReadOnlyDictionary<string, MerWorldTransform> BuildRackMarkers(Vector3 origin, Quaternion rotation)
@@ -1396,6 +1444,95 @@ namespace WarmupScpSelector.Tests
             AssertEqual(0, cache.Count, "cleared cache is empty");
         }
 
+        private static void ParkourDefaultsToExplicitOptIn()
+        {
+            ParkourActivityConfig config = new ActivityConfig().Parkour;
+            AssertEqual(false, config.Enabled, "parkour default off");
+            AssertEqual(20f, config.SchedulerRateHz, "parkour shared tick default");
+            AssertEqual(0.6f, config.StartHoldSeconds, "parkour start hold");
+            AssertEqual(3f, config.CountdownSeconds, "parkour countdown");
+        }
+
+        private static void ParkourRunRequiresOrderedGatesAndFreezesFinishTime()
+        {
+            ParkourRunState run = new ParkourRunState("runner", 41);
+            run.BeginArming(10d);
+            AssertEqual(false, run.TryBeginCountdown(10.5d, 0.6d, 3d), "start hold not complete");
+            AssertEqual(true, run.TryBeginCountdown(10.61d, 0.6d, 3d), "start hold arms countdown");
+            AssertEqual(false, run.TryStartRun(13.60d), "countdown remains authoritative");
+            AssertEqual(true, run.TryStartRun(13.61d), "run starts on GO timestamp");
+            AssertEqual(false, run.TryAdvanceGate(1), "future gate rejected");
+            AssertEqual(true, run.TryAdvanceGate(0), "next ordered gate accepted");
+            AssertEqual(false, run.TryFinish(20d, 2), "finish rejected before all gates");
+            AssertEqual(true, run.TryAdvanceGate(1), "second ordered gate accepted");
+            AssertEqual(true, run.TryFinish(20d, 2), "finish accepted after every gate");
+            AssertEqual(6.39d, Math.Round(run.Elapsed(99d), 3), "finish freezes exact elapsed time");
+            AssertEqual(true, run.RequireStartExit, "finish cannot auto-rearm under runner");
+        }
+
+        private static void ParkourLayoutFitsTheEmptyLeftWing()
+        {
+            AimRangeLayout aim = new AimRangeLayout(Vector3.zero, -4.75f, 37f, 9f);
+            ParkourLayout layout = new ParkourLayout(aim);
+            AssertEqual(17, layout.Platforms.Count, "ordered parkour landing count");
+            AssertEqual(true, ContainsPoint(layout.BayBounds, layout.StartPlate.Center), "start inside parkour bay");
+            AssertEqual(true, ContainsPoint(layout.BayBounds, layout.FinishPlate.Center), "finish inside parkour bay");
+            AssertEqual(true, aim.ContainsParkourBay(layout.StartPlate.Center), "Aim carveout contains start");
+
+            Vector3 previous = layout.StartPlate.Center;
+            foreach (ParkourPlatform platform in layout.Platforms)
+            {
+                AssertEqual(true, ContainsPoint(layout.BayBounds, platform.Center), "landing inside isolated bay");
+                AssertEqual(true, platform.SurfaceY <= aim.GalleryOrigin.y + 2.75f, "landing keeps normal-jump ceiling clearance");
+                double distance = Math.Sqrt(
+                    Math.Pow(platform.Center.x - previous.x, 2d) +
+                    Math.Pow(platform.Center.z - previous.z, 2d));
+                AssertEqual(true, distance <= 3.05d, "consecutive landings stay in normal jump envelope");
+                previous = platform.Center;
+            }
+
+            double home = Math.Sqrt(
+                Math.Pow(layout.FinishPlate.Center.x - previous.x, 2d) +
+                Math.Pow(layout.FinishPlate.Center.z - previous.z, 2d));
+            AssertEqual(true, home <= 2.5d, "descending home jump stays in normal envelope");
+        }
+
+        private static void ParkourSweptGateDetectionCatchesFastCrossings()
+        {
+            Bounds gate = new Bounds(new Vector3(0f, 1f, 0f), new Vector3(1f, 1f, 0.2f));
+            AssertEqual(true,
+                ParkourLayout.SegmentIntersectsBounds(new Vector3(0f, 1f, -2f), new Vector3(0f, 1f, 2f), gate),
+                "fast segment crossing thin gate is credited");
+            AssertEqual(false,
+                ParkourLayout.SegmentIntersectsBounds(new Vector3(2f, 1f, -2f), new Vector3(2f, 1f, 2f), gate),
+                "parallel miss is rejected");
+        }
+
+        private static void ParkourTextIsBilingualAndMarkupSafe()
+        {
+            ParkourViewState active = new ParkourViewState(ParkourPhase.Active, 2, 5, 17, 12.64d, 0d, 31.904d);
+            string english = ParkourText.BuildHero(active, false);
+            string chinese = ParkourText.BuildHero(active, true);
+            AssertContains(english, "SECTOR 2 / 4", "parkour English sector");
+            AssertContains(english, ">12.6<", "parkour tenths timer");
+            AssertNoCjk(english, "parkour English has one language");
+            AssertContains(chinese, "第 2 / 4 段", "parkour Chinese sector");
+            AssertEqual(true, ContainsCjk(chinese), "parkour Chinese has CJK");
+            foreach (string text in new[]
+            {
+                english,
+                chinese,
+                ParkourText.BuildFooter(ParkourPhase.Active, false),
+                ParkourText.BuildFooter(ParkourPhase.Finished, true),
+                ParkourText.BuildFlash("best", false),
+                ParkourText.BuildFlash("recover", true),
+            })
+            {
+                AssertMarkupSafe(text, "parkour markup");
+                AssertNoNestedSize(text, "parkour no nested size");
+            }
+        }
+
         private static bool ContainsCjk(string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -1412,6 +1549,15 @@ namespace WarmupScpSelector.Tests
             }
 
             return false;
+        }
+
+        private static bool ContainsPoint(Bounds bounds, Vector3 point)
+        {
+            Vector3 center = bounds.center;
+            Vector3 size = bounds.size;
+            return Math.Abs(point.x - center.x) <= size.x / 2f &&
+                Math.Abs(point.y - center.y) <= size.y / 2f &&
+                Math.Abs(point.z - center.z) <= size.z / 2f;
         }
 
         private static void AssertNoCjk(string text, string label)

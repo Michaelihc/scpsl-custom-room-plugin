@@ -112,7 +112,7 @@ namespace WarmupScpSelector.Text
         // comfortably inside the ~284px left HUD lane even when the ASCII fallback doubles each cell.
         private const int RailCells = 5;
 
-        /// <summary>Prettify a shelf/bot preset id into a short weapon label (markup-safe).</summary>
+        /// <summary>Prettify an armoury/bot preset id into a short weapon label (markup-safe).</summary>
         public static string WeaponLabel(string presetId)
         {
             if (string.IsNullOrWhiteSpace(presetId))

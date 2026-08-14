@@ -8,15 +8,9 @@ namespace WarmupScpSelector.Activities.AimRange
     /// </summary>
     public sealed class SphereTargetSettings
     {
-        public int ActiveCount { get; set; } = 3;
+        public int ActiveCount { get; set; } = 20;
 
         public float Diameter { get; set; } = 0.72f;
-
-        public float RespawnDelaySeconds { get; set; } = 0.32f;
-
-        public float SpawnRetrySeconds { get; set; } = 0.5f;
-
-        public int SeedSalt { get; set; } = 37013;
 
         public Color Color { get; set; } = new Color(0.20f, 0.93f, 0.85f, 1f);
 
@@ -26,9 +20,6 @@ namespace WarmupScpSelector.Activities.AimRange
             return new SphereTargetValidatedSettings(
                 Mathf.Clamp(ActiveCount, 1, maximumActive),
                 Sanitize(Diameter, 0.2f, 1.5f, 0.72f),
-                Sanitize(RespawnDelaySeconds, 0.05f, 5f, 0.32f),
-                Sanitize(SpawnRetrySeconds, 0.05f, 5f, 0.5f),
-                SeedSalt,
                 SanitizeColor(Color));
         }
 
@@ -58,24 +49,15 @@ namespace WarmupScpSelector.Activities.AimRange
         public SphereTargetValidatedSettings(
             int activeCount,
             float diameter,
-            float respawnDelaySeconds,
-            float spawnRetrySeconds,
-            int seedSalt,
             Color color)
         {
             ActiveCount = activeCount;
             Diameter = diameter;
-            RespawnDelaySeconds = respawnDelaySeconds;
-            SpawnRetrySeconds = spawnRetrySeconds;
-            SeedSalt = seedSalt;
             Color = color;
         }
 
         public int ActiveCount { get; }
         public float Diameter { get; }
-        public float RespawnDelaySeconds { get; }
-        public float SpawnRetrySeconds { get; }
-        public int SeedSalt { get; }
         public Color Color { get; }
     }
 }

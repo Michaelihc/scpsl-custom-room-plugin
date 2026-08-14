@@ -17,7 +17,7 @@ using Logger = LabApi.Features.Console.Logger;
 namespace WarmupScpSelector.Activities.AimRange
 {
     /// <summary>
-    /// Runtime orchestrator for range occupancy, physical shelves, native targets, owned deterministic dummies,
+    /// Runtime orchestrator for range occupancy, main-gallery armoury pickups, native targets, owned deterministic dummies,
     /// damage isolation, lethal human reset, the shared scheduler, and synchronous round-handoff teardown.
     /// </summary>
     internal sealed class AimRangeActivityLane : IActivityLane
@@ -39,6 +39,7 @@ namespace WarmupScpSelector.Activities.AimRange
         private double _now;
         private bool _running;
         private bool _subscribed;
+        private bool _parkourCarveoutEnabled;
 
         // HUD change-detection: last per-player counter snapshot (to fire hit/incoming flashes on a rise) and the
         // last aggregate bot spawn-signal (a rise after startup = a bot respawned -> BOT BACK flash). Pure state;
@@ -83,7 +84,6 @@ namespace WarmupScpSelector.Activities.AimRange
             _sphereTargets = new SphereTargetController(
                 IsActiveParticipant,
                 player => TryGetCurrentOwnedSession(player, out _),
-                () => Now,
                 OnSphereTargetHit,
                 message => Logger.Warn("[WarmupScpSelector] " + message));
         }
@@ -91,6 +91,13 @@ namespace WarmupScpSelector.Activities.AimRange
         public string LaneId => LaneHintIds.Aim;
 
         public bool Enabled => _plugin.Config.ActivitiesEnabled && _plugin.Config.Activities?.Aim?.Enabled == true;
+
+        internal AimRangeLayout? Layout => _running ? _world.Layout : null;
+
+        internal void SetParkourCarveout(bool enabled)
+        {
+            _parkourCarveoutEnabled = enabled;
+        }
 
         private AimRangeActivityConfig AimConfig => _plugin.Config.Activities?.Aim ?? new AimRangeActivityConfig();
 
@@ -127,16 +134,16 @@ namespace WarmupScpSelector.Activities.AimRange
                 _rangeGeneration = Next(_rangeGeneration);
 
                 float doorOffset = room.AimRangeDoorPlaneZ - room.Origin.z;
-                if (!_world.Build(room.Origin, doorOffset) || _world.Layout == null)
+                if (!_world.Build(room.Origin, doorOffset, room.Width, room.Depth) || _world.Layout == null)
                 {
                     StopInternal();
                     return;
                 }
 
                 _now = 0d;
-                if (!_shelves.Start(_world.ShelfAnchors, AimConfig, 0d))
+                if (!_shelves.Start(_world.ShelfAnchors, AimConfig))
                 {
-                    Logger.Warn("[WarmupScpSelector] Aim Range stayed closed because no valid weapon shelf slot could start.");
+                    Logger.Warn("[WarmupScpSelector] Aim Range stayed closed because no valid gallery armoury pickup could start.");
                     StopInternal();
                     return;
                 }
@@ -161,20 +168,17 @@ namespace WarmupScpSelector.Activities.AimRange
                 {
                     SphereTargetLayout sphereLayout = SphereTargetLayout.CreateWidenedThirdLane(
                         _world.Layout.SphereLaneOrigin,
-                        _world.Layout.SphereLaneRotation);
+                        _world.Layout.SphereLaneRotation,
+                        _world.Layout.SphereBayWidth);
                     SphereTargetSettings sphereSettings = new SphereTargetSettings
                     {
                         ActiveCount = AimConfig.SphereActiveCount,
                         Diameter = AimConfig.SphereDiameter,
-                        RespawnDelaySeconds = AimConfig.SphereRespawnSeconds,
-                        SpawnRetrySeconds = AimConfig.SphereSpawnRetrySeconds,
-                        SeedSalt = AimConfig.SphereSeedSalt,
                     };
                     _sphereTargets.Start(
                         _rangeGeneration,
                         sphereLayout,
                         sphereSettings,
-                        SeedSynchronizer.Seed,
                         0d);
                 }
                 catch (Exception ex)
@@ -199,7 +203,7 @@ namespace WarmupScpSelector.Activities.AimRange
             }
             catch (Exception ex)
             {
-                Logger.Warn($"[WarmupScpSelector] Aim Range startup failed: {ex.Message}");
+                Logger.Warn($"[WarmupScpSelector] Aim Range startup failed: {ex}");
                 StopInternal();
             }
         }
@@ -213,6 +217,7 @@ namespace WarmupScpSelector.Activities.AimRange
             try
             {
                 ReleaseSession(userKey);
+                _shelves.DestroyForPlayer(userKey);
             }
             catch (Exception ex)
             {
@@ -231,6 +236,10 @@ namespace WarmupScpSelector.Activities.AimRange
                 Logger.Warn($"[WarmupScpSelector] Aim Range disconnect lobby safety failed: {ex.Message}");
             }
         }
+
+        /// <summary>UI-only range-side check; combat and issued-weapon ownership remain full-room.</summary>
+        public bool IsInAimUiArea(Player player) =>
+            _running && player != null && _world.Layout?.ContainsAimUi(player.Position) == true;
 
         /// <summary>
         /// Reserved routing boundary for a later lethal reset implementation. It returns true only for a reset
@@ -271,7 +280,6 @@ namespace WarmupScpSelector.Activities.AimRange
                     UpdateOccupancy();
                 }
 
-                _shelves.Tick(elapsedSeconds);
                 _slidingTargets.Tick(elapsedSeconds);
                 _sphereTargets.Tick(elapsedSeconds);
                 _bots.Tick(elapsedSeconds);
@@ -316,13 +324,20 @@ namespace WarmupScpSelector.Activities.AimRange
                     continue;
                 }
 
-                live.Add(session.UserKey);
                 Player? player = ResolveHuman(session.UserKey);
                 if (player == null)
                 {
                     continue;
                 }
 
+                if (!IsInAimUiArea(player))
+                {
+                    try { _hints.RemoveLane(player, LaneId); }
+                    catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range out-of-area HUD cleanup failed: {ex.Message}"); }
+                    continue;
+                }
+
+                live.Add(session.UserKey);
                 AimRangeViewState view = BuildViewState(session);
                 try { _hints.ShowLaneHero(player, LaneId, heroY, AimRangeText.BuildHero(view, cn, ascii), hudX); }
                 catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range hero render failed: {ex.Message}"); }
@@ -438,6 +453,11 @@ namespace WarmupScpSelector.Activities.AimRange
         {
             try
             {
+                if (!IsInAimUiArea(player))
+                {
+                    return;
+                }
+
                 string text = AimRangeText.BuildFlash(kind, cn, ascii);
                 if (text.Length == 0)
                 {
@@ -474,7 +494,8 @@ namespace WarmupScpSelector.Activities.AimRange
 
                 string userKey = SelectorController.Key(player);
                 seen.Add(userKey);
-                bool inside = _world.Layout.ContainsVerified(player.Position);
+                bool inside = _world.Layout.ContainsVerified(player.Position) &&
+                    !(_parkourCarveoutEnabled && _world.Layout.ContainsParkourBay(player.Position));
                 AimRangeOccupancyTransition transition = _sessions.UpdateOccupancy(
                     userKey,
                     inside,
@@ -482,6 +503,10 @@ namespace WarmupScpSelector.Activities.AimRange
 
                 if (transition == AimRangeOccupancyTransition.Entered)
                 {
+                    if (_sessions.TryGet(userKey, out AimRangeSessions.Session session))
+                    {
+                        _shelves.AttachToSession(player, session);
+                    }
                     _plugin.LogDebug($"Aim Range occupancy entered: {userKey}.");
                 }
                 else if (transition == AimRangeOccupancyTransition.Left)
@@ -522,7 +547,7 @@ namespace WarmupScpSelector.Activities.AimRange
             Player? player = ResolveHuman(userKey);
             try
             {
-                _shelves.DestroyOwnedWeapon(player, session);
+                _shelves.DetachSession(session);
             }
             catch (Exception ex)
             {
@@ -653,12 +678,21 @@ namespace WarmupScpSelector.Activities.AimRange
                 bool victimParticipant = TryGetCurrentSession(ev.Player, out AimRangeSessions.Session victimSession);
                 AimRangeSessions.Session attackerSession = null!;
                 bool attackerParticipant = ev.Attacker != null && TryGetCurrentSession(ev.Attacker, out attackerSession);
-                bool attackerOwnsWeapon = attackerParticipant && ev.Attacker?.CurrentItem != null &&
-                    attackerSession.OwnedItemSerial != 0 && ev.Attacker.CurrentItem.Serial == attackerSession.OwnedItemSerial &&
-                    ev.DamageHandler is FirearmDamageHandler firearmDamageHandler && firearmDamageHandler.Firearm != null &&
-                    firearmDamageHandler.Firearm.ItemSerial == attackerSession.OwnedItemSerial;
+                ushort damageWeaponSerial = ev.DamageHandler is FirearmDamageHandler firearmDamageHandler &&
+                    firearmDamageHandler.Firearm != null ? firearmDamageHandler.Firearm.ItemSerial : (ushort)0;
+                bool attackerHasIssuedWeapon = ev.Attacker != null &&
+                    damageWeaponSerial != 0 && _shelves.IsIssuedWeapon(ev.Attacker, damageWeaponSerial);
+                bool attackerOwnsWeapon = attackerParticipant && attackerHasIssuedWeapon &&
+                    _shelves.SynchronizeIssuedWeapon(ev.Attacker, attackerSession, damageWeaponSerial);
                 bool attackerBot = _bots.IsOwnedBot(ev.Attacker);
                 bool victimBot = _bots.IsOwnedBot(ev.Player);
+
+                // Gallery armoury guns can be carried outside the range, but can never damage anything there.
+                if (attackerHasIssuedWeapon && !attackerParticipant)
+                {
+                    ev.IsAllowed = false;
+                    return;
+                }
 
                 RangeDamageDisposition disposition = RangeDamagePolicy.Decide(
                     attackerParticipant,
@@ -675,17 +709,17 @@ namespace WarmupScpSelector.Activities.AimRange
 
                 if (disposition == RangeDamageDisposition.AllowHumanToOwnedBot && ev.Attacker != null)
                 {
-                    if (!_bots.TryProvoke(
-                            ev.Player,
-                            ev.Attacker,
-                            attackerSession.Token,
-                            attackerSession.OwnedItemSerial,
-                            Now))
-                    {
-                        ev.IsAllowed = false;
-                        return;
-                    }
-
+                    // Damage authorization and retaliation setup are deliberately independent. A valid issued-gun
+                    // hit always hurts an owned dummy; a transient bot registry/input failure must not make it immune.
+                    bool provoked = _bots.TryProvoke(
+                        ev.Player,
+                        ev.Attacker,
+                        attackerSession.Token,
+                        damageWeaponSerial,
+                        Now);
+                    _plugin.LogDebug(
+                        $"Aim bot hit routed: attacker={attackerSession.UserKey} serial={damageWeaponSerial} " +
+                        $"bot={ev.Player.PlayerId} provoked={provoked} current={ev.Attacker.CurrentItem?.Serial ?? 0}.");
                     attackerSession.BotHits++;
                     return;
                 }
@@ -881,23 +915,11 @@ namespace WarmupScpSelector.Activities.AimRange
         {
             try
             {
-                _shelves.OnPickingUp(ev, Now);
+                _shelves.OnPickingUp(ev);
             }
             catch (Exception ex)
             {
-                Logger.Warn($"[WarmupScpSelector] Aim Range shelf claim failed: {ex.Message}");
-            }
-        }
-
-        private void OnPickedUp(PlayerPickedUpItemEventArgs ev)
-        {
-            try
-            {
-                _shelves.OnPickedUp(ev, Now);
-            }
-            catch (Exception ex)
-            {
-                Logger.Warn($"[WarmupScpSelector] Aim Range shelf pickup failed: {ex.Message}");
+                Logger.Warn($"[WarmupScpSelector] Aim Range armoury grant failed: {ex.Message}");
             }
         }
 
@@ -921,7 +943,6 @@ namespace WarmupScpSelector.Activities.AimRange
             }
 
             PlayerEvents.PickingUpItem += OnPickingUp;
-            PlayerEvents.PickedUpItem += OnPickedUp;
             PlayerEvents.DroppedItem += OnDropped;
             PlayerEvents.ShotWeapon += OnShotWeapon;
             PlayerEvents.DamagingShootingTarget += OnDamagingTarget;
@@ -940,7 +961,6 @@ namespace WarmupScpSelector.Activities.AimRange
             }
 
             PlayerEvents.PickingUpItem -= OnPickingUp;
-            PlayerEvents.PickedUpItem -= OnPickedUp;
             PlayerEvents.DroppedItem -= OnDropped;
             PlayerEvents.ShotWeapon -= OnShotWeapon;
             PlayerEvents.DamagingShootingTarget -= OnDamagingTarget;
@@ -964,16 +984,16 @@ namespace WarmupScpSelector.Activities.AimRange
             foreach (AimRangeSessions.Session session in _sessions.InvalidateAndRemoveAll())
             {
                 Player? player = ResolveHuman(session.UserKey);
-                try { _shelves.DestroyOwnedWeapon(player, session); } catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range owned-weapon teardown failed: {ex.Message}"); }
                 try { if (player != null) _hints.RemoveLane(player, LaneId); } catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range hint teardown failed: {ex.Message}"); }
                 try { _activities.EndSession(session.UserKey); } catch { }
             }
 
-            try { _shelves.Stop(); } catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range shelf teardown failed: {ex.Message}"); }
+            try { _shelves.Stop(); } catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range armoury teardown failed: {ex.Message}"); }
             try { _world.Despawn(); } catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range world teardown failed: {ex.Message}"); }
             try { _room?.CloseAimRangeDoor(); } catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range door cleanup failed: {ex.Message}"); }
 
             _now = 0d;
+            _parkourCarveoutEnabled = false;
             _hudCounters.Clear();
             _lastSpawnSignal = -1;
             _room = null;

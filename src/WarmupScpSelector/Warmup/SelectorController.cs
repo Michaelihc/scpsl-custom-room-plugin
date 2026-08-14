@@ -9,6 +9,7 @@ using PlayerRoles;
 using UnityEngine;
 using WarmupScpSelector.Activities;
 using WarmupScpSelector.Activities.AimRange;
+using WarmupScpSelector.Activities.Parkour;
 using WarmupScpSelector.Selection;
 using WarmupScpSelector.Services;
 using WarmupScpSelector.Text;
@@ -36,6 +37,7 @@ internal sealed class SelectorController
     // players flip to None so range-owned hazards cannot leak into vanilla assignment.
     private readonly ActivityManager _activities = new();
     private readonly AimRangeActivityLane _aimLane;
+    private readonly ParkourActivityLane _parkourLane;
     private readonly SelectorParticipantState _participantState = new();
 
     // TEST SUPPORT ONLY (dummy harness): display-only picks for players that can't grab a coin (dummies).
@@ -62,6 +64,7 @@ internal sealed class SelectorController
         _room = new SelectorRoom(plugin);
         _music = new WarmupMusicPlayer(plugin);
         _aimLane = new AimRangeActivityLane(plugin, hints, _activities, IsOwnedWarmupHuman);
+        _parkourLane = new ParkourActivityLane(plugin, hints, _activities, IsOwnedWarmupHuman);
     }
 
     private Config Config => _plugin.Config;
@@ -70,42 +73,6 @@ internal sealed class SelectorController
     internal ActivityManager Activities => _activities;
 
     private bool UseChinese => string.Equals(Config.Language, "cn", StringComparison.OrdinalIgnoreCase);
-
-    private bool UseAscii => Config.Activities?.UseAsciiGlyphFallback == true;
-
-    // Y of the one-line collapsed status strip shown while a player is inside an activity lane (Aim Range).
-    // Configurable and clamped on-screen; kept below the lane's flash/hero/footer bands so nothing overlaps.
-    private float CollapsedStatusY
-    {
-        get
-        {
-            float y = Config.Activities?.Aim?.CollapsedStatusY ?? 900f;
-            if (float.IsNaN(y) || float.IsInfinity(y))
-            {
-                y = 900f;
-            }
-
-            return Math.Max(0f, Math.Min(1080f, y));
-        }
-    }
-
-    // HSM center-X of the collapsed status strip while a player is inside the Aim Range. It shares the lane's
-    // HudX so the collapsed strip sits in the same narrow left corridor as the range flash/hero/footer (clear of
-    // the native inventory list + wheel). Outside the range the full draft panel keeps the centered global
-    // default (no override), so this is only applied on the collapsed path.
-    private float CollapsedStatusX
-    {
-        get
-        {
-            float x = Config.Activities?.Aim?.HudX ?? -1077f;
-            if (float.IsNaN(x) || float.IsInfinity(x))
-            {
-                x = -1077f;
-            }
-
-            return Math.Max(-1745f, Math.Min(1745f, x));
-        }
-    }
 
     // ---- Server lifecycle ------------------------------------------------------------------------
 
@@ -456,6 +423,17 @@ internal sealed class SelectorController
             {
                 _activities.RegisterLane(_aimLane);
                 _aimLane.Start(_room);
+            }
+
+            if (_parkourLane.Enabled)
+            {
+                _activities.RegisterLane(_parkourLane);
+                bool started = _parkourLane.Start(_aimLane.Layout);
+                _aimLane.SetParkourCarveout(started);
+                if (!started)
+                {
+                    Logger.Warn("[WarmupScpSelector] Parkour stayed closed because its Aim-hall subarea was unavailable.");
+                }
             }
         }
         catch (Exception ex)
@@ -862,9 +840,8 @@ internal sealed class SelectorController
         ShowStatus(player, CountdownNow(), SelectionCounts());
     }
 
-    // Draw/refresh the warmup status panel for one player through HSM (stable id, updated in place). While the
-    // player is inside an activity lane (the Aim Range) the full draft panel collapses to a one-line strip so the
-    // lane's own hero/footer own the screen; it restores to the full card automatically once they leave the lane.
+    // Draw/refresh the original warmup status panel outside the Aim UI area. Crossing the UI-only floor line
+    // removes it completely so only the Aim hero/footer can render; mechanics remain active on both sides.
     // The provider owns the change-skip cache, so an unchanged render never reaches HSM or the network.
     private void ShowStatus(Player player, CountdownContext context, IReadOnlyDictionary<RoleTypeId, int> counts)
     {
@@ -876,11 +853,11 @@ internal sealed class SelectorController
         string key = Key(player);
         RoleTypeId? selection = Selection(player);
 
-        if (string.Equals(_activities.CurrentLane(key), LaneHintIds.Aim, StringComparison.Ordinal))
+        string? currentLane = _activities.CurrentLane(key);
+        if ((string.Equals(currentLane, LaneHintIds.Aim, StringComparison.Ordinal) && _aimLane.IsInAimUiArea(player)) ||
+            (string.Equals(currentLane, LaneHintIds.Parkour, StringComparison.Ordinal) && _parkourLane.Contains(player.Position)))
         {
-            int pickCount = selection.HasValue && counts.TryGetValue(selection.Value, out int count) ? count : 0;
-            string strip = WarmupText.BuildCollapsedStatusStrip(context.Timer, selection, pickCount, UseChinese, UseAscii);
-            _hints.ShowPrompt(player, StatusTagId, CollapsedStatusY, strip, CollapsedStatusX);
+            _hints.Remove(player, StatusTagId);
             return;
         }
 

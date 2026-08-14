@@ -41,12 +41,18 @@ namespace WarmupScpSelector.Activities.AimRange
             SlidingTargetTrackDefinition track,
             float speed,
             double phase,
-            bool reversed)
+            bool reversed,
+            float speedVariation,
+            double speedVariationPeriod,
+            double speedVariationPhase)
         {
             Track = track;
             Speed = speed;
             Phase = phase;
             Reversed = reversed;
+            SpeedVariation = speedVariation;
+            SpeedVariationPeriod = speedVariationPeriod;
+            SpeedVariationPhase = speedVariationPhase;
             Distance = Vector3.Distance(track.EndpointA, track.EndpointB);
         }
 
@@ -54,7 +60,19 @@ namespace WarmupScpSelector.Activities.AimRange
         public float Speed { get; }
         public double Phase { get; }
         public bool Reversed { get; }
+        public float SpeedVariation { get; }
+        public double SpeedVariationPeriod { get; }
+        public double SpeedVariationPhase { get; }
         public float Distance { get; }
+
+        public float EvaluateSpeed(double elapsedSeconds)
+        {
+            double elapsed = double.IsNaN(elapsedSeconds) || double.IsInfinity(elapsedSeconds)
+                ? 0d
+                : Math.Max(0d, elapsedSeconds);
+            double omega = Math.PI * 2d / SpeedVariationPeriod;
+            return Speed * (1f + SpeedVariation * (float)Math.Sin(omega * elapsed + SpeedVariationPhase));
+        }
 
         /// <summary>
         /// Evaluates a looped ping-pong path directly from absolute elapsed time. No prior position or tick delta
@@ -69,8 +87,15 @@ namespace WarmupScpSelector.Activities.AimRange
 
             double elapsed = double.IsNaN(elapsedSeconds) || double.IsInfinity(elapsedSeconds)
                 ? 0d
-                : elapsedSeconds;
-            double traversals = elapsed * Speed / Distance;
+                : Math.Max(0d, elapsedSeconds);
+
+            // Analytically integrate a sinusoidally varying speed. This gives each target visible acceleration and
+            // deceleration while retaining absolute-time evaluation, so scheduler jitter never accumulates drift.
+            double omega = Math.PI * 2d / SpeedVariationPeriod;
+            double travelled = Speed * elapsed +
+                Speed * SpeedVariation / omega *
+                (Math.Cos(SpeedVariationPhase) - Math.Cos(omega * elapsed + SpeedVariationPhase));
+            double traversals = travelled / Distance;
             if (Reversed)
             {
                 traversals = -traversals;
@@ -126,11 +151,21 @@ namespace WarmupScpSelector.Activities.AimRange
             System.Random random = new System.Random(seed);
             float speed = minimumSpeed + (maximumSpeed - minimumSpeed) * (float)random.NextDouble();
             double phase = random.NextDouble();
+            float speedVariation = 0.22f + 0.23f * (float)random.NextDouble();
+            double speedVariationPeriod = 2.4d + 2.6d * random.NextDouble();
+            double speedVariationPhase = random.NextDouble() * Math.PI * 2d;
 
             // Slot parity guarantees adjacent authored tracks start with opposite traversal orientation; the range
             // generation and salt deterministically flip the entire pattern between runs.
             bool reversed = ((track.SlotId + rangeGeneration + seedSalt) & 1) != 0;
-            motion = new SlidingTargetMotion(track, speed, phase, reversed);
+            motion = new SlidingTargetMotion(
+                track,
+                speed,
+                phase,
+                reversed,
+                speedVariation,
+                speedVariationPeriod,
+                speedVariationPhase);
             return true;
         }
 

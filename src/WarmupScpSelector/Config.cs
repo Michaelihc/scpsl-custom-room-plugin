@@ -15,7 +15,7 @@ public sealed class Config
     [Description("Whether debug logging is enabled.")]
     public bool Debug { get; set; } = false;
 
-    [Description("Master switch for the optional warmup activity suite (Aim / Dodgeball / Parkour / Duel lanes). Default OFF: the SCP draft behaves exactly as before. Turning it on only enables lanes that are also gated on under Activities. The Aim Range includes occupancy, physical weapon shelves, deterministic native targets, owned native RA bots, lethal human range reset, and a collision-free bilingual HSM range HUD; persistence/scoring remain separate work.")]
+    [Description("Master switch for the optional warmup activity suite (Aim / Dodgeball / Parkour / Duel lanes). Default OFF: the SCP draft behaves exactly as before. Turning it on only enables lanes that are also gated on under Activities. Aim turns the entire continuous selector hall into the activity area, with persistent counter guns, deterministic native targets, owned native RA bots, lethal human reset, and a collision-free bilingual HSM HUD; persistence/scoring remain separate work.")]
     public bool ActivitiesEnabled { get; set; } = false;
 
     [Description("Shared settings for the warmup activity suite. Only applies when ActivitiesEnabled is true.")]

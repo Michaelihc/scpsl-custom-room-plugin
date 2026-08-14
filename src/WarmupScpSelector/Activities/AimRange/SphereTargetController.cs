@@ -37,6 +37,8 @@ namespace WarmupScpSelector.Activities.AimRange
     /// </summary>
     internal sealed class SphereTargetController
     {
+        private const double StartupSpawnRetrySeconds = 0.5d;
+
         private sealed class RuntimeSlot
         {
             public RuntimeSlot(int slotId)
@@ -52,7 +54,6 @@ namespace WarmupScpSelector.Activities.AimRange
 
         private readonly Func<Player, bool> _isCurrentParticipant;
         private readonly Func<Player, bool> _ownsCurrentRangeFirearm;
-        private readonly Func<double> _clock;
         private readonly Action<SphereTargetHit> _credit;
         private readonly Action<string>? _warn;
         private readonly SphereTargetState _state = new SphereTargetState();
@@ -60,7 +61,7 @@ namespace WarmupScpSelector.Activities.AimRange
 
         private SphereTargetLayout? _layout;
         private SphereTargetValidatedSettings _settings;
-        private int _mapSeed;
+        private long _nextPointOrdinal;
         private int _rangeGeneration;
         private bool _running;
         private bool _subscribed;
@@ -68,13 +69,11 @@ namespace WarmupScpSelector.Activities.AimRange
         public SphereTargetController(
             Func<Player, bool> isCurrentParticipant,
             Func<Player, bool> ownsCurrentRangeFirearm,
-            Func<double> clock,
             Action<SphereTargetHit> credit,
             Action<string>? warn = null)
         {
             _isCurrentParticipant = isCurrentParticipant ?? throw new ArgumentNullException(nameof(isCurrentParticipant));
             _ownsCurrentRangeFirearm = ownsCurrentRangeFirearm ?? throw new ArgumentNullException(nameof(ownsCurrentRangeFirearm));
-            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _credit = credit ?? throw new ArgumentNullException(nameof(credit));
             _warn = warn;
         }
@@ -87,7 +86,6 @@ namespace WarmupScpSelector.Activities.AimRange
             int rangeGeneration,
             SphereTargetLayout layout,
             SphereTargetSettings settings,
-            int mapSeed,
             double now)
         {
             Stop();
@@ -103,7 +101,7 @@ namespace WarmupScpSelector.Activities.AimRange
             }
 
             _settings = (settings ?? new SphereTargetSettings()).Validate(_layout.Points.Count);
-            _mapSeed = mapSeed;
+            _nextPointOrdinal = 0L;
             _rangeGeneration = rangeGeneration;
             _state.Start(rangeGeneration, _settings.ActiveCount, now);
             for (int slotId = 0; slotId < _settings.ActiveCount; slotId++)
@@ -142,17 +140,18 @@ namespace WarmupScpSelector.Activities.AimRange
                     continue;
                 }
 
-                int pointIndex = SelectPoint(ticket, occupied);
+                int pointIndex = SelectPoint(ticket.PreviousPointIndex, occupied);
                 if (pointIndex < 0)
                 {
-                    _state.FailSpawn(_rangeGeneration, ticket, now, _settings.SpawnRetrySeconds);
-                    Warn($"Sphere target slot {slotId} had no free authored respawn point.");
+                    _state.FailSpawn(_rangeGeneration, ticket, now, StartupSpawnRetrySeconds);
+                    Warn($"Sphere target slot {slotId} had no free authored point.");
                     continue;
                 }
 
                 if (TrySpawn(ticket, pointIndex, now))
                 {
                     occupied.Add(pointIndex);
+                    _nextPointOrdinal++;
                 }
             }
         }
@@ -181,7 +180,7 @@ namespace WarmupScpSelector.Activities.AimRange
 
             _slots.Clear();
             _layout = null;
-            _mapSeed = 0;
+            _nextPointOrdinal = 0L;
         }
 
         private void OnAnyPlayerFired(ReferenceHub owner, HitscanResult result)
@@ -199,8 +198,8 @@ namespace WarmupScpSelector.Activities.AimRange
                     return;
                 }
 
-                // One firearm action may contain several pellet rays. Snapshot distinct current generations before
-                // popping anything so destroying the first collider cannot affect matching later rays.
+                // One firearm action may contain several pellet rays. Snapshot each distinct current generation so
+                // a sphere can credit at most once for the action even though its collider is never disabled.
                 Dictionary<int, int> candidates = new Dictionary<int, int>();
                 for (int hitIndex = 0; hitIndex < result.Obstacles.Count; hitIndex++)
                 {
@@ -233,38 +232,60 @@ namespace WarmupScpSelector.Activities.AimRange
                     return;
                 }
 
-                double now = Math.Max(0d, _clock());
                 foreach (KeyValuePair<int, int> candidate in candidates)
                 {
-                    if (!_state.TryPop(
-                            _rangeGeneration,
-                            candidate.Key,
-                            candidate.Value,
-                            now,
-                            _settings.RespawnDelaySeconds,
-                            out SphereTargetPop pop) ||
-                        !_slots.TryGetValue(candidate.Key, out RuntimeSlot runtime))
+                    if (!_slots.TryGetValue(candidate.Key, out RuntimeSlot runtime) ||
+                        runtime.Toy == null || runtime.Toy.IsDestroyed ||
+                        runtime.Generation != candidate.Value ||
+                        !_state.IsCurrentLive(_rangeGeneration, runtime.SlotId, runtime.Generation))
                     {
                         continue;
                     }
 
-                    Vector3 position = runtime.Toy != null && !runtime.Toy.IsDestroyed
-                        ? runtime.Toy.Position
-                        : (_layout != null && pop.PointIndex >= 0 && pop.PointIndex < _layout.Points.Count
-                            ? _layout.Points[pop.PointIndex]
-                            : Vector3.zero);
+                    int creditedPointIndex = runtime.PointIndex;
+                    int creditedGeneration = runtime.Generation;
+                    Vector3 creditedPosition = runtime.Toy.Position;
 
-                    // TryPop invalidated the generation first. The visible sphere disappears synchronously, then
-                    // score integration runs; duplicate rays or delayed callbacks cannot credit it again.
-                    DestroyRuntimeToy(runtime);
+                    HashSet<int> occupied = new HashSet<int>();
+                    foreach (RuntimeSlot other in _slots.Values)
+                    {
+                        if (other.SlotId != runtime.SlotId && other.PointIndex >= 0 &&
+                            other.Toy != null && !other.Toy.IsDestroyed)
+                        {
+                            occupied.Add(other.PointIndex);
+                        }
+                    }
+
+                    int pointIndex = SelectPoint(creditedPointIndex, occupied);
+                    if (pointIndex < 0)
+                    {
+                        Warn($"Sphere target slot {runtime.SlotId} had no free relocation point; it remains live in place.");
+                        continue;
+                    }
+
+                    // Score and send the native hitmarker while the sphere is still at the point that was hit.
+                    // The callback is synchronous; immediately afterward the same always-collidable toy moves.
                     try
                     {
-                        _credit(new SphereTargetHit(player, pop.SlotId, pop.Generation, pop.PointIndex, position));
+                        _credit(new SphereTargetHit(
+                            player,
+                            runtime.SlotId,
+                            creditedGeneration,
+                            creditedPointIndex,
+                            creditedPosition));
                     }
                     catch (Exception ex)
                     {
                         Warn($"Sphere target credit callback failed: {ex.GetBaseException().Message}");
                     }
+
+                    if (!TryRelocate(runtime, pointIndex))
+                    {
+                        Warn($"Sphere target slot {runtime.SlotId} could not relocate; it remains live in place.");
+                        continue;
+                    }
+
+                    _nextPointOrdinal++;
                 }
             }
             catch (Exception ex)
@@ -273,32 +294,102 @@ namespace WarmupScpSelector.Activities.AimRange
             }
         }
 
+        private bool TryRelocate(RuntimeSlot runtime, int pointIndex)
+        {
+            if (_layout == null || runtime.Toy == null || runtime.Toy.IsDestroyed ||
+                pointIndex < 0 || pointIndex >= _layout.Points.Count ||
+                !_state.IsCurrentLive(_rangeGeneration, runtime.SlotId, runtime.Generation))
+            {
+                return false;
+            }
+
+            PrimitiveObjectToy toy = runtime.Toy;
+            Vector3 oldPosition = toy.Position;
+            try
+            {
+                // Do not hide, disable, destroy, respawn, or park the target. The same collider moves directly.
+                toy.Position = _layout.Points[pointIndex];
+                Physics.SyncTransforms();
+                if (!_state.TryCommitRelocation(
+                        _rangeGeneration,
+                        runtime.SlotId,
+                        runtime.Generation,
+                        pointIndex,
+                        out int relocatedGeneration))
+                {
+                    toy.Position = oldPosition;
+                    Physics.SyncTransforms();
+                    return false;
+                }
+
+                runtime.Generation = relocatedGeneration;
+                runtime.PointIndex = pointIndex;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    toy.Position = oldPosition;
+                    Physics.SyncTransforms();
+                }
+                catch
+                {
+                    // The original live generation is still valid; teardown remains the final safety boundary.
+                }
+
+                Warn($"Sphere target slot {runtime.SlotId} relocation failed: {ex.GetBaseException().Message}");
+                return false;
+            }
+        }
+
         private bool TrySpawn(SphereTargetSpawnTicket ticket, int pointIndex, double now)
         {
             if (_layout == null || !_slots.TryGetValue(ticket.SlotId, out RuntimeSlot runtime))
             {
-                _state.FailSpawn(_rangeGeneration, ticket, now, _settings.SpawnRetrySeconds);
+                _state.FailSpawn(_rangeGeneration, ticket, now, StartupSpawnRetrySeconds);
                 return false;
             }
 
-            PrimitiveObjectToy? toy = null;
+            PrimitiveObjectToy? toy = runtime.Toy;
+            bool created = toy == null || toy.IsDestroyed;
             try
             {
                 Vector3 position = _layout.Points[pointIndex];
-                toy = PrimitiveObjectToy.Create(
-                    position,
-                    Quaternion.identity,
-                    Vector3.one * _settings.Diameter,
-                    networkSpawn: false);
+                if (created)
+                {
+                    toy = PrimitiveObjectToy.Create(
+                        position,
+                        Quaternion.identity,
+                        Vector3.one * _settings.Diameter,
+                        networkSpawn: false);
+                }
+
+                if (toy == null)
+                {
+                    throw new InvalidOperationException("Sphere target toy creation returned null.");
+                }
+
                 toy.Type = PrimitiveType.Sphere;
                 toy.Color = _settings.Color;
                 toy.Flags = PrimitiveFlags.Visible | PrimitiveFlags.Collidable;
-                toy.IsStatic = true;
-                toy.Spawn();
+                // Pooled targets move after their initial network spawn. Static AdminToys deliberately stop
+                // synchronizing local transforms, which leaves clients rendering the old position while the
+                // authoritative collider has moved. Keep transform sync enabled; unchanged transforms do not
+                // dirty Mirror sync vars, so these stationary-between-pop toys remain inexpensive.
+                toy.IsStatic = false;
+                toy.MovementSmoothing = 0;
+                toy.SyncInterval = 0.05f;
+                toy.Position = position;
+                toy.Scale = Vector3.one * _settings.Diameter;
+                if (created)
+                {
+                    toy.Spawn();
+                }
 
                 if (!_state.CommitSpawn(_rangeGeneration, ticket, pointIndex))
                 {
-                    if (!toy.IsDestroyed)
+                    if (created && !toy.IsDestroyed)
                     {
                         toy.Destroy();
                     }
@@ -309,13 +400,14 @@ namespace WarmupScpSelector.Activities.AimRange
                 runtime.Generation = ticket.Generation;
                 runtime.PointIndex = pointIndex;
                 runtime.Toy = toy;
+                Physics.SyncTransforms();
                 return true;
             }
             catch (Exception ex)
             {
                 try
                 {
-                    if (toy != null && !toy.IsDestroyed)
+                    if (created && toy != null && !toy.IsDestroyed)
                     {
                         toy.Destroy();
                     }
@@ -325,41 +417,36 @@ namespace WarmupScpSelector.Activities.AimRange
                     // The state invalidation below is the safety boundary; cleanup remains best effort.
                 }
 
-                _state.FailSpawn(_rangeGeneration, ticket, now, _settings.SpawnRetrySeconds);
+                _state.FailSpawn(_rangeGeneration, ticket, now, StartupSpawnRetrySeconds);
                 Warn($"Sphere target slot {ticket.SlotId} spawn failed: {ex.GetBaseException().Message}");
                 return false;
             }
         }
 
-        private int SelectPoint(SphereTargetSpawnTicket ticket, HashSet<int> occupied)
+        private int SelectPoint(int previousPointIndex, HashSet<int> occupied)
         {
             if (_layout == null)
             {
                 return -1;
             }
 
-            List<int> candidates = new List<int>();
-            for (int pointIndex = 0; pointIndex < _layout.Points.Count; pointIndex++)
-            {
-                if (pointIndex != ticket.PreviousPointIndex && !occupied.Contains(pointIndex))
-                {
-                    candidates.Add(pointIndex);
-                }
-            }
-
-            if (candidates.Count == 0)
+            int pointCount = _layout.Points.Count;
+            int start = SphereTargetLayout.GetSequencePointIndex(_nextPointOrdinal, pointCount);
+            if (start < 0)
             {
                 return -1;
             }
 
-            int seed = AimRangeDeterminism.CombineSeed(
-                _mapSeed,
-                _rangeGeneration,
-                ticket.SlotId,
-                ticket.SpawnOrdinal,
-                _settings.SeedSalt);
-            int selected = AimRangeDeterminism.SelectIndex(candidates.Count, seed);
-            return selected < 0 ? -1 : candidates[selected];
+            for (int offset = 0; offset < pointCount; offset++)
+            {
+                int pointIndex = (start + offset) % pointCount;
+                if (pointIndex != previousPointIndex && !occupied.Contains(pointIndex))
+                {
+                    return pointIndex;
+                }
+            }
+
+            return -1;
         }
 
         private void DestroyRuntimeToy(RuntimeSlot runtime)

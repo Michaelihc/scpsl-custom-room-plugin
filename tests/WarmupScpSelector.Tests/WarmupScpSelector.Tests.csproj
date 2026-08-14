@@ -35,6 +35,9 @@
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotValidatedSettings.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotLobbyPolicy.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\WeaponShelfState.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\Parkour\ParkourRunState.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\Parkour\ParkourLayout.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Text\ParkourText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\ParticipantIdentity.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Models\MerWorldTransform.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeLayout.cs" />
