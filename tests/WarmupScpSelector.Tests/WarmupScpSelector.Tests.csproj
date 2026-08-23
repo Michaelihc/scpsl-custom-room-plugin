@@ -12,6 +12,8 @@
        types), so the headless test compiles those source files directly instead of referencing the plugin. -->
   <ItemGroup>
     <Compile Include="..\..\src\WarmupScpSelector\Selection\SelectionSwapPlanner.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\AtomicRoleDispatchPlanner.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\VanillaScpSlotCounter.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Selection\VanillaRoleAssignmentResolver.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\WarmupText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\AimRangeText.cs" />

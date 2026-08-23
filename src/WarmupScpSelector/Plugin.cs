@@ -15,9 +15,9 @@ namespace WarmupScpSelector;
 /// <summary>
 /// Warmup SCP draft. During waiting-for-players the plugin builds one room holding a model of every
 /// offered SCP, each with a big coin. Players walk up and grab a coin to pick that SCP. When the round
-/// starts, the plugin lets the game assign vanilla roles, then swaps the selected SCP slots over to the
-/// players who picked them (the displaced holder inherits the picker's original role). It never creates
-/// extra SCPs: a pick is honoured only if vanilla actually spawned that SCP this round.
+/// starts, vanilla still chooses the SCP role multiset; the plugin buffers those pending assignments and
+/// remaps their recipients before any SCP role is initialized or sent. Displaced holders remain eligible for
+/// vanilla human assignment. It never creates extra SCPs: a pick is honoured only if vanilla spawned it.
 /// </summary>
 public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 {
@@ -51,15 +51,15 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         ServerEvents.RoundRestarted += _controller.OnRoundRestarted;
         PlayerEvents.Joined += _controller.OnPlayerJoined;
         PlayerEvents.Left += _controller.OnPlayerLeft;
+        PlayerEvents.ChangingRole += _controller.OnPlayerChangingRole;
         PlayerEvents.Spawning += _controller.OnPlayerSpawning;
         // SearchingPickup (not PickingUpItem) so the selector works for ANY configured pickup type:
         // ammo/armor route through their own pickup events, but all of them fire SearchingPickup.
         PlayerEvents.SearchingPickup += _controller.OnSearchingPickup;
 
-        // These two fire INSIDE the vanilla round-start, in a deterministic order within the same call:
-        // OnBeforePlayersSpawned (before assignment) hands warmup players back to vanilla; OnPlayersSpawned
-        // (after assignment) is where we schedule the SCP swaps. Using OnPlayersSpawned instead of LabAPI's
-        // RoundStarted avoids depending on cross-subscriber event ordering (RoundStarted may fire first).
+        // These fire INSIDE vanilla round-start in a deterministic order. OnBeforePlayersSpawned hands warmup
+        // players back and arms pending-role interception; ChangingRole buffers vanilla's SCP calls and applies
+        // only the final permutation before HumanSpawner; OnPlayersSpawned clears state or runs the fail-safe.
         RoleAssigner.OnBeforePlayersSpawned += _controller.OnBeforeVanillaRoleAssignment;
         RoleAssigner.OnPlayersSpawned += _controller.OnVanillaRolesAssigned;
 
@@ -72,6 +72,7 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         ServerEvents.RoundRestarted -= _controller.OnRoundRestarted;
         PlayerEvents.Joined -= _controller.OnPlayerJoined;
         PlayerEvents.Left -= _controller.OnPlayerLeft;
+        PlayerEvents.ChangingRole -= _controller.OnPlayerChangingRole;
         PlayerEvents.Spawning -= _controller.OnPlayerSpawning;
         PlayerEvents.SearchingPickup -= _controller.OnSearchingPickup;
         RoleAssigner.OnBeforePlayersSpawned -= _controller.OnBeforeVanillaRoleAssignment;

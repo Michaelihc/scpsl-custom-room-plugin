@@ -5,14 +5,14 @@
 - LabAPI `net48` plugin named `WarmupScpSelector` (was the EXILED `ScpslCustomRoomPlugin`).
 - Purpose: a **warmup SCP draft**. During waiting-for-players, players are moved into one floating room
   showing a model of each offered SCP with a big coin; grabbing a coin picks that SCP. At round start
-  the plugin lets vanilla assign roles, then swaps the selected SCP slots to the pickers. It never
-  creates extra SCPs — it only rearranges vanilla's assignment.
+  vanilla still chooses the SCP role multiset, but the plugin remaps the pending SCP recipients before
+  role initialization/networking. It never creates extra SCPs — it only rearranges vanilla's assignment.
 - The room + models **despawn on round start**.
 
 ## Architecture
 
-- `src/WarmupScpSelector/Plugin.cs` — entry point; wires LabAPI events + the core `RoleAssigner.OnBeforePlayersSpawned` hook.
-- `Warmup/SelectorController.cs` — small event-driven orchestrator (build room, record picks, hand off, swap).
+- `src/WarmupScpSelector/Plugin.cs` — entry point; wires LabAPI events + the core `RoleAssigner`/pending-role hooks.
+- `Warmup/SelectorController.cs` — small event-driven orchestrator (build room, record picks, hand off, atomic remap).
 - `Warmup/SelectorRoom.cs` — builds/despawns the floating room: floor + walls + per-SCP pedestal, model, label, coin.
   Themed to the server brand **莺歌傲然**: a near-black navy gallery, a glowing teal floor seam, near-white lights
   (so SCP models stay true), and the cream/gold primitive server logo centered on the back wall above a gold
@@ -121,8 +121,11 @@
 - Tutorial warmup players are "alive", so vanilla `RoleAssigner.CheckPlayer` would skip them. The plugin
   hooks `RoleAssigner.OnBeforePlayersSpawned` (fires inside round-start, just before the eligibility
   count) and flips those Tutorial players to `RoleTypeId.None` (dead, not spectator) so the assigner
-  includes them. This single hook replaced the old timer-watching / watchdog / force-start / lobby-lock
-  machinery — do **not** reintroduce that complexity.
+  includes them. It then buffers cancellable `RoundStart` SCP `ChangingRole` events and applies the final
+  slot-preserving permutation on the last SCP callback, before `HumanSpawner` runs. A displaced holder stays
+  `None` until vanilla gives it one human role, so clients never see SCP→human or human→SCP. No Harmony.
+  This event path replaced timer-watching / watchdog / force-start / lobby-lock machinery — do **not**
+  reintroduce that complexity.
 - The room is self-contained and floats at `Config.RoomOrigin` (no map/door lookups).
 
 ## Build / test

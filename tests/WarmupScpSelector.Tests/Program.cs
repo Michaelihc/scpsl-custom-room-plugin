@@ -43,6 +43,11 @@ namespace WarmupScpSelector.Tests
                 Selected173DoesNotStayVanilla049When173Spawned,
                 DisplacedHolderLaterSelectingAnotherScpPreservesRoleMultiset,
                 DuplicateVanillaHolderWhoPickedItKeepsIt,
+                AtomicPreSpawnPlanLeavesDisplacedHolderHumanEligible,
+                AtomicDispatchNeverReentersCurrentPlayer,
+                AtomicDispatchHandlesJoinStormWithoutMakingDummiesSelectors,
+                VanillaScpSlotCounterMatchesRoleAssignerLoop,
+                VanillaScpSlotCounterHonoursOverflow,
                 LiveRoundRoleBeatsStaleCapturedRole,
                 CapturedRoleIsFallbackWhenLiveRoleIsSpectator,
                 TutorialRoleWithoutCaptureIsUnresolved,
@@ -383,6 +388,96 @@ namespace WarmupScpSelector.Tests
             AssertRole(plan, "b", RoleTypeId.Scp106);
             AssertRole(plan, "c", RoleTypeId.Scp106);
             AssertRole(plan, "a", RoleTypeId.ClassD);
+        }
+
+        private static void AtomicPreSpawnPlanLeavesDisplacedHolderHumanEligible()
+        {
+            // Before HumanSpawner runs, every non-SCP is still None. The same planner can therefore move the
+            // pending 096 slot to the picker while returning its vanilla holder to the eligible pool. Neither
+            // player needs to be initialized as an intermediate role.
+            SelectionSwapPlan<string> plan = BuildPlan(
+                new Dictionary<string, RoleTypeId>
+                {
+                    ["picker"] = RoleTypeId.None,
+                    ["vanilla096"] = RoleTypeId.Scp096,
+                },
+                new Dictionary<RoleTypeId, IReadOnlyList<string>>
+                {
+                    [RoleTypeId.Scp096] = new[] { "picker" },
+                });
+
+            AssertRole(plan, "picker", RoleTypeId.Scp096);
+            AssertRole(plan, "vanilla096", RoleTypeId.None);
+            AssertEqual(1, plan.Swaps.Count, "atomic swap count");
+        }
+
+        private static void AtomicDispatchNeverReentersCurrentPlayer()
+        {
+            var finalScps = new Dictionary<string, RoleTypeId>
+            {
+                ["callback-holder"] = RoleTypeId.Scp096,
+                ["other-holder"] = RoleTypeId.Scp106,
+            };
+
+            AtomicRoleDispatchPlan<string> dispatch = AtomicRoleDispatchPlanner.Build(finalScps, "callback-holder");
+
+            AssertEqual(true, dispatch.CallbackReceivesScp, "callback receives SCP");
+            AssertEqual(RoleTypeId.Scp096, dispatch.CallbackRole, "callback role");
+            AssertEqual(1, dispatch.ImmediateAssignments.Count, "non-reentrant assignment count");
+            AssertEqual("other-holder", dispatch.ImmediateAssignments[0].Key, "only other player is assigned immediately");
+            AssertEqual(RoleTypeId.Scp106, dispatch.ImmediateAssignments[0].Value, "other player's role");
+        }
+
+        private static void AtomicDispatchHandlesJoinStormWithoutMakingDummiesSelectors()
+        {
+            var originalRoles = new Dictionary<string, RoleTypeId>();
+            for (int index = 0; index < 32; index++)
+            {
+                originalRoles[$"dummy-{index}"] = RoleTypeId.None;
+            }
+
+            originalRoles["dummy-vanilla-096"] = RoleTypeId.Scp096;
+            originalRoles["dummy-vanilla-106"] = RoleTypeId.Scp106;
+            originalRoles["human-picker"] = RoleTypeId.None;
+
+            SelectionSwapPlan<string> selection = BuildPlan(
+                originalRoles,
+                new Dictionary<RoleTypeId, IReadOnlyList<string>>
+                {
+                    // Only the real human is in a selection pool. Dummies remain ordinary vanilla candidates.
+                    [RoleTypeId.Scp096] = new[] { "human-picker" },
+                });
+
+            AssertRole(selection, "human-picker", RoleTypeId.Scp096);
+            AssertRole(selection, "dummy-vanilla-096", RoleTypeId.None);
+            AssertRole(selection, "dummy-vanilla-106", RoleTypeId.Scp106);
+            for (int index = 0; index < 32; index++)
+            {
+                AssertRole(selection, $"dummy-{index}", RoleTypeId.None);
+            }
+
+            Dictionary<string, RoleTypeId> finalScps = selection.FinalRoles
+                .Where(pair => pair.Value == RoleTypeId.Scp096 || pair.Value == RoleTypeId.Scp106)
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+            AtomicRoleDispatchPlan<string> dispatch = AtomicRoleDispatchPlanner.Build(finalScps, "dummy-vanilla-106");
+
+            AssertEqual(true, dispatch.CallbackReceivesScp, "dummy callback retains only its vanilla SCP");
+            AssertEqual(RoleTypeId.Scp106, dispatch.CallbackRole, "dummy callback role");
+            AssertEqual(false, dispatch.ImmediateAssignments.Any(pair => pair.Key == "dummy-vanilla-106"),
+                "current dummy is never assigned reentrantly");
+        }
+
+        private static void VanillaScpSlotCounterMatchesRoleAssignerLoop()
+        {
+            // Team digits: 4=ClassD, 0=SCP. With overflow disabled the vanilla loop stops at its SCP cap.
+            AssertEqual(2, VanillaScpSlotCounter.Count("4x0", 8, 2, false), "capped SCP count");
+            AssertEqual(0, VanillaScpSlotCounter.Count("444", 8, 2, false), "human-only queue");
+            AssertEqual(0, VanillaScpSlotCounter.Count("not-a-queue", 8, 2, false), "invalid queue");
+        }
+
+        private static void VanillaScpSlotCounterHonoursOverflow()
+        {
+            AssertEqual(4, VanillaScpSlotCounter.Count("40", 8, 2, true), "overflow SCP count");
         }
 
         private static void LiveRoundRoleBeatsStaleCapturedRole()

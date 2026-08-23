@@ -51,7 +51,7 @@ public sealed class Config
     [Description("HintServiceMeow display settings for the warmup status panel (hint-ID prefix, position, and text size). The countdown/selection text is drawn through HSM so it composes with other HSM/CUIMeow hints instead of being clobbered by the vanilla hint channel.")]
     public HintDisplayConfig HintDisplay { get; set; } = new();
 
-    [Description("Seconds after the vanilla round starts before selected SCPs are swapped in (lets vanilla roles settle).")]
+    [Description("Fallback-only delay used if atomic pre-spawn SCP remapping cannot be prepared. Normal round starts apply only each player's final role before it is sent.")]
     public float RoleSwapDelaySeconds { get; set; } = 1.5f;
 
     [Description("Hide the vanilla 'WAITING FOR PLAYERS / ROUND START IS PAUSED' block while the selector is active.")]

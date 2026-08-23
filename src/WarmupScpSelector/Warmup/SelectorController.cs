@@ -6,6 +6,7 @@ using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Features.Wrappers;
 using MEC;
 using PlayerRoles;
+using PlayerRoles.RoleAssign;
 using UnityEngine;
 using WarmupScpSelector.Activities;
 using WarmupScpSelector.Activities.AimRange;
@@ -20,13 +21,15 @@ namespace WarmupScpSelector.Warmup;
 /// <summary>
 /// Orchestrates the warmup selector lifecycle. Deliberately small and event-driven:
 /// build room on waiting-for-players, record coin picks, hand players back for vanilla assignment at
-/// round start, then swap the picked SCP slots in. No timer manipulation, watchdog, or lobby locking.
+/// round start, then remap vanilla's pending SCP slots before roles reach clients. No timer manipulation,
+/// watchdog, Harmony patch, or lobby locking.
 /// </summary>
 internal sealed class SelectorController
 {
     // Stable HSM hint id for the warmup status panel, so it can be updated in place and removed explicitly
     // (kept per repo policy: provider-backed HSM hints use stable IDs/groups rather than fire-and-forget text).
     private const string StatusTagId = "status";
+    private const string DefaultTeamRespawnQueue = "4014314031441404134041434414";
 
     private readonly WarmupScpSelectorPlugin _plugin;
     private readonly HsmHintDisplayProvider _hints;
@@ -56,6 +59,32 @@ internal sealed class SelectorController
     private bool _active;
     private bool _handedOff;
     private Vector3? _savedStartRoundScale;
+
+    // Vanilla assigns SCPs before humans, one ServerSetRole call at a time. While armed, the cancellable
+    // ChangingRole event buffers those pending SCP calls. On the final one we apply the completed draft plan,
+    // so no client is ever initialized or notified as the intermediate vanilla SCP it will later lose.
+    private readonly List<PendingScpAssignment> _pendingScpAssignments = new();
+    private readonly HashSet<Player> _atomicAppliedPlayers = new();
+    private int _expectedScpAssignments;
+    private bool _atomicDraftArmed;
+    private bool _atomicDraftApplying;
+    private bool _atomicDraftCompleted;
+    private bool _atomicDraftNeedsFallback;
+    private Player? _atomicCallbackPlayer;
+    private RoleTypeId _atomicCallbackRole = RoleTypeId.None;
+
+    private readonly struct PendingScpAssignment
+    {
+        public PendingScpAssignment(Player player, RoleTypeId role)
+        {
+            Player = player;
+            Role = role;
+        }
+
+        public Player Player { get; }
+
+        public RoleTypeId Role { get; }
+    }
 
     public SelectorController(WarmupScpSelectorPlugin plugin, HsmHintDisplayProvider hints)
     {
@@ -128,10 +157,32 @@ internal sealed class SelectorController
         }
     }
 
-    // RoleAssigner.OnPlayersSpawned: vanilla roles are now assigned, in the SAME round-start call as the
-    // handoff (which set _handedOff). Scheduling here, rather than on LabAPI RoundStarted, guarantees this
-    // runs after assignment regardless of cross-subscriber event ordering.
+    // RoleAssigner.OnPlayersSpawned: the normal atomic path has already applied the final SCP permutation
+    // before HumanSpawner ran. This hook only clears round state, or schedules the old post-spawn swap as a
+    // fail-safe if another plugin/server change prevented the pending assignment interception from completing.
     public void OnVanillaRolesAssigned()
+    {
+        try
+        {
+            OnVanillaRolesAssignedCore();
+        }
+        catch (Exception ex)
+        {
+            // This hook also runs inside RoleAssigner.OnRoundStarted. Log and drop selector state rather than
+            // ever letting a recovery-path exception abort the native round start.
+            Logger.Error($"[WarmupScpSelector] Post-assignment recovery failed safely: {ex}");
+            try
+            {
+                ResetState();
+            }
+            catch (Exception resetEx)
+            {
+                Logger.Warn($"[WarmupScpSelector] State reset after recovery failure also failed: {resetEx.Message}");
+            }
+        }
+    }
+
+    private void OnVanillaRolesAssignedCore()
     {
         if (!_handedOff)
         {
@@ -140,8 +191,53 @@ internal sealed class SelectorController
 
         _handedOff = false;
 
-        // Runs inside the round-start path, so it must not throw. Snapshot the PURE vanilla assignment now
-        // (before the settle delay and before other plugins can change roles); the swap plan is built from it.
+        bool callbackApplied = false;
+        if (_atomicDraftCompleted)
+        {
+            try
+            {
+                callbackApplied = _atomicCallbackPlayer == null ||
+                    (_atomicCallbackPlayer.ReferenceHub != null && _atomicCallbackPlayer.IsReady &&
+                     _atomicCallbackPlayer.Role == _atomicCallbackRole);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"[WarmupScpSelector] Could not validate the final in-flight role callback: {ex.Message}");
+            }
+        }
+
+        if (_atomicDraftCompleted && callbackApplied)
+        {
+            _plugin.LogDebug("Applied the SCP draft atomically before vanilla roles were sent.");
+            ResetState();
+            return;
+        }
+
+        if (_atomicDraftCompleted)
+        {
+            Logger.Warn(
+                $"[WarmupScpSelector] The final in-flight role callback did not apply {_atomicCallbackRole}; " +
+                "using compatibility fallback.");
+            _atomicDraftCompleted = false;
+            _atomicDraftNeedsFallback = true;
+            AbortAtomicDraftAndRestoreVanilla("the final in-flight role callback was changed or cancelled");
+        }
+
+        if (_atomicDraftArmed)
+        {
+            // This should only be reachable if the server's role-assignment sequence changed after this build.
+            // Restore every buffered vanilla SCP before taking the proven post-spawn fallback path.
+            AbortAtomicDraftAndRestoreVanilla(
+                $"captured {_pendingScpAssignments.Count}/{_expectedScpAssignments} SCP assignments before OnPlayersSpawned");
+        }
+
+        if (_atomicDraftNeedsFallback)
+        {
+            _plugin.LogDebug("Using the post-spawn SCP swap compatibility fallback for this round.");
+        }
+
+        // Runs inside the round-start path, so it must not throw. Snapshot the roles now for the exceptional
+        // compatibility fallback; normal rounds returned above and never expose this delayed swap to clients.
         try
         {
             _participantState.ClearVanillaRoles();
@@ -205,6 +301,7 @@ internal sealed class SelectorController
 
             // Only hand back the players THIS selector moved in (tracked by key), never unrelated Tutorial players.
             FlipTrackedTutorialPlayersToNone();
+
         }
         catch (Exception ex)
         {
@@ -263,6 +360,11 @@ internal sealed class SelectorController
             {
                 Logger.Warn($"[WarmupScpSelector] Selector room despawn failed: {ex.Message}");
             }
+
+            // Snapshot vanilla eligibility only after every potentially expensive teardown step. RoleAssigner
+            // counts players immediately after this hook returns, so keeping these two counts adjacent prevents
+            // a rapid join/dummy storm during room teardown from making us finalize on the wrong SCP callback.
+            PrepareAtomicRoleDraft();
         }
     }
 
@@ -350,6 +452,76 @@ internal sealed class SelectorController
         if (_participantState.IsMovedIn(Key(player)))
         {
             ev.SetSpawnpoint(_room.SpawnPosition, 0f);
+        }
+    }
+
+    public void OnPlayerChangingRole(PlayerChangingRoleEventArgs ev)
+    {
+        try
+        {
+            OnPlayerChangingRoleCore(ev);
+        }
+        catch (Exception ex)
+        {
+            // This callback runs inside native ServerSetRole. No plugin exception may escape it: abandon the
+            // atomic path, allow the in-flight vanilla role, and let OnPlayersSpawned restore/fallback later.
+            Logger.Error($"[WarmupScpSelector] Role interception failed safely: {ex}");
+            _atomicDraftApplying = false;
+            _atomicDraftCompleted = false;
+            _atomicDraftNeedsFallback = true;
+            _atomicCallbackPlayer = null;
+            _atomicCallbackRole = RoleTypeId.None;
+            _atomicDraftArmed = _pendingScpAssignments.Count > 0;
+            if (ev != null)
+            {
+                ev.IsAllowed = true;
+            }
+        }
+    }
+
+    private void OnPlayerChangingRoleCore(PlayerChangingRoleEventArgs ev)
+    {
+        if (_atomicDraftCompleted && !_atomicDraftApplying && ev != null &&
+            ev.ChangeReason == RoleChangeReason.RoundStart && ScpOption.IsScpRole(ev.NewRole))
+        {
+            // Eligibility changed after our adjacent snapshot (for example another round-start hook added a
+            // dummy). Allow vanilla's extra slot and fall back after spawn; never attempt a second in-callback
+            // finalization against a plan whose role multiset is now stale.
+            Logger.Warn("[WarmupScpSelector] Vanilla produced an additional SCP callback; abandoning the atomic draft safely.");
+            _atomicDraftCompleted = false;
+            _atomicDraftNeedsFallback = true;
+            _atomicCallbackPlayer = null;
+            _atomicCallbackRole = RoleTypeId.None;
+            return;
+        }
+
+        if (!_atomicDraftArmed || _atomicDraftApplying || ev == null ||
+            ev.ChangeReason != RoleChangeReason.RoundStart || !ScpOption.IsScpRole(ev.NewRole))
+        {
+            return;
+        }
+
+        Player player = ev.Player;
+        if (player == null || player.ReferenceHub == null ||
+            _pendingScpAssignments.Count >= _expectedScpAssignments)
+        {
+            AbortAtomicDraftAndRestoreVanillaDuringCallback(
+                ev,
+                "received an invalid or unexpected SCP assignment callback");
+            return;
+        }
+
+        // Cancelling all but the final callback means PlayerRoleManager never initializes or networks those
+        // intermediate vanilla roles. The final callback is rewritten in place after the complete plan exists.
+        _pendingScpAssignments.Add(new PendingScpAssignment(player, ev.NewRole));
+
+        if (_pendingScpAssignments.Count == _expectedScpAssignments)
+        {
+            FinalizeAtomicRoleDraft(ev);
+        }
+        else
+        {
+            ev.IsAllowed = false;
         }
     }
 
@@ -468,6 +640,328 @@ internal sealed class SelectorController
         }
     }
 
+    private void PrepareAtomicRoleDraft()
+    {
+        _pendingScpAssignments.Clear();
+        _atomicAppliedPlayers.Clear();
+        _expectedScpAssignments = 0;
+        _atomicDraftArmed = false;
+        _atomicDraftApplying = false;
+        _atomicDraftCompleted = false;
+        _atomicDraftNeedsFallback = false;
+        _atomicCallbackPlayer = null;
+        _atomicCallbackRole = RoleTypeId.None;
+
+        if (_participantState.SelectionCount == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            string queue = ConfigFile.ServerConfig.GetString("team_respawn_queue", DefaultTeamRespawnQueue);
+            int eligiblePlayers = ReferenceHub.AllHubs.Count(RoleAssigner.CheckPlayer);
+            _expectedScpAssignments = VanillaScpSlotCounter.Count(
+                queue,
+                eligiblePlayers,
+                ScpSpawner.MaxSpawnableScps,
+                ConfigFile.ServerConfig.GetBool("allow_scp_overflow"));
+
+            _atomicDraftArmed = _expectedScpAssignments > 0;
+            if (_atomicDraftArmed)
+            {
+                _plugin.LogDebug($"Armed atomic draft interception for {_expectedScpAssignments} vanilla SCP assignment(s).");
+            }
+        }
+        catch (Exception ex)
+        {
+            // Do not endanger vanilla round start if a future server build changes its config surface.
+            // OnPlayersSpawned will use the existing delayed swap path instead.
+            _expectedScpAssignments = 0;
+            _atomicDraftNeedsFallback = true;
+            Logger.Warn($"[WarmupScpSelector] Could not prepare atomic SCP assignment; using compatibility fallback: {ex.Message}");
+        }
+    }
+
+    private void FinalizeAtomicRoleDraft(PlayerChangingRoleEventArgs currentEvent)
+    {
+        try
+        {
+            Dictionary<Player, RoleTypeId> originalRoles = new();
+
+            // Every intercepted vanilla SCP holder gets their pending role in the planner snapshot.
+            foreach (PendingScpAssignment assignment in _pendingScpAssignments)
+            {
+                originalRoles[assignment.Player] = assignment.Role;
+            }
+
+            // Other eligible humans are represented as None because HumanSpawner has not run yet. This is
+            // exactly the role the displaced vanilla SCP holder should return to before human assignment.
+            foreach (Player player in Participants().ToList())
+            {
+                if (player != null && player.ReferenceHub != null &&
+                    RoleAssigner.CheckPlayer(player.ReferenceHub) && !originalRoles.ContainsKey(player))
+                {
+                    originalRoles[player] = RoleTypeId.None;
+                }
+            }
+
+            Dictionary<RoleTypeId, List<Player>> pools = new();
+            foreach (Player player in originalRoles.Keys.ToList())
+            {
+                if (!IsCanonicalHuman(player) ||
+                    !_participantState.TryGetSelection(Key(player), out RoleTypeId selected))
+                {
+                    continue;
+                }
+
+                if (!pools.TryGetValue(selected, out List<Player> pool))
+                {
+                    pool = new List<Player>();
+                    pools[selected] = pool;
+                }
+
+                pool.Add(player);
+            }
+
+            List<RoleTypeId> roleOrder = OfferedScpRoleOrder();
+            Dictionary<RoleTypeId, IReadOnlyList<Player>> plannerPools =
+                pools.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<Player>)pair.Value);
+            SelectionSwapPlan<Player> plan = SelectionSwapPlanner.BuildPlan(
+                roleOrder,
+                originalRoles,
+                plannerPools,
+                candidates => candidates[_random.Next(candidates.Count)]);
+
+            List<KeyValuePair<Player, RoleTypeId>> finalScps = plan.FinalRoles
+                .Where(pair => ScpOption.IsScpRole(pair.Value))
+                .ToList();
+            if (!HasSameScpMultiset(_pendingScpAssignments.Select(assignment => assignment.Role),
+                    finalScps.Select(pair => pair.Value)))
+            {
+                throw new InvalidOperationException("atomic draft plan changed the vanilla SCP role multiset");
+            }
+
+            // Validate the whole plan before sending any role. A disconnect or conflicting plugin change takes
+            // the compatibility path without partially exposing the planned assignment.
+            foreach (KeyValuePair<Player, RoleTypeId> assignment in finalScps)
+            {
+                if (assignment.Key == null || assignment.Key.ReferenceHub == null ||
+                    !assignment.Key.IsReady || !RoleAssigner.CheckPlayer(assignment.Key.ReferenceHub))
+                {
+                    throw new InvalidOperationException("an atomic draft recipient stopped being vanilla-eligible");
+                }
+            }
+
+            Dictionary<Player, RoleTypeId> finalScpRoles = finalScps
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+            AtomicRoleDispatchPlan<Player> dispatch = AtomicRoleDispatchPlanner.Build(
+                finalScpRoles,
+                currentEvent.Player);
+
+            _atomicDraftArmed = false;
+            _atomicDraftApplying = true;
+            foreach (KeyValuePair<Player, RoleTypeId> assignment in dispatch.ImmediateAssignments)
+            {
+                assignment.Key.SetRole(assignment.Value, RoleChangeReason.RoundStart, RoleSpawnFlags.All);
+                if (assignment.Key.Role != assignment.Value)
+                {
+                    throw new InvalidOperationException($"final role {assignment.Value} was blocked for a draft recipient");
+                }
+
+                _atomicAppliedPlayers.Add(assignment.Key);
+            }
+
+            // Never call SetRole recursively for the same PlayerRoleManager whose ChangingRole callback is on
+            // the stack. Rewrite that one native call in place, or cancel it if its holder was displaced and
+            // must remain None for HumanSpawner. This is the crash-safety boundary for large join/dummy storms.
+            if (dispatch.CallbackReceivesScp)
+            {
+                currentEvent.NewRole = dispatch.CallbackRole;
+                currentEvent.ChangeReason = RoleChangeReason.RoundStart;
+                currentEvent.SpawnFlags = RoleSpawnFlags.All;
+                currentEvent.IsAllowed = true;
+                _atomicCallbackPlayer = currentEvent.Player;
+                _atomicCallbackRole = dispatch.CallbackRole;
+            }
+            else
+            {
+                currentEvent.IsAllowed = false;
+                _atomicCallbackPlayer = null;
+                _atomicCallbackRole = RoleTypeId.None;
+            }
+
+            _atomicDraftCompleted = true;
+            _atomicDraftNeedsFallback = false;
+            _plugin.LogDebug(
+                $"Atomic SCP draft planned {plan.Swaps.Count} swap(s), {plan.NaturalSelections.Count} natural, " +
+                $"and {plan.SkippedUnspawnedRoles.Count} unspawned selection(s).");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[WarmupScpSelector] Atomic SCP assignment failed; restoring vanilla roles: {ex.Message}");
+            AbortAtomicDraftAndRestoreVanillaDuringCallback(
+                currentEvent,
+                "atomic assignment application failed");
+        }
+        finally
+        {
+            _atomicDraftApplying = false;
+        }
+    }
+
+    private void AbortAtomicDraftAndRestoreVanillaDuringCallback(
+        PlayerChangingRoleEventArgs currentEvent,
+        string reason)
+    {
+        Logger.Warn($"[WarmupScpSelector] Atomic draft aborted ({reason}); restoring buffered vanilla SCP assignments.");
+
+        _atomicDraftArmed = false;
+        _atomicDraftApplying = true;
+        _atomicDraftCompleted = false;
+        _atomicDraftNeedsFallback = true;
+        _atomicCallbackPlayer = null;
+        _atomicCallbackRole = RoleTypeId.None;
+
+        try
+        {
+            HashSet<Player> originalHolders = new(_pendingScpAssignments.Select(assignment => assignment.Player));
+            foreach (Player player in _atomicAppliedPlayers.ToList())
+            {
+                try
+                {
+                    if (player != null && player.ReferenceHub != null && player.IsReady &&
+                        !originalHolders.Contains(player) && ScpOption.IsScpRole(player.Role))
+                    {
+                        player.SetRole(RoleTypeId.None, RoleChangeReason.RoundStart, RoleSpawnFlags.None);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"[WarmupScpSelector] Could not clear a partial atomic assignment: {ex.Message}");
+                }
+            }
+
+            foreach (PendingScpAssignment assignment in _pendingScpAssignments)
+            {
+                if (assignment.Player == currentEvent.Player)
+                {
+                    // Let the already-running native call restore its own vanilla role without re-entering it.
+                    currentEvent.NewRole = assignment.Role;
+                    currentEvent.ChangeReason = RoleChangeReason.RoundStart;
+                    currentEvent.SpawnFlags = RoleSpawnFlags.All;
+                    currentEvent.IsAllowed = true;
+                    continue;
+                }
+
+                try
+                {
+                    if (assignment.Player != null && assignment.Player.ReferenceHub != null &&
+                        assignment.Player.IsReady && assignment.Player.Role != assignment.Role)
+                    {
+                        assignment.Player.SetRole(assignment.Role, RoleChangeReason.RoundStart, RoleSpawnFlags.All);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"[WarmupScpSelector] Could not restore a buffered vanilla SCP: {ex.Message}");
+                }
+            }
+        }
+        finally
+        {
+            _atomicDraftApplying = false;
+            _atomicAppliedPlayers.Clear();
+        }
+    }
+
+    private void AbortAtomicDraftAndRestoreVanilla(string reason)
+    {
+        if (_pendingScpAssignments.Count == 0)
+        {
+            _atomicDraftArmed = false;
+            _atomicDraftCompleted = false;
+            _atomicDraftNeedsFallback = true;
+            _atomicCallbackPlayer = null;
+            _atomicCallbackRole = RoleTypeId.None;
+            return;
+        }
+
+        Logger.Warn($"[WarmupScpSelector] Atomic draft aborted ({reason}); restoring buffered vanilla SCP assignments.");
+
+        _atomicDraftArmed = false;
+        _atomicDraftApplying = true;
+        _atomicDraftCompleted = false;
+        _atomicDraftNeedsFallback = true;
+        _atomicCallbackPlayer = null;
+        _atomicCallbackRole = RoleTypeId.None;
+
+        try
+        {
+            HashSet<Player> originalHolders = new(_pendingScpAssignments.Select(assignment => assignment.Player));
+            foreach (Player player in _atomicAppliedPlayers.ToList())
+            {
+                try
+                {
+                    if (player != null && player.ReferenceHub != null && player.IsReady &&
+                        !originalHolders.Contains(player) && ScpOption.IsScpRole(player.Role))
+                    {
+                        player.SetRole(RoleTypeId.None, RoleChangeReason.RoundStart, RoleSpawnFlags.None);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"[WarmupScpSelector] Could not clear a partial atomic assignment: {ex.Message}");
+                }
+            }
+
+            foreach (PendingScpAssignment assignment in _pendingScpAssignments)
+            {
+                try
+                {
+                    if (assignment.Player != null && assignment.Player.ReferenceHub != null &&
+                        assignment.Player.IsReady && assignment.Player.Role != assignment.Role)
+                    {
+                        assignment.Player.SetRole(assignment.Role, RoleChangeReason.RoundStart, RoleSpawnFlags.All);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn($"[WarmupScpSelector] Could not restore a buffered vanilla SCP: {ex.Message}");
+                }
+            }
+        }
+        finally
+        {
+            _atomicDraftApplying = false;
+            _atomicAppliedPlayers.Clear();
+            _pendingScpAssignments.Clear();
+            _expectedScpAssignments = 0;
+        }
+    }
+
+    private static bool HasSameScpMultiset(IEnumerable<RoleTypeId> expected, IEnumerable<RoleTypeId> actual)
+    {
+        Dictionary<RoleTypeId, int> expectedCounts = expected
+            .GroupBy(role => role)
+            .ToDictionary(group => group.Key, group => group.Count());
+        Dictionary<RoleTypeId, int> actualCounts = actual
+            .GroupBy(role => role)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        return expectedCounts.Count == actualCounts.Count &&
+               expectedCounts.All(pair => actualCounts.TryGetValue(pair.Key, out int count) && count == pair.Value);
+    }
+
+    private List<RoleTypeId> OfferedScpRoleOrder()
+    {
+        return (Config.ScpOptions ?? new List<ScpOption>())
+            .Where(option => option != null && ScpOption.IsScpRole(option.Role))
+            .Select(option => option.Role)
+            .Distinct()
+            .ToList();
+    }
+
     // Flip back to None only the players THIS selector moved into Tutorial (tracked in pure participant state), so cleanup
     // and the round-start handoff never disturb unrelated Tutorial players from admins or other plugins.
     private void FlipTrackedTutorialPlayersToNone()
@@ -511,6 +1005,15 @@ internal sealed class SelectorController
         _offeredOptions = Array.Empty<WarmupOption>();
         _active = false;
         _handedOff = false;
+        _pendingScpAssignments.Clear();
+        _atomicAppliedPlayers.Clear();
+        _expectedScpAssignments = 0;
+        _atomicDraftArmed = false;
+        _atomicDraftApplying = false;
+        _atomicDraftCompleted = false;
+        _atomicDraftNeedsFallback = false;
+        _atomicCallbackPlayer = null;
+        _atomicCallbackRole = RoleTypeId.None;
     }
 
     private void MoveIntoSelector(Player player)
@@ -685,11 +1188,7 @@ internal sealed class SelectorController
             }
 
             // Distinct SCP roles only: a duplicate role in config would otherwise process the same pool twice.
-            List<RoleTypeId> roleOrder = (Config.ScpOptions ?? new List<ScpOption>())
-                .Where(option => option != null && ScpOption.IsScpRole(option.Role))
-                .Select(option => option.Role)
-                .Distinct()
-                .ToList();
+            List<RoleTypeId> roleOrder = OfferedScpRoleOrder();
             Dictionary<RoleTypeId, IReadOnlyList<Player>> plannerPools =
                 pools.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<Player>)pair.Value);
 
