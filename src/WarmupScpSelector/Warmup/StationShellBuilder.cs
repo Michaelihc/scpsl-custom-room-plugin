@@ -162,21 +162,24 @@ internal sealed class StationShellBuilder
         AddGuideStrip(_layout.World(-16f, SeamProud + 0.02f, 0f), new Vector3(10f, 0.03f, 0.35f));
         AddGuideStrip(_layout.World(0f, SeamProud + 0.02f, 30f), new Vector3(0.35f, 0.03f, 24f));
 
-        AddHatchSign(_layout.World(0f, 3.9f, WarmupHallLayout.HubHalfDepth - 0.45f), _layout.ParkourShaft, faceNegativeZ: true);
-        AddHatchSign(_layout.World(0f, 3.9f, -WarmupHallLayout.HubHalfDepth + 0.45f), _layout.Gallery, faceNegativeZ: false);
-        AddHatchSign(_layout.World(WarmupHallLayout.HubHalfWidth - 0.45f, 3.9f, 0f), _layout.AimBay, faceNegativeZ: true, yaw: 90f);
-        AddHatchSign(_layout.World(-WarmupHallLayout.HubHalfWidth + 0.45f, 3.9f, 0f), _layout.ObservationDeck, faceNegativeZ: true, yaw: -90f);
+        // Each sign is read by someone in the hub walking TOWARD that compartment, so its facing comes
+        // from that approach direction. An earlier boolean flag got all four backwards and rendered the
+        // signage mirrored.
+        AddHatchSign(_layout.World(0f, 3.9f, WarmupHallLayout.HubHalfDepth - 0.45f), _layout.ParkourShaft, Vector3.forward);
+        AddHatchSign(_layout.World(0f, 3.9f, -WarmupHallLayout.HubHalfDepth + 0.45f), _layout.Gallery, Vector3.back);
+        AddHatchSign(_layout.World(WarmupHallLayout.HubHalfWidth - 0.45f, 3.9f, 0f), _layout.AimBay, Vector3.right);
+        AddHatchSign(_layout.World(-WarmupHallLayout.HubHalfWidth + 0.45f, 3.9f, 0f), _layout.ObservationDeck, Vector3.left);
     }
 
     private void AddGuideStrip(Vector3 center, Vector3 size) =>
         AddBox(center, size, StationPalette.Guide, collidable: false);
 
-    private void AddHatchSign(Vector3 position, StationZone destination, bool faceNegativeZ, float yaw = 0f)
+    private void AddHatchSign(Vector3 position, StationZone destination, Vector3 approachDirection)
     {
         string text = _chinese
-            ? $"<color=#4FCBFF>{destination.SignCn}</color>"
-            : $"<color=#4FCBFF>{destination.SignEn}</color>";
-        AddLabel(position, text, Quaternion.Euler(0f, yaw + (faceNegativeZ ? 180f : 0f), 0f), 420f);
+            ? $"<color=#1B87C9>{destination.SignCn}</color>"
+            : $"<color=#1B87C9>{destination.SignEn}</color>";
+        AddLabel(position, text, WarmupHallLayout.FacingViewer(approachDirection), 420f);
     }
 
     // ---- Lighting ----------------------------------------------------------------------------

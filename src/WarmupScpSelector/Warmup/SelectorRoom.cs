@@ -51,6 +51,12 @@ public sealed class SelectorRoom
         [RoleTypeId.Scp3114] = "scp-3114",
     };
 
+    /// <summary>
+    /// Everything flat on the gallery's back wall - labels, the wordmark, the logo - is read by a
+    /// player standing in the aisle looking -Z toward the exhibits.
+    /// </summary>
+    private static Quaternion GalleryFacing => WarmupHallLayout.FacingViewer(Vector3.back);
+
     private readonly WarmupScpSelectorPlugin _plugin;
     private readonly List<AdminToy> _toys = new();
     private readonly List<Pickup> _pickups = new();
@@ -145,6 +151,22 @@ public sealed class SelectorRoom
         IReadOnlyList<ScpOption> options,
         IReadOnlyList<GalleryDisplaySlot> slots)
     {
+        // The brand emblem and its gradient wordmark were designed against a near-black ground. On a
+        // white station they wash out completely, so the gallery's back wall carries one dark feature
+        // panel behind them - the only deliberately dark surface in the room.
+        // Surround first (further from the viewer), dark panel proud of it, so the frame reads as a
+        // border rather than covering the panel. Viewers stand at larger Z, so larger Z is nearer.
+        shell.AddBox(
+            hall.World(0f, 4.1f, WarmupHallLayout.GalleryFarZ + 0.17f),
+            new Vector3(7.8f, 5.8f, 0.04f),
+            StationPalette.Frame,
+            collidable: false);
+        shell.AddBox(
+            hall.World(0f, 4.1f, WarmupHallLayout.GalleryFarZ + 0.21f),
+            new Vector3(7.4f, 5.4f, 0.04f),
+            StationPalette.DisplayPanel,
+            collidable: false);
+
         SpawnLogo(hall.LogoAnchor, LogoScale);
         AddBanner(hall.BannerAnchor);
 
@@ -232,8 +254,8 @@ public sealed class SelectorRoom
 
         shell.AddLabel(
             hall.World(deck.MinX + 0.6f, 4.35f, deck.CenterZ),
-            UseChinese ? "<color=#4FCBFF>观景舱</color>" : "<color=#4FCBFF>OBSERVATION</color>",
-            Quaternion.Euler(0f, -90f, 0f),
+            UseChinese ? "<color=#1B87C9>观景舱</color>" : "<color=#1B87C9>OBSERVATION</color>",
+            WarmupHallLayout.FacingViewer(Vector3.left),
             380f);
     }
 
@@ -424,6 +446,11 @@ public sealed class SelectorRoom
         List<MerPrimitive> primitives = MerModelLoader.LoadEmbedded("yingge-aoran-logo-opt.mer.json");
         Dictionary<int, PrimitiveObjectToy> parents = new();
 
+        // The emblem is authored front-on toward -Z like the labels, so it needs the same turn. Without
+        // it the whole wordmark renders mirrored - the failure is a readable-looking logo that is
+        // backwards, not a missing one.
+        Quaternion facing = GalleryFacing;
+
         foreach (MerPrimitive primitive in primitives)
         {
             if (primitive.IsMarker)
@@ -436,8 +463,8 @@ public sealed class SelectorRoom
                 if (!parents.TryGetValue(parentTransform.ObjectId, out PrimitiveObjectToy parent))
                 {
                     parent = PrimitiveObjectToy.Create(
-                        centerWorld + (parentTransform.Position - LogoAssetCenter) * scale,
-                        Quaternion.Euler(parentTransform.Rotation),
+                        centerWorld + facing * ((parentTransform.Position - LogoAssetCenter) * scale),
+                        facing * Quaternion.Euler(parentTransform.Rotation),
                         parentTransform.Scale * scale,
                         networkSpawn: false);
                     _toys.Add(parent);
@@ -465,8 +492,8 @@ public sealed class SelectorRoom
             }
 
             PrimitiveObjectToy toy = PrimitiveObjectToy.Create(
-                centerWorld + (primitive.Position - LogoAssetCenter) * scale,
-                Quaternion.Euler(primitive.Rotation),
+                centerWorld + facing * ((primitive.Position - LogoAssetCenter) * scale),
+                facing * Quaternion.Euler(primitive.Rotation),
                 primitive.Scale * scale,
                 networkSpawn: false);
             _toys.Add(toy);
@@ -499,10 +526,10 @@ public sealed class SelectorRoom
         return height;
     }
 
-    /// <summary>Exhibit label. Identity rotation faces the arrival aisle at -Z.</summary>
+    /// <summary>Exhibit label, turned to face players arriving down the aisle (they look -Z).</summary>
     private void AddLabel(Vector3 center, string label)
     {
-        TextToy text = TextToy.Create(center, Quaternion.identity, Vector3.one * 0.2f, networkSpawn: false);
+        TextToy text = TextToy.Create(center, GalleryFacing, Vector3.one * 0.2f, networkSpawn: false);
         _toys.Add(text);
         text.TextFormat = $"<align=center><b>{label}</b></align>";
         text.DisplaySize = new Vector2(220f, 40f);
@@ -512,7 +539,7 @@ public sealed class SelectorRoom
 
     private void AddBanner(Vector3 center)
     {
-        TextToy text = TextToy.Create(center, Quaternion.identity, Vector3.one * 0.45f, networkSpawn: false);
+        TextToy text = TextToy.Create(center, GalleryFacing, Vector3.one * 0.45f, networkSpawn: false);
         _toys.Add(text);
         text.TextFormat = BannerMarkup;
         text.DisplaySize = new Vector2(1000f, 200f);

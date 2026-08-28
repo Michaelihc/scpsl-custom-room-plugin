@@ -185,13 +185,13 @@ namespace WarmupScpSelector.Warmup
         private void BuildSignage(AimRangeLayout layout, bool chinese)
         {
             AddLabel(layout.Range(0f, 3.9f, -2.6f),
-                chinese ? "瞄准训练舱" : "AIM BAY", 420f, yaw: 90f);
+                chinese ? "瞄准训练舱" : "AIM BAY", 420f);
             AddLabel(layout.Range(layout.LaneOneCenter, 3.4f, 1.4f),
-                chinese ? "1 实战机器人" : "1  LIVE BOTS", 300f, yaw: 90f);
+                chinese ? "1 实战机器人" : "1  LIVE BOTS", 300f);
             AddLabel(layout.Range(layout.LaneTwoCenter, 3.4f, 1.4f),
-                chinese ? "2 平移靶" : "2  SLIDING", 300f, yaw: 90f);
+                chinese ? "2 平移靶" : "2  SLIDING", 300f);
             AddLabel(layout.Range(layout.LaneThreeCenter, 3.4f, 1.4f),
-                chinese ? "3 球形反应" : "3  SPHERES", 300f, yaw: 90f);
+                chinese ? "3 球形反应" : "3  SPHERES", 300f);
         }
 
         private void BuildAttachmentWorkstations(IReadOnlyList<AimWorkstationAnchor> anchors)
@@ -284,9 +284,11 @@ namespace WarmupScpSelector.Warmup
             light.Spawn();
         }
 
-        private void AddLabel(Vector3 center, string text, float width, float yaw)
+        /// <summary>Range signage is read by a shooter standing at the counter facing downrange (+X).</summary>
+        private void AddLabel(Vector3 center, string text, float width)
         {
-            TextToy label = TextToy.Create(center, Quaternion.Euler(0f, yaw, 0f), Vector3.one * 0.18f, networkSpawn: false);
+            TextToy label = TextToy.Create(
+                center, WarmupHallLayout.FacingViewer(Vector3.right), Vector3.one * 0.18f, networkSpawn: false);
             _toys.Add(label);
             label.TextFormat = "<align=center><b>" + text + "</b></align>";
             label.DisplaySize = new Vector2(width, 50f);

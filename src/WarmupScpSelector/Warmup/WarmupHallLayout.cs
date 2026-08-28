@@ -274,6 +274,23 @@ public sealed class WarmupHallLayout
     public Vector3 World(float x, float y, float z) => new(Origin.x + x, Origin.y + y, Origin.z + z);
 
     /// <summary>
+    /// Rotation that makes a flat, front-facing object readable to someone looking along
+    /// <paramref name="viewDirection"/>.
+    ///
+    /// A <c>TextToy</c>'s readable face points along its LOCAL -Z, so it must be turned to point back
+    /// against the viewer's line of sight. <c>LookRotation(d)</c> sends local +Z to <c>d</c>, hence
+    /// local -Z to <c>-d</c>, which is exactly the face a viewer looking along <c>d</c> sees.
+    ///
+    /// Getting this backwards renders the text mirrored rather than invisible, which is easy to miss
+    /// until someone reads it in game: the old single-hall room faced its viewers along +Z, so every
+    /// label there was correct on <c>Quaternion.identity</c>. The station's gallery is entered from
+    /// the opposite side, and reusing identity silently mirrored every label, the wordmark, and the
+    /// logo. Always derive the rotation from where the reader actually stands.
+    /// </summary>
+    public static Quaternion FacingViewer(Vector3 viewDirection) =>
+        Quaternion.LookRotation(viewDirection.normalized, Vector3.up);
+
+    /// <summary>
     /// Inclusive axis-aligned containment. Deliberately NOT <c>Bounds.Contains</c>: that is a native
     /// ECall in the dedicated server's UnityEngine, so calling it makes every occupancy rule in this
     /// plugin untestable outside a running game. This is the same test in managed arithmetic.

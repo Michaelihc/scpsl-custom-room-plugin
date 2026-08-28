@@ -195,7 +195,9 @@ namespace WarmupScpSelector.Warmup
 
         private void AddLabel(Vector3 center, string text, float width, float scale)
         {
-            TextToy label = TextToy.Create(center, Quaternion.Euler(0f, 180f, 0f), Vector3.one * scale, networkSpawn: false);
+            // Runners climb the shaft away from the hub, so they read these looking +Z.
+            TextToy label = TextToy.Create(
+                center, WarmupHallLayout.FacingViewer(Vector3.forward), Vector3.one * scale, networkSpawn: false);
             _toys.Add(label);
             label.TextFormat = "<align=center><b>" + text + "</b></align>";
             label.DisplaySize = new Vector2(width, 48f);
