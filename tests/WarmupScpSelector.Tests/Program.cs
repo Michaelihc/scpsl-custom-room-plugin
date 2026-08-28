@@ -80,6 +80,7 @@ namespace WarmupScpSelector.Tests
                 RangeBotRegistryUsesLiveIdentityIndexes,
                 ParticipantIdentityRulesRejectNonHumans,
                 MerWorldTransformComposesOneLevelParent,
+                EveryCompartmentIsReachableFromTheSpawnPoint,
                 StationCompartmentsTileWithoutOverlapOrGap,
                 StationWallPanelsSealEveryCompartmentFace,
                 GalleryStandsKeepTheAisleAndFitTheRoom,
@@ -1180,6 +1181,46 @@ namespace WarmupScpSelector.Tests
             AssertEqual(true, MerWorldTransformComposer.RotationAngleDegrees(
                 MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 180f, 0f)), child.Rotation) < 0.01f,
                 "child world rotation includes parent");
+        }
+
+        private static void EveryCompartmentIsReachableFromTheSpawnPoint()
+        {
+            WarmupHallLayout hall = new WarmupHallLayout(new Vector3(5f, 400f, -7f));
+
+            // Players are meant to walk the whole station. Every compartment - and the deck-level route
+            // through it - must count as inside, or the maintain sweep teleports them back to spawn.
+            foreach (StationZone zone in hall.Zones)
+            {
+                AssertEqual(true, hall.IsInsideStation(hall.ZoneCenter(zone, 0.5f)),
+                    $"{zone.Id} centre is inside the station");
+                AssertEqual(true, hall.IsInsideStation(hall.World(zone.MinX + 0.5f, 0.5f, zone.MinZ + 0.5f)),
+                    $"{zone.Id} near corner is inside the station");
+                AssertEqual(true, hall.IsInsideStation(hall.World(zone.MaxX - 0.5f, 0.5f, zone.MaxZ - 0.5f)),
+                    $"{zone.Id} far corner is inside the station");
+            }
+
+            // The far ends specifically: these are what a spawn-radius leash made unreachable.
+            AssertEqual(true, hall.IsInsideStation(hall.World(WarmupHallLayout.AimBayFarX - 1f, 0.5f, 0f)),
+                "the far end of the aim bay is reachable");
+            AssertEqual(true, hall.IsInsideStation(hall.World(0f, 0.5f, WarmupHallLayout.ShaftFarZ - 1f)),
+                "the far end of the parkour shaft is reachable");
+            AssertEqual(true, hall.IsInsideStation(hall.World(0f, 8f, WarmupHallLayout.ShaftFarZ - 1f)),
+                "a runner high up the shaft is still inside the station");
+            AssertEqual(true, hall.IsInsideStation(hall.World(WarmupHallLayout.ObservationFarX + 1f, 0.5f, 0f)),
+                "the observation deck is reachable");
+
+            // A radius around the spawn point cannot express this: the hub centre alone is out of range.
+            float hubDistance = Vector3.Distance(hall.SpawnPosition, hall.ZoneCenter(hall.Hub, 0.5f));
+            AssertEqual(true, hubDistance > 30f,
+                $"hub centre is {hubDistance:0.#}m from spawn, so a 30m leash would fence players into the gallery");
+
+            // Outside is still outside.
+            AssertEqual(false, hall.IsInsideStation(hall.World(WarmupHallLayout.AimBayFarX + 12f, 0.5f, 0f)),
+                "a point past the aim bay bulkhead is outside");
+            AssertEqual(false, hall.IsInsideStation(hall.World(0f, 0.5f, WarmupHallLayout.ShaftFarZ + 12f)),
+                "a point past the shaft end is outside");
+            AssertEqual(false, hall.IsInsideStation(hall.World(0f, -9f, 0f)),
+                "a point far below the deck is outside");
         }
 
         private static void StationCompartmentsTileWithoutOverlapOrGap()

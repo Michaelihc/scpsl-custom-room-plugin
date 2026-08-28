@@ -274,6 +274,30 @@ public sealed class WarmupHallLayout
     public Vector3 World(float x, float y, float z) => new(Origin.x + x, Origin.y + y, Origin.z + z);
 
     /// <summary>
+    /// Whether a point is inside ANY compartment of the station, with slack for doorways and jumps.
+    ///
+    /// This is the leash for warmup players, and it has to be the station's real volume rather than a
+    /// radius around the spawn point. A 30 m sphere sized for the old single hall put the hub itself
+    /// out of bounds - the spawn sits in the gallery, 31.5 m from hub centre - so anyone who walked out
+    /// of the gallery was teleported straight back, and the arms and shaft were unreachable entirely.
+    /// </summary>
+    public bool IsInsideStation(Vector3 worldPosition, float horizontalSlack = 1.5f, float verticalSlack = 2.5f)
+    {
+        Vector3 local = worldPosition - Origin;
+        foreach (StationZone zone in _zones)
+        {
+            if (local.x >= zone.MinX - horizontalSlack && local.x <= zone.MaxX + horizontalSlack &&
+                local.z >= zone.MinZ - horizontalSlack && local.z <= zone.MaxZ + horizontalSlack &&
+                local.y >= -verticalSlack && local.y <= zone.CeilingHeight + verticalSlack)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Rotation that makes a flat, front-facing object readable to someone looking along
     /// <paramref name="viewDirection"/>.
     ///

@@ -1104,6 +1104,7 @@ internal sealed class SelectorController
             try
             {
                 Vector3 spawn = _room.SpawnPosition;
+                WarmupHallLayout? hall = _room.Hall;
                 foreach (Player player in Participants().ToList())
                 {
                     try
@@ -1114,8 +1115,14 @@ internal sealed class SelectorController
                             continue;
                         }
 
+                        // Fell through the deck, or left the station entirely. Containment is the
+                        // station's own compartment volume: players are MEANT to walk the whole
+                        // station, so a radius around the spawn point would fence them into the
+                        // gallery and make every other compartment unreachable.
                         Vector3 pos = player.Position;
-                        if (pos.y < spawn.y - 4f || Vector3.Distance(pos, spawn) > 30f)
+                        bool fellThrough = pos.y < spawn.y - 4f;
+                        bool leftStation = hall != null && !hall.IsInsideStation(pos);
+                        if (fellThrough || leftStation)
                         {
                             player.Position = spawn;
                         }
