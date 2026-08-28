@@ -3,10 +3,12 @@
 ## Project Snapshot
 
 - LabAPI `net48` plugin named `WarmupScpSelector` (was the EXILED `ScpslCustomRoomPlugin`).
-- Purpose: a **warmup SCP draft**. During waiting-for-players, players are moved into one floating room
+- Purpose: a **warmup SCP draft** plus early-round SCP disconnect replacement. During waiting-for-players, players are moved into one floating room
   showing a model of each offered SCP with a big coin; grabbing a coin picks that SCP. At round start
   vanilla still chooses the SCP role multiset, but the plugin remaps the pending SCP recipients before
   role initialization/networking. It never creates extra SCPs — it only rearranges vanilla's assignment.
+  After round start, a healthy early-disconnecting SCP can open that exact vacant role to a short
+  UserId-backed `.volunteer` lottery; spectators and living non-SCP humans are both eligible by default.
 - The room + models **despawn on round start**.
 
 ## Architecture
@@ -23,6 +25,11 @@
   composes those transforms at arbitrary world roots, returns named markers without spawning marker geometry,
   and owns idempotent per-instance/all-instance teardown for runtime props.
 - `Selection/SelectionSwapPlanner.cs`, `Selection/VanillaRoleAssignmentResolver.cs` — pure, unit-tested swap logic.
+- `Replacement/` — LabAPI port of the Jon M/Augaton SCPReplacer flow. It snapshots a healthy main-SCP
+  disconnect inside the early cutoff, stores volunteers only by authenticated UserId, accepts spectators plus
+  living non-SCP players by default, starts one generation-guarded lottery on the first volunteer, and rechecks
+  that the role is still vacant before promotion. Round end/restart/disable cancels all callbacks. Optional
+  `.human`/`.no` opens the SCP's old slot only after eligibility/capacity checks and rolls a configured human role.
 - `Activities/` — shared **warmup activity suite** (default-off, gated on `Config.ActivitiesEnabled`;
   spec/plan in `docs/warmup-activity-suite-*`). `ActivityManager` holds exclusive per-player sessions + generation
   tokens and the idempotent, non-throwing `StopForRoundStart`/`StopAll`/`OnPlayerLeft` teardown (delegated to
@@ -73,10 +80,12 @@
   short active-voice instruction). The former room seam is UI-only: the selector side shows only the untouched original
   `warmupscp.status` SCP draft panel, while the training side removes that panel and shows only the three Aim IDs.
   Combat, issued guns, damage routing, and bot provocation still use full-hall occupancy. The three Aim zones render
-  on one configurable HSM center-X `Activities.Aim.HudX` (default -1077): center-X is
-  ~0.556 px/unit with X=0 at ~px956, so -1077 lands every rendered box in the narrow ~px216..496 corridor between
-  the native inventory list (x0..214) and the inventory wheel (x498..1404) at 1920x1080 — clear of both while TAB
-  is held. Outside the range the full draft panel keeps the centered default X. Text was compressed to fit that
+  on one configurable HSM center-X `Activities.Aim.HudX` (default -1077, aimed at the narrow corridor between
+  the native inventory list (x0..214) and the inventory wheel (x498..1404) at 1920x1080 while TAB is held).
+  SUSPECT since the 2026-08-18 in-game HSM recalibration (see `..\.tests\AGENTS.md`): center-X is actually
+  0.5 px/unit (not 0.556, so -1077 renders ~px421), and multi-char lines starting left of X≈-800 word-wrap
+  after their first glyph — this lane likely renders garbled in game and needs the ghost-tail re-place +
+  an in-game recheck. Outside the range the full draft panel keeps the centered default X. Text was compressed to fit that
   corridor (short rail/footers); bands + lane X are configurable and
   non-overlapping, no nested `<size>` spans, glyph fallback preserved. Verified with real 1920x1080 renders against
   `inventory-highlighted` (0 overlap) plus announcement/spawn-flash/waiting-highlighted regressions.
@@ -107,7 +116,7 @@
   assets (no longer spawned by the three-lane runtime; WithCulture=false + LogicalName in the csproj).
 - `tools/` — Python model pipeline: `scp_builder.py` (Builder API), `build_scp_*_asset.py` (per-SCP), `render_model_preview.py` (offline renderer, including parented/sheared logo quads; `--exposure N` brightens dark room previews to approximate in-scene point lights), `build_room_preview.py` (emits the themed room + real models/logo to render/inspect offline). `tools/preview/banner.html` previews the welcome line + status-panel TMP markup in a browser (serve over localhost; `file://` is blocked).
 - `tests/models/` — `scp_model_contract.py` + `test_scp_*_model.py` geometry contracts.
-- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity tests (61 tests currently, including bot lifecycle,
+- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity/replacement tests (76 tests currently, including bot lifecycle,
   exact automatic-rifle presets, fixed aggro lock, continuous-path/tall-cover contracts, stale generations, damage policy,
   config validation, lethal reset state, pure MER
   root/one-level-parent transform composition, continuous full-room bounds and persistent counter-armoury layout,

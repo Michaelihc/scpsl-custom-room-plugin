@@ -6,6 +6,7 @@ using LabApi.Features.Wrappers;
 using LabApi.Loader.Features.Plugins;
 using PlayerRoles;
 using PlayerRoles.RoleAssign;
+using WarmupScpSelector.Replacement;
 using WarmupScpSelector.Services;
 using WarmupScpSelector.Warmup;
 using Logger = LabApi.Features.Console.Logger;
@@ -23,16 +24,19 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 {
     private SelectorController _controller = null!;
     private HsmHintDisplayProvider _hints = null!;
+    private ScpReplacementService _replacement = null!;
 
     public static WarmupScpSelectorPlugin Instance { get; private set; } = null!;
 
+    internal ScpReplacementService? ReplacementService => _replacement;
+
     public override string Name => "WarmupScpSelector";
 
-    public override string Description => "Warmup room where players pick their SCP from a gallery of models; selected SCPs are swapped into the vanilla round assignment at round start.";
+    public override string Description => "Warmup SCP draft plus early-round replacement for healthy SCP disconnects.";
 
     public override string Author => "Michael";
 
-    public override Version Version => new(1, 0, 0);
+    public override Version Version => new(1, 1, 0);
 
     public override Version RequiredApiVersion => new(LabApiProperties.CompiledVersion);
 
@@ -46,10 +50,17 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         _hints.Enable();
 
         _controller = new SelectorController(this, _hints);
+        _replacement = new ScpReplacementService(this);
 
+        // Register replacement first so its Left handler snapshots an SCP's role/health before any other
+        // plugin-owned per-player teardown runs. Its round state is otherwise independent of warmup.
+        ServerEvents.RoundStarted += _replacement.OnRoundStarted;
+        ServerEvents.RoundEnded += _replacement.OnRoundEnded;
         ServerEvents.WaitingForPlayers += _controller.OnWaitingForPlayers;
+        ServerEvents.RoundRestarted += _replacement.OnRoundRestarted;
         ServerEvents.RoundRestarted += _controller.OnRoundRestarted;
         PlayerEvents.Joined += _controller.OnPlayerJoined;
+        PlayerEvents.Left += _replacement.OnPlayerLeft;
         PlayerEvents.Left += _controller.OnPlayerLeft;
         PlayerEvents.ChangingRole += _controller.OnPlayerChangingRole;
         PlayerEvents.Spawning += _controller.OnPlayerSpawning;
@@ -68,9 +79,13 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 
     public override void Disable()
     {
+        ServerEvents.RoundStarted -= _replacement.OnRoundStarted;
+        ServerEvents.RoundEnded -= _replacement.OnRoundEnded;
         ServerEvents.WaitingForPlayers -= _controller.OnWaitingForPlayers;
+        ServerEvents.RoundRestarted -= _replacement.OnRoundRestarted;
         ServerEvents.RoundRestarted -= _controller.OnRoundRestarted;
         PlayerEvents.Joined -= _controller.OnPlayerJoined;
+        PlayerEvents.Left -= _replacement.OnPlayerLeft;
         PlayerEvents.Left -= _controller.OnPlayerLeft;
         PlayerEvents.ChangingRole -= _controller.OnPlayerChangingRole;
         PlayerEvents.Spawning -= _controller.OnPlayerSpawning;
@@ -78,8 +93,10 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         RoleAssigner.OnBeforePlayersSpawned -= _controller.OnBeforeVanillaRoleAssignment;
         RoleAssigner.OnPlayersSpawned -= _controller.OnVanillaRolesAssigned;
 
+        _replacement.Cleanup();
         _controller.Cleanup();
         _hints?.Disable();
+        _replacement = null!;
         _hints = null!;
         Instance = null!;
         Logger.Info($"{Name} disabled.");

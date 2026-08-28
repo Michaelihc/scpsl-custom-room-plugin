@@ -18,6 +18,10 @@
     <Compile Include="..\..\src\WarmupScpSelector\Text\WarmupText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\AimRangeText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\ActivityGlyphs.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Text\ScpReplacementText.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementConfig.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementPolicy.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementState.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Services\HintChangeCache.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\IActivityLane.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\ActivityManager.cs" />

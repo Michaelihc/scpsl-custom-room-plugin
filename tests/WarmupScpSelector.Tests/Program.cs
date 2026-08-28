@@ -7,6 +7,7 @@ using WarmupScpSelector.Activities;
 using WarmupScpSelector.Activities.AimRange;
 using WarmupScpSelector.Activities.Parkour;
 using WarmupScpSelector.Models;
+using WarmupScpSelector.Replacement;
 using WarmupScpSelector.Selection;
 using WarmupScpSelector.Services;
 using WarmupScpSelector.Text;
@@ -95,6 +96,16 @@ namespace WarmupScpSelector.Tests
                 ParkourLayoutFitsTheEmptyLeftWing,
                 ParkourSweptGateDetectionCatchesFastCrossings,
                 ParkourTextIsBilingualAndMarkupSafe,
+                ScpReplacementDefaultsAllowLivingAndSpectatorVolunteers,
+                ScpReplacementDeparturePolicyHonoursCutoffHealthAndIgnoredRoles,
+                ScpReplacementStateRejectsDuplicateStableUserIds,
+                ScpReplacementDisconnectRemovalDropsVolunteerFromEverySlot,
+                ScpReplacementRoundGenerationRejectsStaleLottery,
+                ScpReplacementCapacityCountsPendingReservations,
+                ScpReplacementParserAcceptsFriendlyScpNumbers,
+                ScpReplacementWeightedHumanRolesRejectInvalidEntries,
+                ScpReplacementCooldownIsSharedAndResettable,
+                ScpReplacementTextIsBilingualAndMarkupSafe,
             };
 
             int failed = 0;
@@ -1625,6 +1636,174 @@ namespace WarmupScpSelector.Tests
             {
                 AssertMarkupSafe(text, "parkour markup");
                 AssertNoNestedSize(text, "parkour no nested size");
+            }
+        }
+
+        private static void ScpReplacementDefaultsAllowLivingAndSpectatorVolunteers()
+        {
+            ScpReplacementConfig config = new ScpReplacementConfig();
+            AssertEqual(true, config.IsEnabled, "replacement enabled by default");
+            AssertEqual(true, config.AllowAliveVolunteers, "living volunteers enabled by default");
+            AssertEqual(true,
+                ScpReplacementPolicy.CanVolunteer(RoleTypeId.Spectator, false, config.AllowAliveVolunteers),
+                "spectator may volunteer");
+            AssertEqual(true,
+                ScpReplacementPolicy.CanVolunteer(RoleTypeId.ClassD, true, config.AllowAliveVolunteers),
+                "living ClassD may volunteer");
+            AssertEqual(true,
+                ScpReplacementPolicy.CanVolunteer(RoleTypeId.NtfPrivate, true, config.AllowAliveVolunteers),
+                "living MTF may volunteer");
+            AssertEqual(false,
+                ScpReplacementPolicy.CanVolunteer(RoleTypeId.Scp939, true, config.AllowAliveVolunteers),
+                "SCP may not volunteer");
+            AssertEqual(false,
+                ScpReplacementPolicy.CanVolunteer(RoleTypeId.ClassD, false, config.AllowAliveVolunteers),
+                "dead non-spectator state may not volunteer");
+            AssertEqual(false,
+                ScpReplacementPolicy.CanVolunteer(RoleTypeId.ClassD, true, false),
+                "spectator-only config rejects living human");
+        }
+
+        private static void ScpReplacementDeparturePolicyHonoursCutoffHealthAndIgnoredRoles()
+        {
+            List<RoleTypeId> ignored = new List<RoleTypeId> { RoleTypeId.Scp079 };
+            AssertEqual(true,
+                ScpReplacementPolicy.CanOpenDeparture(RoleTypeId.Scp096, 950f, 1000f, 60d, 60f, 95f, ignored),
+                "departure at exact cutoff and health threshold");
+            AssertEqual(false,
+                ScpReplacementPolicy.CanOpenDeparture(RoleTypeId.Scp096, 949f, 1000f, 60d, 60f, 95f, ignored),
+                "low-health departure rejected");
+            AssertEqual(false,
+                ScpReplacementPolicy.CanOpenDeparture(RoleTypeId.Scp096, 1000f, 1000f, 60.01d, 60f, 95f, ignored),
+                "late departure rejected");
+            AssertEqual(false,
+                ScpReplacementPolicy.CanOpenDeparture(RoleTypeId.Scp079, 100f, 100f, 1d, 60f, 95f, ignored),
+                "configured ignored role rejected");
+            AssertEqual(false,
+                ScpReplacementPolicy.CanOpenDeparture(RoleTypeId.Scp0492, 100f, 100f, 1d, 60f, 95f, ignored),
+                "zombie is never a main SCP slot");
+        }
+
+        private static void ScpReplacementStateRejectsDuplicateStableUserIds()
+        {
+            ScpReplacementState state = new ScpReplacementState();
+            state.BeginRound();
+            AssertEqual(true, state.TryOpen(RoleTypeId.Scp079, 0, out PendingScpReplacement? entry), "open SCP-079");
+            AssertEqual(true,
+                state.TryVolunteer(RoleTypeId.Scp079, "user@steam", out _, out bool start, out int token),
+                "first stable UserId enters");
+            AssertEqual(true, start, "first volunteer starts lottery");
+            AssertEqual(1, token, "first lottery token");
+            AssertEqual(false,
+                state.TryVolunteer(RoleTypeId.Scp079, "user@steam", out _, out _, out _),
+                "duplicate stable UserId rejected");
+            AssertEqual(1, entry!.Volunteers.Count, "duplicate did not grow pool");
+        }
+
+        private static void ScpReplacementDisconnectRemovalDropsVolunteerFromEverySlot()
+        {
+            ScpReplacementState state = new ScpReplacementState();
+            state.BeginRound();
+            state.TryOpen(RoleTypeId.Scp079, 0, out _);
+            state.TryOpen(RoleTypeId.Scp096, 0, out _);
+            state.TryVolunteer(RoleTypeId.Scp079, "leaver", out _, out _, out _);
+            state.TryVolunteer(RoleTypeId.Scp096, "leaver", out _, out _, out _);
+            state.RemoveVolunteer("leaver");
+            state.TryFind(RoleTypeId.Scp079, out PendingScpReplacement? first);
+            state.TryFind(RoleTypeId.Scp096, out PendingScpReplacement? second);
+            AssertEqual(0, first!.Volunteers.Count, "leaver removed from first lottery");
+            AssertEqual(0, second!.Volunteers.Count, "leaver removed from second lottery");
+        }
+
+        private static void ScpReplacementRoundGenerationRejectsStaleLottery()
+        {
+            ScpReplacementState state = new ScpReplacementState();
+            state.BeginRound();
+            state.TryOpen(RoleTypeId.Scp173, 0, out PendingScpReplacement? entry);
+            state.TryVolunteer(RoleTypeId.Scp173, "candidate", out _, out _, out int token);
+            int staleGeneration = entry!.RoundGeneration;
+            state.EndRound();
+            state.BeginRound();
+            AssertEqual(false,
+                state.TryTakeLottery(RoleTypeId.Scp173, staleGeneration, token, out _),
+                "stale callback cannot touch new round");
+            AssertEqual(0, state.PendingCount, "stale callback leaves new round clean");
+        }
+
+        private static void ScpReplacementCapacityCountsPendingReservations()
+        {
+            ScpReplacementState state = new ScpReplacementState();
+            state.BeginRound();
+            AssertEqual(true, state.TryOpen(RoleTypeId.Scp079, 1, out PendingScpReplacement? entry), "first slot reserves cap");
+            AssertEqual(false, state.TryOpen(RoleTypeId.Scp096, 1, out _), "second pending slot cannot exceed cap");
+            state.TryVolunteer(RoleTypeId.Scp079, "candidate", out _, out _, out int token);
+            AssertEqual(true,
+                state.TryTakeLottery(RoleTypeId.Scp079, entry!.RoundGeneration, token, out _),
+                "lottery consumes pending reservation");
+            state.MarkReplacementSucceeded();
+            AssertEqual(false, state.TryOpen(RoleTypeId.Scp096, 1, out _), "successful replacement keeps cap occupied");
+        }
+
+        private static void ScpReplacementParserAcceptsFriendlyScpNumbers()
+        {
+            AssertEqual(true, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp079, "079"), "canonical number");
+            AssertEqual(true, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp079, "79"), "number without leading zero");
+            AssertEqual(true, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp079, "SCP-079"), "prefixed number");
+            AssertEqual(true, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp3114, "scp3114"), "four-digit number");
+            AssertEqual(false, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp079, "096"), "different role rejected");
+            AssertEqual(false, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp079, "SCP"), "missing digits rejected");
+            AssertEqual(false, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp079, "not079"), "unrecognized prefix rejected");
+        }
+
+        private static void ScpReplacementWeightedHumanRolesRejectInvalidEntries()
+        {
+            Dictionary<RoleTypeId, int> weights = new Dictionary<RoleTypeId, int>
+            {
+                [RoleTypeId.Scp096] = 1000,
+                [RoleTypeId.Spectator] = 1000,
+                [RoleTypeId.ClassD] = 1,
+                [RoleTypeId.Scientist] = 1,
+            };
+            AssertEqual(RoleTypeId.ClassD, ScpReplacementPolicy.PickWeightedHumanRole(weights, 0), "first valid weighted role");
+            AssertEqual(RoleTypeId.Scientist, ScpReplacementPolicy.PickWeightedHumanRole(weights, 1), "second valid weighted role");
+            AssertEqual(RoleTypeId.ClassD,
+                ScpReplacementPolicy.PickWeightedHumanRole(new Dictionary<RoleTypeId, int> { [RoleTypeId.Scp939] = 5 }, 0),
+                "invalid-only weights fail closed to ClassD");
+        }
+
+        private static void ScpReplacementCooldownIsSharedAndResettable()
+        {
+            ScpReplacementState state = new ScpReplacementState();
+            state.BeginRound();
+            AssertEqual(true, state.TryConsumeCooldown("user", 10d, 3d, out _), "first command accepted");
+            AssertEqual(false, state.TryConsumeCooldown("user", 11d, 3d, out double remaining), "second command throttled");
+            AssertEqual(2d, remaining, "cooldown remaining");
+            state.RemoveVolunteer("user");
+            AssertEqual(true, state.TryConsumeCooldown("user", 11d, 3d, out _), "disconnect cleanup removes cooldown");
+            state.EndRound();
+            state.BeginRound();
+            AssertEqual(true, state.TryConsumeCooldown("user", 11d, 3d, out _), "round reset clears cooldown");
+        }
+
+        private static void ScpReplacementTextIsBilingualAndMarkupSafe()
+        {
+            string english = ScpReplacementText.Departure(RoleTypeId.Scp079, false);
+            string chinese = ScpReplacementText.Departure(RoleTypeId.Scp079, true);
+            AssertContains(english, ".volunteer 079", "English departure command");
+            AssertNoCjk(english, "English replacement text has one language");
+            AssertContains(chinese, ".volunteer 079", "Chinese departure command");
+            AssertEqual(true, ContainsCjk(chinese), "Chinese replacement text has CJK");
+            foreach (string text in new[]
+            {
+                english,
+                chinese,
+                ScpReplacementText.Winner(RoleTypeId.Scp096, true, false),
+                ScpReplacementText.Winner(RoleTypeId.Scp096, false, true),
+                ScpReplacementText.NoWinner(RoleTypeId.Scp173, true, false),
+                ScpReplacementText.HumanHint(true),
+            })
+            {
+                AssertMarkupSafe(text, "replacement markup");
             }
         }
 

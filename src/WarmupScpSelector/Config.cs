@@ -3,6 +3,7 @@ using System.ComponentModel;
 using PlayerRoles;
 using UnityEngine;
 using WarmupScpSelector.Activities;
+using WarmupScpSelector.Replacement;
 using WarmupScpSelector.Services;
 
 namespace WarmupScpSelector;
@@ -20,6 +21,9 @@ public sealed class Config
 
     [Description("Shared settings for the warmup activity suite. Only applies when ActivitiesEnabled is true.")]
     public ActivityConfig Activities { get; set; } = new();
+
+    [Description("Early-round SCP disconnect replacement and optional .human opt-out settings. This system is independent of the waiting-for-players draft.")]
+    public ScpReplacementConfig ScpReplacement { get; set; } = new();
 
     [Description("Player-facing language: \"cn\" for Simplified Chinese (default), \"en\" for English.")]
     public string Language { get; set; } = "cn";

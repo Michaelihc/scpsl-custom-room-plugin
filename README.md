@@ -5,7 +5,8 @@
 A LabAPI plugin for SCP: Secret Laboratory. During waiting-for-players it builds one room holding a
 model of every offered SCP, each with a big coin. Players walk up and grab a coin to pick the SCP they
 want to play. When the round starts, the plugin lets the game assign roles normally, then swaps the
-selected SCP slots over to the players who picked them.
+selected SCP slots over to the players who picked them. During the early round it can also refill a
+healthy SCP slot whose player disconnects.
 
 > Renamed from the old "scpsl-custom-room-plugin" / `ScpslCustomRoomPlugin`. It never built custom
 > rooms in the SCP-002 sense — it is a warmup SCP draft — so the name was changed to match what it does.
@@ -65,6 +66,21 @@ selected SCP slots over to the players who picked them.
   - If vanilla did **not** spawn that SCP this round, the pick is skipped. The plugin **never creates
     extra SCPs** or invents fallback roles — it only rearranges what vanilla already assigned.
 - The selector room and all models **despawn when the round starts**.
+- If a main SCP disconnects during the configured early-round window while still above the configured
+  health threshold, that exact role becomes available through `.volunteer <number>` (alias `.v`).
+  **Both spectators and living non-SCP players may enter by default.** The first volunteer starts a
+  short lottery; only connected, still-eligible UserIds are considered when it resolves.
+- Replacement is vacancy-safe: if another plugin or an administrator has already restored that SCP role,
+  the lottery cancels instead of creating a duplicate. Round end, restart, disable, and disconnect remove
+  all pending callbacks/candidates. `MaxReplacementsPerRound` also counts pending reservations.
+- An SCP may optionally use `.human` (alias `.no`) during the same early window to become a weighted
+  random human role and offer their former SCP slot for replacement.
+
+### Replacement commands
+
+- `.volunteer` / `.v` — list SCP roles currently awaiting replacement.
+- `.volunteer 079` / `.v 079` — enter that role's replacement lottery. `SCP-079` and `79` are also accepted.
+- `.human` / `.no` — if enabled, give up an eligible healthy SCP role early in the round.
 
 ### Build
 
@@ -99,6 +115,13 @@ LabAPI generates the config at:
 Key options:
 
 - `Language` — `"en"` for English, `"cn"` for Simplified Chinese player-facing text.
+- `ScpReplacement.IsEnabled` — enables the post-start disconnect replacement system (default `true`).
+- `ScpReplacement.AllowAliveVolunteers` — allows living non-SCP players in addition to spectators (default `true`).
+- `ScpReplacement.DepartureCutoffSeconds`, `VolunteerCutoffSeconds`, `RequiredHealthPercentage`, and
+  `LotterySeconds` — departure/entry windows, departure health gate, and lottery duration.
+- `ScpReplacement.AllowHumanCommand`, `HumanCommandRoles`, and `ClassDBonusItems` — `.human` behavior.
+- `ScpReplacement.MaxReplacementsPerRound`, `IgnoredRoles`, and `CommandCooldownSeconds` — capacity,
+  exclusions, and shared `.volunteer`/`.human` rate limiting.
 - `RoomOrigin` — world position of the floating selector room (high Y keeps it clear of the live map).
 - `PedestalSpacing`, `ModelScale`, `SelectorCoinScale` — layout/sizing.
 - `SelectorItem` — the pickup used as the selection coin (default `Coin`).
@@ -155,7 +178,7 @@ python tests/models/test_scp_173_model.py                        # geometry cont
 ### Tests
 
 - C# planner/activity/runtime-adjacent logic (headless): `dotnet build tests/WarmupScpSelector.Tests` then run
-  `WarmupScpSelector.Tests.exe` (`61/61` tests, including bot lifecycle/tactical contracts, lethal reset state, parkour route/gates/HUD, MER transforms,
+  `WarmupScpSelector.Tests.exe` (`76/76` tests, including SCP replacement policy/state/text, bot lifecycle/tactical contracts, lethal reset state, parkour route/gates/HUD, MER transforms,
   widened lane bounds, deterministic sliding motion, one-credit immediate sphere relocation, bilingual Aim text, and HSM cache behavior).
 - Model geometry contracts: run each `tests/models/test_*_model.py` script (`10/10` current model contracts).
 - Shared HSM renderer: `node ../.tests/UI/smoke-test.js`; all 22 WarmupScp draft/Aim EN+CN fixtures parse with
@@ -171,7 +194,11 @@ python tests/models/test_scp_173_model.py                        # geometry cont
 
 ### Known limits / conflicts
 
-- Player-facing text requires HintServiceMeow and uses stable HSM hint IDs.
+- The selector/activity HUD requires HintServiceMeow and uses stable HSM hint IDs. Replacement notices use
+  global broadcasts plus optional client-console copies.
+- Do not install the standalone SCPReplacer beside this port; both would observe the same departure and announce
+  competing lotteries. ScpSwap may coexist: the replacement lottery rechecks that the SCP role is still vacant
+  immediately before promotion.
 - Lobby music uses one filtered audio transmitter per player so join fade-in is per-player. Keep tracks
   reasonably short; `MusicMaxSeconds` caps accidental huge files.
 - The isolated live harness verifies AdminToy collision, widened lane geometry, smoothed persistent-target
@@ -219,6 +246,18 @@ SCP 名额交换给选择它的玩家。
   - 如果原版生成了某人选择的 SCP，则从该选择池里选一名玩家获得该名额，被替换的原 SCP 玩家获得选择者原本的（人类）职业。
   - 如果原版本回合没有生成该 SCP，则跳过该选择。插件**不会额外创建 SCP**，也不会随机生成回退职业，只会重排原版已分配的职业。
 - 选择房间和所有模型在**回合开始时销毁**。
+- 若主要 SCP 在配置的回合早期窗口内、且生命值仍高于阈值时断线，其原职业会开放替补。玩家可输入
+  `.volunteer <编号>`（别名 `.v`）参加抽选；**默认同时允许旁观者和仍存活的非 SCP 玩家参加**。
+  第一名志愿者会启动短暂抽选，结算时只保留仍在线、仍符合条件的 UserId。
+- 结算前会再次确认该 SCP 职业确实空缺；若管理员或其他插件已经补位，就取消抽选，不会生成重复 SCP。
+  回合结束、重启、插件禁用和玩家断线都会清理候选人与延迟回调。
+- 可选的 `.human`（别名 `.no`）允许健康的 SCP 在回合早期转为加权随机人类职业，并开放其原 SCP 名额。
+
+### 替补命令
+
+- `.volunteer` / `.v`——列出当前可替补的 SCP。
+- `.volunteer 079` / `.v 079`——参加该 SCP 的替补抽选，也接受 `SCP-079` 或 `79`。
+- `.human` / `.no`——若配置启用，在回合早期放弃符合条件的 SCP 职业。
 
 ### 构建
 
@@ -247,6 +286,14 @@ dotnet build -c Release -p:ServerManagedPath="C:\path\to\SCPSL_Data\Managed"
 常用选项：
 
 - `Language`——`"en"` 英文，`"cn"` 简体中文。
+- `ScpReplacement.IsEnabled`——启用回合开始后的断线 SCP 替补（默认 `true`）。
+- `ScpReplacement.AllowAliveVolunteers`——除旁观者外，也允许存活的非 SCP 玩家参加（默认 `true`）。
+- `ScpReplacement.DepartureCutoffSeconds`、`VolunteerCutoffSeconds`、`RequiredHealthPercentage`、
+  `LotterySeconds`——断线/报名窗口、生命值阈值和抽选时长。
+- `ScpReplacement.AllowHumanCommand`、`HumanCommandRoles`、`ClassDBonusItems`——`.human` 的开关、
+  人类职业权重和 D级额外物品。
+- `ScpReplacement.MaxReplacementsPerRound`、`IgnoredRoles`、`CommandCooldownSeconds`——每回合上限、
+  排除职业和两个命令共用的冷却。
 - `RoomOrigin`——悬空选择房间的世界坐标（较高的 Y 可避免与正式地图冲突）。
 - `PedestalSpacing`、`ModelScale`、`SelectorCoinScale`——布局/尺寸。
 - `SelectorItem`——作为选择硬币的物品（默认 `Coin`）。
@@ -281,7 +328,7 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
 
 ### 测试
 
-- C# 纯逻辑与运行时邻接测试：`61/61` 通过。
+- C# 纯逻辑与运行时邻接测试：`76/76` 通过（包含 SCP 替补策略、状态和中英文本）。
 - SCP、Logo、枪架和保留的移动靶载具模型契约：`10/10` 通过。
 - WarmupScp 选择/训练场中英文 HSM fixture：22 个全部为零静态问题。
 - 隔离本地端口的 dev-only 实机验证：`253/253` 通过，覆盖全宽场景、全宽柜台、每半区三盏超亮非 HDR 点光源、
@@ -290,13 +337,19 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
 
 ### 已知限制 / 冲突
 
-- 玩家提示依赖 HintServiceMeow，并使用稳定的 HSM hint ID。
+- 选择器/训练场 HUD 依赖 HintServiceMeow，并使用稳定 HSM hint ID；替补通知使用全局广播，且可选同步到客户端控制台。
+- 不要同时安装独立版 SCPReplacer，否则两个插件会同时处理同一次断线并发出竞争抽选。ScpSwap 可以共存：
+  本插件会在抽选结算前再次确认对应 SCP 职业仍为空缺。
 - 大厅音乐为每名玩家使用一个过滤后的音频发送器，因此加入时淡入是按玩家独立生效的。音频文件不要太长；
   `MusicMaxSeconds` 会限制误放入的超大文件。
 - 隔离实机 harness 已验证 AdminToy 碰撞、扩宽训练道、枪架位置、平滑永久移动靶同步、球形靶生成、两名产品
   机器人真实巡逻与原生还击弹药消耗、dummy 落地和交接零泄漏清理。真实客户端的拾取/射击顺序、第一人称表现、
   机器人反复死亡重生、命中标记与球形靶消失重生画面、致命重置画面，以及中英文最终视觉检查仍需在可见本地
   服务器上完成。单人会使用训练场临时持有的大厅锁；第二名真实玩家加入后自动释放，让原生倒计时继续。
+
+## Attribution
+
+The replacement mechanic is adapted from Jon M's SCPReplacer and Augaton's modern rewrite. See [NOTICE.md](NOTICE.md).
 
 ## License
 

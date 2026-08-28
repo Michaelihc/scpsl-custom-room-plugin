@@ -137,7 +137,7 @@ namespace WarmupScpSelector.Activities
         [Description("Full positive health restored by a same-life Aim lethal intercept.")]
         public float HumanResetHealth { get; set; } = 100f;
 
-        [Description("HSM center-X for the whole in-range HUD lane (flash + hero + footer + collapsed status). HSM center-X is ~0.556 px/unit with X=0 at screen center (~px956); the default -1077 lands the lane in the narrow left corridor (~px216..496 at 1920x1080) between the native inventory list and the inventory wheel so the HUD never sits on either while TAB is held. Outside the range the warmup status panel keeps the centered default.")]
+        [Description("HSM center-X for the whole in-range HUD lane (flash + hero + footer + collapsed status). Rendered center px = 960 + X/2 (in-game measured 2026-08-18), so the default -1077 renders near px421, between the native inventory list and the inventory wheel while TAB is held. CAUTION: multi-char lines starting left of X = -800 word-wrap after their first glyph in game; values below -800 need the ghost-tail placement recipe and an in-game recheck.")]
         public float HudX { get; set; } = -1077f;
 
         [Description("HSM Y of the force-shown range event flash (HIT / INCOMING / BOT DOWN ...). Keep the flash/hero/footer/collapsed bands non-overlapping. 0 (top) .. 1080 (bottom).")]
