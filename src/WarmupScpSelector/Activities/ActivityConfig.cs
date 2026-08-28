@@ -15,13 +15,13 @@ namespace WarmupScpSelector.Activities
         [Description("Full warmup Aim Range settings.")]
         public AimRangeActivityConfig Aim { get; set; } = new AimRangeActivityConfig();
 
-        [Description("Parkour course settings for the empty far-left Aim-hall subarea.")]
+        [Description("Pulse Line settings. The course lives in the station's own parkour shaft, north of the hub.")]
         public ParkourActivityConfig Parkour { get; set; } = new ParkourActivityConfig();
     }
 
     public sealed class ParkourActivityConfig
     {
-        [Description("Offer Pulse Line parkour during warmup. Requires ActivitiesEnabled and the Aim hall. Default OFF.")]
+        [Description("Offer Pulse Line parkour during warmup. Requires ActivitiesEnabled; independent of the Aim Bay. The route is generated from the game's real jump and movement constants, so it stays clearable and non-trivial across balance patches. Default OFF.")]
         public bool Enabled { get; set; } = false;
 
         [Description("Parkour occupancy, gate, recovery, and HUD updates per second.")]

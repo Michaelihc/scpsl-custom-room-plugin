@@ -80,8 +80,11 @@ namespace WarmupScpSelector.Tests
                 RangeBotRegistryUsesLiveIdentityIndexes,
                 ParticipantIdentityRulesRejectNonHumans,
                 MerWorldTransformComposesOneLevelParent,
-                ContinuousHallUsesPersistentCounterArmoury,
-                WidenedAimLayoutDefinesThreeClearLanes,
+                StationCompartmentsTileWithoutOverlapOrGap,
+                StationWallPanelsSealEveryCompartmentFace,
+                GalleryStandsKeepTheAisleAndFitTheRoom,
+                AimBayHostsThePersistentCounterArmoury,
+                AimBayDefinesThreeClearLanesAlongTheArm,
                 SlidingTargetMotionIsDeterministicAndAbsolute,
                 SphereTargetStateCreditsOnceAndRelocates,
                 SphereTargetLayoutFitsThirdLane,
@@ -93,7 +96,9 @@ namespace WarmupScpSelector.Tests
                 HintChangeCacheSkipsUnchangedButResendsOnChange,
                 ParkourDefaultsToExplicitOptIn,
                 ParkourRunRequiresOrderedGatesAndFreezesFinishTime,
-                ParkourLayoutFitsTheEmptyLeftWing,
+                ParkourRouteIsClearableButNotTrivial,
+                ParkourRouteAdaptsToMovementConstants,
+                ParkourJumpModelMatchesNativeProjectileMotion,
                 ParkourSweptGateDetectionCatchesFastCrossings,
                 ParkourTextIsBilingualAndMarkupSafe,
                 ScpReplacementDefaultsAllowLivingAndSpectatorVolunteers,
@@ -119,7 +124,10 @@ namespace WarmupScpSelector.Tests
                 catch (Exception ex)
                 {
                     failed++;
-                    Console.Error.WriteLine($"FAIL {test.Method.Name}: {ex.Message}");
+                    // Print the frame too: a bare message is useless for the Unity ECall failures that
+                    // happen when a headless test touches a native UnityEngine method.
+                    string frame = (ex.StackTrace ?? string.Empty).Split('\n').FirstOrDefault()?.Trim() ?? string.Empty;
+                    Console.Error.WriteLine($"FAIL {test.Method.Name}: {ex.Message} {frame}");
                 }
             }
 
@@ -1174,59 +1182,178 @@ namespace WarmupScpSelector.Tests
                 "child world rotation includes parent");
         }
 
-        private static void ContinuousHallUsesPersistentCounterArmoury()
+        private static void StationCompartmentsTileWithoutOverlapOrGap()
+        {
+            WarmupHallLayout hall = new WarmupHallLayout(new Vector3(10f, 1000f, -20f));
+            AssertEqual(6, hall.Zones.Count, "station compartment count");
+
+            // No two compartments may share interior floor, or the deck would be built twice and every
+            // occupancy rule would be ambiguous about which room a player is in.
+            for (int i = 0; i < hall.Zones.Count; i++)
+            {
+                for (int j = i + 1; j < hall.Zones.Count; j++)
+                {
+                    StationZone a = hall.Zones[i];
+                    StationZone b = hall.Zones[j];
+                    bool overlaps = a.MinX < b.MaxX - 0.01f && b.MinX < a.MaxX - 0.01f &&
+                        a.MinZ < b.MaxZ - 0.01f && b.MinZ < a.MaxZ - 0.01f;
+                    AssertEqual(false, overlaps, $"{a.Id} and {b.Id} do not overlap");
+                }
+            }
+
+            // Every hatch must lie exactly on a face shared by two compartments, or it opens onto nothing.
+            foreach (StationOpening hatch in hall.Openings)
+            {
+                int touching = hall.Zones.Count(zone => hatch.InConstantXWall
+                    ? (Math.Abs(zone.MinX - hatch.Plane) < 0.01f || Math.Abs(zone.MaxX - hatch.Plane) < 0.01f) &&
+                      zone.MinZ <= hatch.From + 0.01f && zone.MaxZ >= hatch.To - 0.01f
+                    : (Math.Abs(zone.MinZ - hatch.Plane) < 0.01f || Math.Abs(zone.MaxZ - hatch.Plane) < 0.01f) &&
+                      zone.MinX <= hatch.From + 0.01f && zone.MaxX >= hatch.To - 0.01f);
+                AssertEqual(2, touching, $"hatch at {hatch.Plane} joins exactly two compartments");
+            }
+
+            AssertEqual(5, hall.Openings.Count, "one hatch per compartment beyond the hub");
+        }
+
+        private static void StationWallPanelsSealEveryCompartmentFace()
+        {
+            WarmupHallLayout hall = new WarmupHallLayout(Vector3.zero);
+
+            foreach (StationZone zone in hall.Zones)
+            {
+                IReadOnlyList<StationWallSegment> segments = hall.BuildWallSegments(zone);
+
+                foreach (bool inConstantXWall in new[] { true, false })
+                {
+                    float spanMin = inConstantXWall ? zone.MinZ : zone.MinX;
+                    float spanMax = inConstantXWall ? zone.MaxZ : zone.MaxX;
+                    foreach (float plane in inConstantXWall
+                        ? new[] { zone.MinX, zone.MaxX }
+                        : new[] { zone.MinZ, zone.MaxZ })
+                    {
+                        // Sample the face on a fine grid: every point is either solid panel or inside a
+                        // hatch. Anything else is a hole players fall through.
+                        for (float u = spanMin + 0.05f; u < spanMax; u += 0.25f)
+                        {
+                            for (float y = 0.05f; y < zone.CeilingHeight; y += 0.25f)
+                            {
+                                bool covered = segments.Any(seg =>
+                                    seg.InConstantXWall == inConstantXWall &&
+                                    Math.Abs(seg.Plane - plane) < 0.01f &&
+                                    u >= seg.From - 0.001f && u <= seg.To + 0.001f &&
+                                    y >= seg.BottomY - 0.001f && y <= seg.TopY + 0.001f);
+                                bool hatch = hall.Openings.Any(o =>
+                                    o.InConstantXWall == inConstantXWall &&
+                                    Math.Abs(o.Plane - plane) < 0.01f &&
+                                    u >= o.From - 0.001f && u <= o.To + 0.001f &&
+                                    y <= o.Height + 0.001f);
+                                AssertEqual(true, covered || hatch,
+                                    $"{zone.Id} face at {plane} is sealed or open at ({u:0.##}, {y:0.##})");
+                            }
+                        }
+                    }
+                }
+
+                AssertEqual(true, segments.All(seg => seg.Span > 0.01f && seg.Height > 0.01f),
+                    $"{zone.Id} emits no degenerate panels");
+            }
+        }
+
+        private static void GalleryStandsKeepTheAisleAndFitTheRoom()
+        {
+            WarmupHallLayout hall = new WarmupHallLayout(Vector3.zero);
+            const float spacing = 3.7f;
+            const float standWidth = 1.9f;
+
+            AssertEqual(true, hall.DisplayCapacity(spacing, standWidth) >= 7,
+                "gallery stands at least the seven default SCP options");
+
+            IReadOnlyList<GalleryDisplaySlot> slots = hall.BuildDisplaySlots(7, spacing, standWidth);
+            AssertEqual(7, slots.Count, "seven stands for seven options");
+
+            foreach (GalleryDisplaySlot slot in slots)
+            {
+                AssertEqual(true, Math.Abs(slot.StandTopCenter.x) + standWidth / 2f < WarmupHallLayout.HubHalfWidth,
+                    "stand stays inside the gallery walls");
+                AssertEqual(true, slot.StandTopCenter.z > WarmupHallLayout.GalleryFarZ &&
+                    slot.StandTopCenter.z < WarmupHallLayout.ConnectorFarZ,
+                    "stand stays inside the gallery");
+                AssertEqual(true, slot.CoinPosition.z > slot.StandTopCenter.z,
+                    "coin sits in front of its model, toward arriving players");
+            }
+
+            // The centre aisle stays clear so the wall logo reads straight down it from the spawn point.
+            AssertEqual(true, slots.All(slot => Math.Abs(slot.StandTopCenter.x) > 1f), "no stand blocks the centre aisle");
+
+            // Stands must not collide with each other.
+            for (int i = 0; i < slots.Count; i++)
+            {
+                for (int j = i + 1; j < slots.Count; j++)
+                {
+                    float dx = Math.Abs(slots[i].StandTopCenter.x - slots[j].StandTopCenter.x);
+                    float dz = Math.Abs(slots[i].StandTopCenter.z - slots[j].StandTopCenter.z);
+                    AssertEqual(true, dx > standWidth + 0.2f || dz > slots[i].StandDepth + 0.2f,
+                        $"stands {i} and {j} do not overlap");
+                }
+            }
+
+            // Arrivals land in the gallery, on the deck, looking at the back rank.
+            AssertEqual(true, hall.SpawnPosition.z > WarmupHallLayout.BackRankZ, "spawn is in front of the back rank");
+            AssertEqual(true, hall.SpawnPosition.z < WarmupHallLayout.ConnectorFarZ, "spawn is inside the gallery");
+            AssertEqual(180f, hall.SpawnYaw, "arrivals face the SCP stands");
+            AssertEqual(true, hall.LogoAnchor.z < WarmupHallLayout.BackRankZ, "logo is on the wall behind the back rank");
+        }
+
+        private static void AimBayHostsThePersistentCounterArmoury()
         {
             Vector3 origin = new Vector3(100f, 200f, 300f);
-            const float galleryWidth = 37f;
-            const float galleryDepth = 9f;
-            AimRangeLayout layout = new AimRangeLayout(origin, -4.75f, galleryWidth, galleryDepth);
-            AssertEqual(37f, layout.ShellWidth, "training shell expands to the full selector width");
-            AssertEqual(36.4f, layout.ShootingCounterWidth, "shooting counter spans the full hall inside the side walls");
-            AssertEqual(15.3f, layout.SphereBayWidth, "sphere bay spans from the lane divider to the outer wall");
-            AssertVectorNear(new Vector3(110.85f, 200f, 288.25f), layout.SphereLaneOrigin, 0.001f,
-                "sphere cloud is centered in the full right-hand wing");
+            WarmupHallLayout hall = new WarmupHallLayout(origin);
+            AimRangeLayout layout = new AimRangeLayout(hall);
+
+            AssertEqual(19f, layout.ShellWidth, "aim bay spans the full width of the east arm");
+            AssertEqual(18.4f, layout.ShootingCounterWidth, "shooting counter spans the bay inside its side walls");
+            AssertEqual(14.5f, layout.ShootingLineX, "shooting line sits just inside the bay hatch");
+            AssertEqual(36f, layout.BackstopX, "backstop is the far bulkhead of the arm");
+
             AssertEqual(6, layout.ShelfAnchors.Count, "six counter armoury pickups");
             AssertSequence(Enumerable.Range(0, 6).ToArray(), layout.ShelfAnchors.Select(anchor => anchor.SlotId).ToArray(),
                 "armoury slot ids remain deterministic");
-            AssertEqual(true, layout.ShelfAnchors.All(anchor => Math.Abs(anchor.LocalPosition.y - (200f + AimRangeLayout.ShootingCounterHeight + 0.28f)) < 0.001f),
+            AssertEqual(true, layout.ShelfAnchors.All(anchor =>
+                    Math.Abs(anchor.LocalPosition.y - (origin.y + AimRangeLayout.ShootingCounterHeight + 0.28f)) < 0.001f),
                 "counter guns sit visibly above the counter top");
-            AssertEqual(true, layout.ShelfAnchors.All(anchor => Math.Abs(anchor.LocalPosition.z - (layout.DoorPlaneZ - AimRangeLayout.ShootingCounterDepth)) < 0.001f),
-                "counter guns share the shooting-counter line");
-            AssertEqual(3, layout.ShelfAnchors.Count(anchor => anchor.LocalPosition.x < origin.x), "three counter guns on the left half");
-            AssertEqual(3, layout.ShelfAnchors.Count(anchor => anchor.LocalPosition.x > origin.x), "three counter guns on the right half");
+            AssertEqual(true, layout.ShelfAnchors.All(anchor =>
+                    Math.Abs(anchor.LocalPosition.x - (origin.x + layout.ShootingLineX)) < 0.001f),
+                "counter guns share the shooting line");
+            AssertEqual(3, layout.ShelfAnchors.Count(anchor => anchor.LocalPosition.z < origin.z), "three counter guns left of centre");
+            AssertEqual(3, layout.ShelfAnchors.Count(anchor => anchor.LocalPosition.z > origin.z), "three counter guns right of centre");
+
             AssertEqual(2, layout.AttachmentWorkstationAnchors.Count, "two native attachment workstations");
-            AimWorkstationAnchor leftWorkstation = layout.AttachmentWorkstationAnchors[0];
-            AimWorkstationAnchor rightWorkstation = layout.AttachmentWorkstationAnchors[1];
-            AssertVectorNear(new Vector3(81.72f, 200f, 291.284f), leftWorkstation.Position, 0.001f,
-                "left attachment workstation sits against the wall");
-            AssertVectorNear(new Vector3(118.28f, 200f, 291.284f), rightWorkstation.Position, 0.001f,
-                "right attachment workstation mirrors the left");
-            AssertEqual(true, Math.Abs((leftWorkstation.Position.x - origin.x) + (rightWorkstation.Position.x - origin.x)) < 0.001f,
-                "attachment workstations are symmetric around hall center");
-            AssertEqual(true, MerWorldTransformComposer.RotationAngleDegrees(
-                leftWorkstation.Rotation, MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 90f, 0f))) < 0.1f,
-                "left workstation faces inward");
-            AssertEqual(true, MerWorldTransformComposer.RotationAngleDegrees(
-                rightWorkstation.Rotation, MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, -90f, 0f))) < 0.1f,
-                "right workstation faces inward");
-            AssertVectorNear(new Vector3(100f, 202.5f, 288.7f), layout.VerifiedBounds.center, 0.001f,
-                "full-room activity bounds are centered across gallery and training area");
-            AssertVectorNear(new Vector3(36.5f, 5.5f, 30.6f), layout.VerifiedBounds.size, 0.001f,
-                "full-room activity bounds cover the combined rectangle with only edge tolerance");
-            AssertEqual(true, layout.RequiredRetaliationDistance > 47f,
-                "bot retaliation covers the widened full-hall diagonal rather than the legacy 24 m cap");
-            Vector3 selectorSide = new Vector3(origin.x, origin.y + 0.5f, layout.DoorPlaneZ + 1f);
-            Vector3 aimSide = new Vector3(origin.x, origin.y + 0.5f, layout.DoorPlaneZ - 1f);
-            AssertEqual(false, layout.ContainsAimUi(selectorSide), "selector side keeps original SCP UI only");
-            AssertEqual(true, layout.ContainsAimUi(aimSide), "training side shows Aim UI only");
+            AimWorkstationAnchor near = layout.AttachmentWorkstationAnchors[0];
+            AimWorkstationAnchor far = layout.AttachmentWorkstationAnchors[1];
+            AssertEqual(true, Math.Abs((near.Position.z - origin.z) + (far.Position.z - origin.z)) < 0.001f,
+                "attachment workstations are symmetric across the bay");
+            AssertEqual(true, Math.Abs(Math.Abs(near.Position.z - origin.z) - (19f / 2f - AimRangeLayout.AttachmentWorkstationWallInset)) < 0.001f,
+                "attachment workstations hug the side walls");
+
+            // Ownership deliberately reaches back through the hatch so a player in the doorway is still
+            // governed by the range, while the HUD only swaps inside the bay proper.
+            Vector3 hubSide = hall.World(layout.EntranceX - 1.5f, 0.5f, 0f);
+            Vector3 baySide = hall.World(layout.EntranceX + 1.5f, 0.5f, 0f);
+            AssertEqual(false, layout.ContainsAimUi(hubSide), "hub side keeps the original SCP draft panel");
+            AssertEqual(true, layout.ContainsAimUi(baySide), "bay side shows the Aim HUD");
+            AssertEqual(true, layout.ContainsVerified(hubSide), "range still owns a shooter standing in its hatch");
+            AssertEqual(true, layout.RequiredRetaliationDistance > 27f,
+                "bot retaliation covers the full downrange diagonal of the bay");
         }
 
-        private static void WidenedAimLayoutDefinesThreeClearLanes()
+        private static void AimBayDefinesThreeClearLanesAlongTheArm()
         {
             Vector3 origin = new Vector3(25f, 50f, 75f);
-            AimRangeLayout layout = new AimRangeLayout(origin, -4.75f);
-            AssertEqual(19.2f, AimRangeLayout.Width, "centered training-lane width");
-            AssertEqual(6.4f, AimRangeLayout.LaneWidth, "each lane width");
+            WarmupHallLayout hall = new WarmupHallLayout(origin);
+            AimRangeLayout layout = new AimRangeLayout(hall);
+
+            AssertEqual(19f, AimRangeLayout.Width, "authored lane width across the bay");
+            AssertEqual(21.5f, AimRangeLayout.Depth, "authored downrange length");
             AssertEqual(3, layout.SlidingTargetTracks.Count, "three persistent sliding tracks");
             AssertEqual(1.70f * 1.35f, layout.SlidingTargetTracks[2].MinimumSpeed,
                 "deepest sliding target minimum speed is 35 percent faster");
@@ -1234,12 +1361,19 @@ namespace WarmupScpSelector.Tests
                 "deepest sliding target maximum speed is 35 percent faster");
             AssertEqual(2, layout.BotPaths.Count, "two authored bot patrol paths");
             AssertEqual(6, layout.BotCovers.Count, "three authored covers per bot slot");
-            AssertEqual(true, SphereTargetLayout.RequiredClearWidth <= AimRangeLayout.LaneWidth - 0.5f, "sphere lane keeps required clear width");
+            AssertEqual(true, layout.SphereBayWidth >= SphereTargetLayout.RequiredClearWidth,
+                "sphere lane keeps the required clear width");
+            AssertEqual(true, layout.BackstopX - layout.ShootingLineX >= SphereTargetLayout.RequiredClearDepth,
+                "sphere lane keeps the required clear depth");
 
+            // Lane 1 is everything outboard of the first divider; every bot fixture must live there so its
+            // fire never crosses into the sliding or sphere lanes.
             foreach (AimBotPath path in layout.BotPaths)
             {
-                AssertEqual(true, path.Segments.All(segment => segment.From.X < -AimRangeLayout.LaneWidth / 2f && segment.To.X < -AimRangeLayout.LaneWidth / 2f),
+                AssertEqual(true, path.Segments.All(segment => segment.From.Z < layout.DividerOneZ && segment.To.Z < layout.DividerOneZ),
                     $"bot path {path.SlotId} stays in lane 1");
+                AssertEqual(true, path.Segments.All(segment => segment.From.Z > layout.BayMinZ && segment.To.Z > layout.BayMinZ),
+                    $"bot path {path.SlotId} stays inside the bay wall");
                 AssertEqual(true, path.Segments.All(segment =>
                         Math.Abs(segment.From.X - segment.To.X) > 0.0001f || Math.Abs(segment.From.Z - segment.To.Z) > 0.0001f),
                     $"bot path {path.SlotId} has no zero-distance dwell segment");
@@ -1252,25 +1386,31 @@ namespace WarmupScpSelector.Tests
                 AssertEqual(2, covers.Count(cover => cover.FullHeight), $"bot slot {slotId} full-height cover count");
                 AssertEqual(true, covers.Where(cover => cover.FullHeight).All(cover => Math.Abs(cover.Size.y - 2.2f) < 0.001f),
                     $"bot slot {slotId} full-height covers are 2.2m tall");
-                AssertEqual(true, covers.All(cover => cover.Center.x < origin.x - AimRangeLayout.LaneWidth / 2f &&
-                    cover.ReloadPoint.x < origin.x - AimRangeLayout.LaneWidth / 2f),
+                AssertEqual(true, covers.All(cover =>
+                        cover.Center.z - origin.z < layout.DividerOneZ && cover.ReloadPoint.z - origin.z < layout.DividerOneZ),
                     $"bot slot {slotId} covers and reload points stay in lane 1");
                 AssertEqual(true, covers.All(cover => Math.Abs(cover.ReloadPoint.y - origin.y) < 0.001f),
-                    $"bot slot {slotId} reload points sit on the authored floor");
+                    $"bot slot {slotId} reload points sit on the deck");
+                AssertEqual(true, covers.All(cover => cover.ReloadPoint.x > cover.Center.x),
+                    $"bot slot {slotId} reload points sit behind cover, away from the firing line");
             }
 
             foreach (SlidingTargetTrackDefinition track in layout.SlidingTargetTracks)
             {
-                AssertEqual(true, Math.Abs(track.EndpointA.x - origin.x) < AimRangeLayout.LaneWidth / 2f,
+                AssertEqual(true, track.EndpointA.z - origin.z > layout.DividerOneZ && track.EndpointA.z - origin.z < layout.DividerTwoZ,
                     $"sliding track {track.SlotId} endpoint A stays in lane 2");
-                AssertEqual(true, Math.Abs(track.EndpointB.x - origin.x) < AimRangeLayout.LaneWidth / 2f,
+                AssertEqual(true, track.EndpointB.z - origin.z > layout.DividerOneZ && track.EndpointB.z - origin.z < layout.DividerTwoZ,
                     $"sliding track {track.SlotId} endpoint B stays in lane 2");
+                AssertEqual(true, track.EndpointA.x > origin.x + layout.ShootingLineX && track.EndpointA.x < origin.x + layout.BackstopX,
+                    $"sliding track {track.SlotId} sits downrange of the counter");
             }
+
+            AssertEqual(true, layout.SphereLaneOrigin.z - origin.z > layout.DividerTwoZ, "sphere cloud starts in lane 3");
         }
 
         private static void SlidingTargetMotionIsDeterministicAndAbsolute()
         {
-            AimRangeLayout layout = new AimRangeLayout(Vector3.zero, -4.75f);
+            AimRangeLayout layout = new AimRangeLayout(new WarmupHallLayout(Vector3.zero));
             SlidingTargetTrackDefinition track = layout.SlidingTargetTracks[1];
             AssertEqual(true, SlidingTargetLogic.TryBuildMotion(track, 1234, 7, 1, 17031, out SlidingTargetMotion first), "first motion builds");
             AssertEqual(true, SlidingTargetLogic.TryBuildMotion(track, 1234, 7, 1, 17031, out SlidingTargetMotion repeat), "repeat motion builds");
@@ -1576,31 +1716,109 @@ namespace WarmupScpSelector.Tests
             AssertEqual(true, run.RequireStartExit, "finish cannot auto-rearm under runner");
         }
 
-        private static void ParkourLayoutFitsTheEmptyLeftWing()
+        private static void ParkourRouteIsClearableButNotTrivial()
         {
-            AimRangeLayout aim = new AimRangeLayout(Vector3.zero, -4.75f, 37f, 9f);
-            ParkourLayout layout = new ParkourLayout(aim);
-            AssertEqual(17, layout.Platforms.Count, "ordered parkour landing count");
-            AssertEqual(true, ContainsPoint(layout.BayBounds, layout.StartPlate.Center), "start inside parkour bay");
-            AssertEqual(true, ContainsPoint(layout.BayBounds, layout.FinishPlate.Center), "finish inside parkour bay");
-            AssertEqual(true, aim.ContainsParkourBay(layout.StartPlate.Center), "Aim carveout contains start");
+            WarmupHallLayout hall = new WarmupHallLayout(Vector3.zero);
+            // The live Tutorial role's measured constants (see the pulse-line playtest transcript), not
+            // the fallbacks: this is the course players actually get.
+            ParkourJumpModel model = new ParkourJumpModel(4.9f, 3.9f, 5.4f);
+            ParkourLayout layout = new ParkourLayout(hall, model);
 
-            Vector3 previous = layout.StartPlate.Center;
-            foreach (ParkourPlatform platform in layout.Platforms)
+            AssertEqual(true, layout.Platforms.Count >= 10, $"route has a real number of landings (got {layout.Platforms.Count})");
+            AssertEqual(layout.Platforms.Count + 1, layout.Hops.Count, "every landing plus the finish is a measured hop");
+            AssertEqual(true, ContainsPoint(layout.ShaftBounds, layout.StartPlate.Center), "start inside the shaft");
+            AssertEqual(true, ContainsPoint(layout.ShaftBounds, layout.FinishPlate.Center), "finish inside the shaft");
+
+            // Possible: no hop may exceed the reachable distance at the reference speed, with margin.
+            foreach (ParkourHop hop in layout.Hops)
             {
-                AssertEqual(true, ContainsPoint(layout.BayBounds, platform.Center), "landing inside isolated bay");
-                AssertEqual(true, platform.SurfaceY <= aim.GalleryOrigin.y + 2.75f, "landing keeps normal-jump ceiling clearance");
-                double distance = Math.Sqrt(
-                    Math.Pow(platform.Center.x - previous.x, 2d) +
-                    Math.Pow(platform.Center.z - previous.z, 2d));
-                AssertEqual(true, distance <= 3.05d, "consecutive landings stay in normal jump envelope");
-                previous = platform.Center;
+                AssertEqual(true, hop.Difficulty <= ParkourLayout.MaximumDifficulty,
+                    $"hop {hop.Index} is clearable (difficulty {hop.Difficulty:0.###})");
+                AssertEqual(true, hop.Rise < model.MaxRise,
+                    $"hop {hop.Index} rise stays under the jump apex");
             }
 
-            double home = Math.Sqrt(
-                Math.Pow(layout.FinishPlate.Center.x - previous.x, 2d) +
-                Math.Pow(layout.FinishPlate.Center.z - previous.z, 2d));
-            AssertEqual(true, home <= 2.5d, "descending home jump stays in normal envelope");
+            // Not trivial: the closing hops must genuinely demand a sprint, not a walk.
+            AssertEqual(true, layout.PeakDifficulty >= ParkourLayout.MinimumPeakDifficulty,
+                $"route peaks at a committed difficulty (got {layout.PeakDifficulty:0.###})");
+            // The closing stretch must be out of a walker's reach by a real margin, not by 2%: an earlier
+            // calibration missed that and a walking dummy completed the whole course in game.
+            int walkOnly = layout.Hops.Count(hop => hop.Gap <= model.MaxGap(hop.Rise, model.WalkSpeed));
+            AssertEqual(true, walkOnly <= layout.Hops.Count * 3 / 4,
+                $"the closing quarter of the route must demand a sprint (got {walkOnly}/{layout.Hops.Count} walkable)");
+            AssertEqual(true, walkOnly >= layout.Hops.Count / 2,
+                "the opening half of the route is still clearable at walking pace");
+            ParkourHop hardest = layout.Hops.OrderByDescending(hop => hop.Difficulty).First();
+            AssertEqual(true, hardest.Gap > model.MaxGap(hardest.Rise, model.WalkSpeed) * 1.1f,
+                $"the hardest hop clears a walker's reach by a real margin ({hardest.Gap:0.##}m vs {model.MaxGap(hardest.Rise, model.WalkSpeed):0.##}m)");
+
+            foreach (ParkourPlatform platform in layout.Platforms)
+            {
+                AssertEqual(true, ContainsPoint(layout.ShaftBounds, platform.Center), "landing inside the shaft");
+                AssertEqual(true, platform.SurfaceY + 1.9f + model.MaxRise < WarmupHallLayout.ShaftCeilingHeight,
+                    "landing keeps jump headroom under the shaft overhead");
+                AssertEqual(true,
+                    Math.Abs(platform.Center.x) + platform.Size.x / 2f < WarmupHallLayout.ShaftHalfWidth,
+                    "landing stays clear of the shaft walls");
+            }
+
+            // A miss is caught while still falling, well before the deck and well before fall damage.
+            ParkourPlatform third = layout.Platforms[2];
+            AssertEqual(false, layout.HasFallenOffRoute(third.RecoveryPosition, 2), "standing on the route is not a fall");
+            AssertEqual(true, layout.HasFallenOffRoute(third.RecoveryPosition - new Vector3(0f, 2.5f, 0f), 2),
+                "dropping clear of the last landing is caught early");
+        }
+
+        private static void ParkourRouteAdaptsToMovementConstants()
+        {
+            WarmupHallLayout hall = new WarmupHallLayout(Vector3.zero);
+
+            // The route is generated from the jump model rather than hand-placed, so a balance patch that
+            // changes movement cannot silently turn it into a walk-over or an impossibility.
+            // The low end is the one that matters: SCP:SL's Tutorial role really jumps at 4.9 with a
+            // 0.61 m apex, far below what a hand-authored course would assume.
+            foreach (float[] constants in new[]
+            {
+                new[] { 4.0f, 3.2f, 4.4f },
+                new[] { 4.5f, 3.6f, 5.0f },
+                new[] { 4.9f, 3.9f, 5.4f },
+                new[] { 5.5f, 4.2f, 6.0f },
+                new[] { 6.0f, 4.0f, 5.5f },
+                new[] { 7.0f, 4.5f, 6.5f },
+                new[] { 8.0f, 5.5f, 8.0f },
+            })
+            {
+                ParkourJumpModel model = new ParkourJumpModel(constants[0], constants[1], constants[2]);
+                ParkourLayout layout = new ParkourLayout(hall, model);
+                AssertEqual(true, layout.PeakDifficulty <= ParkourLayout.MaximumDifficulty,
+                    $"jump {constants[0]} route stays clearable (peak {layout.PeakDifficulty:0.###})");
+                AssertEqual(true, layout.PeakDifficulty >= ParkourLayout.MinimumPeakDifficulty,
+                    $"jump {constants[0]} route stays non-trivial (peak {layout.PeakDifficulty:0.###})");
+                AssertEqual(true, layout.Platforms.Count >= 8, $"jump {constants[0]} route keeps enough landings");
+                foreach (ParkourHop hop in layout.Hops)
+                {
+                    AssertEqual(true, hop.Rise <= model.MaxRise * 0.56f,
+                        $"jump {constants[0]} hop {hop.Index} respects the step-rise cap ({hop.Rise:0.###}m)");
+                }
+            }
+        }
+
+        private static void ParkourJumpModelMatchesNativeProjectileMotion()
+        {
+            ParkourJumpModel model = new ParkourJumpModel(7f, 4.5f, 6.5f);
+
+            // y(t) = J*t - g*t^2/2, caught on the descending branch. Apex is J^2 / 2g.
+            AssertEqual(1.25d, Math.Round(model.MaxRise, 3), "jump apex from native gravity and jump speed");
+            AssertEqual(0.714d, Math.Round(model.AirTime(0f), 3), "flat air time is the full arc");
+            AssertEqual(0f, model.AirTime(model.MaxRise + 0.05f), "a landing above the apex is unreachable");
+
+            // Landing higher costs reach; landing lower buys it.
+            AssertEqual(true, model.MaxGap(0.6f) < model.MaxGap(0f), "climbing shortens the reachable gap");
+            AssertEqual(true, model.MaxGap(-1f) > model.MaxGap(0f), "dropping lengthens the reachable gap");
+            AssertEqual(true, model.MaxGap(0f, model.SprintSpeed) > model.MaxGap(0f, model.WalkSpeed),
+                "sprinting reaches further than walking");
+            AssertEqual(1d, Math.Round(model.Difficulty(model.MaxGap(0.4f), 0.4f), 3),
+                "a hop at exactly the reachable distance is difficulty 1");
         }
 
         private static void ParkourSweptGateDetectionCatchesFastCrossings()

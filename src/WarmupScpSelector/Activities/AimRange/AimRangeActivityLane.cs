@@ -39,7 +39,6 @@ namespace WarmupScpSelector.Activities.AimRange
         private double _now;
         private bool _running;
         private bool _subscribed;
-        private bool _parkourCarveoutEnabled;
 
         // HUD change-detection: last per-player counter snapshot (to fire hit/incoming flashes on a rise) and the
         // last aggregate bot spawn-signal (a rise after startup = a bot respawned -> BOT BACK flash). Pure state;
@@ -94,11 +93,6 @@ namespace WarmupScpSelector.Activities.AimRange
 
         internal AimRangeLayout? Layout => _running ? _world.Layout : null;
 
-        internal void SetParkourCarveout(bool enabled)
-        {
-            _parkourCarveoutEnabled = enabled;
-        }
-
         private AimRangeActivityConfig AimConfig => _plugin.Config.Activities?.Aim ?? new AimRangeActivityConfig();
 
         private bool UseChinese => string.Equals(_plugin.Config.Language, "cn", StringComparison.OrdinalIgnoreCase);
@@ -123,7 +117,7 @@ namespace WarmupScpSelector.Activities.AimRange
         public void Start(SelectorRoom room)
         {
             StopInternal();
-            if (!Enabled || room == null || !room.AimRangeDoorPrepared)
+            if (!Enabled || room?.Hall == null || !room.AimRangeDoorPrepared)
             {
                 return;
             }
@@ -133,8 +127,7 @@ namespace WarmupScpSelector.Activities.AimRange
                 _room = room;
                 _rangeGeneration = Next(_rangeGeneration);
 
-                float doorOffset = room.AimRangeDoorPlaneZ - room.Origin.z;
-                if (!_world.Build(room.Origin, doorOffset, room.Width, room.Depth) || _world.Layout == null)
+                if (!_world.Build(room.Hall, UseChinese) || _world.Layout == null)
                 {
                     StopInternal();
                     return;
@@ -193,7 +186,7 @@ namespace WarmupScpSelector.Activities.AimRange
 
                 if (!room.OpenAimRangeDoor())
                 {
-                    Logger.Warn("[WarmupScpSelector] Aim Range stayed closed because its gallery door could not be opened.");
+                    Logger.Warn("[WarmupScpSelector] Aim Range stayed closed because its bay hatch could not be opened.");
                     StopInternal();
                     return;
                 }
@@ -494,8 +487,9 @@ namespace WarmupScpSelector.Activities.AimRange
 
                 string userKey = SelectorController.Key(player);
                 seen.Add(userKey);
-                bool inside = _world.Layout.ContainsVerified(player.Position) &&
-                    !(_parkourCarveoutEnabled && _world.Layout.ContainsParkourBay(player.Position));
+                // The parkour shaft is its own compartment on the opposite side of the hub, so range
+                // ownership no longer has to carve a sub-area out of its own bounds.
+                bool inside = _world.Layout.ContainsVerified(player.Position);
                 AimRangeOccupancyTransition transition = _sessions.UpdateOccupancy(
                     userKey,
                     inside,
@@ -993,7 +987,6 @@ namespace WarmupScpSelector.Activities.AimRange
             try { _room?.CloseAimRangeDoor(); } catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Aim Range door cleanup failed: {ex.Message}"); }
 
             _now = 0d;
-            _parkourCarveoutEnabled = false;
             _hudCounters.Clear();
             _lastSpawnSignal = -1;
             _room = null;

@@ -2,21 +2,55 @@
 
 [中文](#中文说明) | [English](#english)
 
-A LabAPI plugin for SCP: Secret Laboratory. During waiting-for-players it builds one room holding a
-model of every offered SCP, each with a big coin. Players walk up and grab a coin to pick the SCP they
-want to play. When the round starts, the plugin lets the game assign roles normally, then swaps the
-selected SCP slots over to the players who picked them. During the early round it can also refill a
-healthy SCP slot whose player disconnects.
+A LabAPI plugin for SCP: Secret Laboratory. During waiting-for-players it builds a floating **space
+station** whose gallery holds a model of every offered SCP, each with a big coin. Players walk up and
+grab a coin to pick the SCP they want to play. When the round starts, the plugin lets the game assign
+roles normally, then swaps the selected SCP slots over to the players who picked them. During the early
+round it can also refill a healthy SCP slot whose player disconnects.
+
+Two optional activity compartments open off the station's hub: an **Aim Bay** and a **parkour shaft**.
 
 > Renamed from the old "scpsl-custom-room-plugin" / `ScpslCustomRoomPlugin`. It never built custom
 > rooms in the SCP-002 sense — it is a warmup SCP draft — so the name was changed to match what it does.
 
 ## English
 
+### The station
+
+Players spawn in the SCP gallery, looking down the aisle at the exhibits. Everything else is optional
+and reached on foot.
+
+```
+                                      +Z
+         z=71    +---------+          ^
+                 | PARKOUR |          |   9 m wide, 13.5 m tall shaft
+                 |  SHAFT  |
+       z=17.5    +--+   +--+
+ +---------------+  |   |  +--------------------------------+
+ |  OBSERVATION  |    HUB    |          AIM BAY             |   z = +/-9.5
+ |     DECK      |  |   |  |                                |
+ +---------------+  |   |  +--------------------------------+
+ x=-22        x=-11 +--+---+ x=11                       x=36
+                 |CONNECTOR|
+       z=-25.5   +--+   +--+
+                 |         |
+                 | GALLERY |   SCP draft, 7.5 m ceiling
+         z=-46   +---------+
+```
+
+The plan comes from a room authored in ProjectMER; the numbers were regularised into named constants so
+the station is extensible in code. Adding a compartment means adding a zone and the hatch that connects
+it — the shell builder walls, seals, and lights it automatically.
+
+Each activity compartment is **fail-closed**: its hatch is a solid bulkhead panel during setup, removed
+only once that activity's world, props, and scheduler have all started successfully.
+
 ### What it does
 
-- While the server is **waiting for players**, everyone is moved into a floating selector room as
-  `Tutorial` and shown a row of SCP models (049, 079, 096, 106, 173, 939, 3114), each with a big coin.
+- While the server is **waiting for players**, everyone is moved into the station as `Tutorial` and
+  spawned in the SCP gallery, facing a rank of SCP models (049, 079, 096, 106, 173, 939, 3114), each on
+  a low stand with a big coin in front of it. The gallery's centre aisle is left clear so the server logo
+  reads straight down it.
 - **Grabbing a coin** selects that SCP (the pickup is cancelled, so the coin stays put). A hint shows
   the lobby countdown and your current pick, with a small badge for how many players picked the same SCP
   (e.g. `SCP-096　·　5 picks`) and a tiny `·N` tally on each chip in the offered-role row. You can change
@@ -25,18 +59,15 @@ healthy SCP slot whose player disconnects.
 - The plugin never forces the native lobby countdown. The only exception is an ownership-safe temporary lobby lock
   while one human is using configured native bots, preventing counted dummies from falsely starting the round; it is
   released synchronously when another human joins, the last human leaves, or Aim stops.
-- The default-off **Aim Range** turns the entire selector and training area into one uninterrupted full-width rectangular
-  hall—there is no doorway, choke point, or second room. Six persistent firearms sit visibly on the shooting counter
-  with two native attachment workstations placed symmetrically against the side walls;
-  the counter wall spans nearly the entire hall. Exactly three very bright point lights illuminate each half of the hall
-  (six total), using ordinary non-HDR light colors; the branded back-wall logo keeps its HDR albedo boost
-  and shares the selector's center light for bloom without adding another real-time light;
-  the centered 19.2 m × 22 m training area has three 6.4 m lanes: cover-backed live bots, three parallel persistent sliding
-  native targets at different distances/speeds, and Aim-Lab spheres that send a hitmarker/score on a valid hit and
-  immediately teleport the same always-hittable toy to the next authored point.
-  Grabbing a counter gun grants a separate owned inventory copy, so the displayed gun remains visible and immediately reusable.
-  Both normal targets and spheres send the shooter a native hitmarker when a valid range hit is credited; sliding
-  targets use client interpolation between 15 Hz network keyframes instead of snapping between scheduler updates.
+- The default-off **Aim Range** occupies the east Aim Bay, firing 21.5 m down the arm. Six persistent
+  firearms sit visibly on the shooting counter, with two native attachment workstations placed
+  symmetrically against the side walls. Three lanes run the length of the bay: cover-backed live bots,
+  three parallel persistent sliding native targets at different distances and speeds, and Aim-Lab spheres
+  that send a hitmarker/score on a valid hit and immediately teleport the same always-hittable toy to the
+  next authored point. Grabbing a counter gun grants a separate owned inventory copy, so the displayed gun
+  remains visible and immediately reusable. Both normal targets and spheres send the shooter a native
+  hitmarker when a valid range hit is credited; sliding targets use client interpolation between 15 Hz
+  network keyframes instead of snapping between scheduler updates.
 - Up to two explicitly enabled native RA bots continuously strafe through cover using small native FPC motor steps
   with no waypoint binding. Both slots use Crossvec. Bots keep moving and
   jump on bounded native-input cooldowns; a close attacker makes them jump more often. During retaliation they always
@@ -46,26 +77,33 @@ healthy SCP slot whose player disconnects.
   normally and respawn with a new owned identity and Crossvec.
 - Bot shots deal real damage. A lethal hit on a range participant is cancelled before vanilla death, synchronously
   reinitializes the same player as `Tutorial`, and returns them to the range entrance without a spectator frame.
-  Leaving the range or starting the round destroys every range-owned gun, pickup, target, carrier, bot, and hint.
-- The former room seam is now UI-only. On the selector side, only the original SCP selection panel is shown; no Aim UI
-  appears. On the training side, the SCP panel is hidden completely and only the bilingual Aim flash, hero, and footer
-  are shown. Shooting, damage routing, gun ownership, and bot provocation remain active across the entire hall. The Aim HUD renders on a narrow left lane
-  (`Activities.Aim.HudX`, default -1077) that sits between the native inventory list and the inventory wheel, so it
-  never overlaps them while TAB is held; the original selector-side SCP panel keeps its centered layout.
-- The default-off **Pulse Line parkour** uses the previously empty far-left wing behind the shooting counter. A
-  full-height divider isolates it from bot fire. Step on START for 0.6 seconds, run the 3-second countdown, then clear
-  17 ordered cream platforms around four folded sectors and return to FIN beside START. Thin cyan/gold route strips
-  make the next line readable; swept-segment gate checks prevent fast crossings from being missed. Falling to the
-  hall floor immediately returns the runner to the last completed landing while the authoritative timer keeps running.
-  The reusable RESET coin restarts in place, and the compact bilingual HSM card shows timer, sector spine, progress,
-  and the best completed time for the current warmup. The course uses only static toys and one bounded scheduler loop.
+  Leaving the bay or starting the round destroys every range-owned gun, pickup, target, carrier, bot, and hint.
+- The HUD switches at the bay threshold. In the hub and gallery you see only the SCP draft panel; inside
+  the bay the draft panel is hidden and only the bilingual Aim flash, hero, and footer are shown. Gun
+  ownership, damage routing, and bot provocation still reach back through the hatch, so a shooter standing
+  in the doorway behaves normally. The Aim HUD renders on a narrow left lane (`Activities.Aim.HudX`,
+  default -1077) between the native inventory list and the inventory wheel.
+- The default-off **Pulse Line parkour** owns the north shaft — 9 m wide, 53.5 m long, 13.5 m tall. Step
+  on START for 0.6 seconds, run the 3-second countdown, then climb an ordered chain of lit landings to the
+  finish pad at the far end. Missing a landing returns you to the last one you cleared, caught early in the
+  fall so it never costs health, while the authoritative timer keeps running. The reusable RESET coin
+  restarts in place, and the compact bilingual HSM card shows timer, sector spine, progress, and the best
+  completed time for the current warmup.
+- **The parkour route is generated from the game's own physics, not hand-placed.** At build time the
+  plugin reads the live Tutorial role's jump speed, walk speed, and sprint speed, and lays out every hop
+  so it uses a target fraction of the distance actually reachable at that jump — ramping from an easy
+  opener to a closing stretch that demands a committed sprint. If the result would be impossible, trivial,
+  out of the shaft, or short on ceiling clearance, the lane refuses to open rather than shipping a broken
+  course. This matters more than it sounds: SCP:SL's real jump apex is about **0.61 m**, far lower than a
+  hand-authored course would assume.
+
 - When the round starts, the plugin hands players back so the game assigns vanilla roles, then **swaps**
   the selected SCP slots to the pickers:
   - If vanilla spawned an SCP that someone picked, one picker from that pool takes the slot, and the
     displaced vanilla holder inherits the picker's original (human) role.
   - If vanilla did **not** spawn that SCP this round, the pick is skipped. The plugin **never creates
     extra SCPs** or invents fallback roles — it only rearranges what vanilla already assigned.
-- The selector room and all models **despawn when the round starts**.
+- The station and all models **despawn when the round starts**.
 - If a main SCP disconnects during the configured early-round window while still above the configured
   health threshold, that exact role becomes available through `.volunteer <number>` (alias `.v`).
   **Both spectators and living non-SCP players may enter by default.** The first volunteer starts a
@@ -139,8 +177,8 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   reaches round start, with a final fallback fade during the role-assignment handoff.
 - `ScpOptions` — the SCPs offered, each with a role, label, and embedded model name.
 - `ActivitiesEnabled` and `Activities.Aim.Enabled` — both must be `true` to open the Aim Range.
-- `Activities.Parkour.Enabled` — additionally set this to `true` to build Pulse Line in the Aim hall's far-left bay.
-  Parkour remains default-off and requires the Aim hall because it reuses that shell and floor.
+- `Activities.Parkour.Enabled` — additionally set this to `true` to open Pulse Line in the north shaft.
+  It is default-off and **independent of the Aim Bay**: the shaft is its own compartment.
 - `Activities.Parkour.SchedulerRateHz`, `StartHoldSeconds`, `CountdownSeconds`, and `RecoveryGraceSeconds` — parkour
   tick and run/recovery timing. `HudX`, `FlashY`, `HeroY`, and `FooterY` position its three stable HSM zones.
 - `Activities.Aim.WeaponPresets` — the six persistent shooting-counter presets, attachment codes, and tracked reserve ammo. Two native attachment workstations sit symmetrically at the side walls.
@@ -153,9 +191,12 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   immediately teleports the same sphere to the next position in a fixed, irregular 50-point 3D deck.
 - `Activities.Aim.FlashY`, `HeroY`, and `FooterY` — the three non-overlapping Aim HSM bands. The retained
   `CollapsedStatusY` setting is legacy compatibility and is not rendered.
-- `Activities.Aim.HudX` — HSM center-X for the training-side Aim HUD lane (default `-1077`). It keeps the flash,
+- `Activities.Aim.HudX` — HSM center-X for the in-bay Aim HUD lane (default `-1077`). It keeps the flash,
   hero, and footer in the narrow left corridor between the native inventory list and wheel so the HUD never overlaps
-  them while TAB is held. The selector side shows only the original centered SCP panel.
+  them while TAB is held. Outside the bay only the original centered SCP panel is shown.
+- `PedestalSpacing` — spacing of the gallery's back rank of stands (default `3.7`). Wider spacing fits fewer
+  stands in the back rank and pushes the remainder onto the side walls; the gallery holds ten in total.
+- `SurfaceClearance` and `RoomOrigin` — where the station floats. The origin is the hub's deck centre.
 
 ### Models
 
@@ -177,20 +218,57 @@ python tests/models/test_scp_173_model.py                        # geometry cont
 
 ### Tests
 
-- C# planner/activity/runtime-adjacent logic (headless): `dotnet build tests/WarmupScpSelector.Tests` then run
-  `WarmupScpSelector.Tests.exe` (`76/76` tests, including SCP replacement policy/state/text, bot lifecycle/tactical contracts, lethal reset state, parkour route/gates/HUD, MER transforms,
-  widened lane bounds, deterministic sliding motion, one-credit immediate sphere relocation, bilingual Aim text, and HSM cache behavior).
+- **Headless logic** (`dotnet build tests/WarmupScpSelector.Tests`, then run `WarmupScpSelector.Tests.exe`):
+  `81/81`. Covers SCP replacement policy/state/text, bot lifecycle and tactical contracts, lethal reset
+  state, MER transforms, deterministic sliding motion, one-credit sphere relocation, bilingual Aim text,
+  HSM cache behaviour, and — new with the station — compartment tiling, **wall-panel sealing** (every
+  compartment face is sampled on a grid and must be either solid panel or inside a hatch), gallery stand
+  placement, the Aim Bay's three lanes, and the parkour jump model and generated route.
+- **Live dummy playtest** (`tests/WarmupPlaytestScenarios`, run through the shared `.tests/Playtest`
+  harness): `ptest run warmup standard`.
+  - `warmup-station` raycast-walks every compartment for deck and walls, checks each hatch is open and
+    the hub's side walls beside it are not, and settles a dummy at the arrival point.
+  - `warmup-pulse-line` sweeps the shaft with raycasts to discover the landings from the world (so a pad
+    that spawned without a collider fails discovery rather than passing on paper), then drives three real
+    dummies with native movement and the native jump action to bracket the difficulty.
+
+  Transcript from `2026-08-28`, port 7930, standard fidelity:
+
+  ```text
+  [Station] shaft sweep: 806 surface hits -> 21 landings from y=0.5 to y=7.24
+  [PulseLine] route: 21 landings, climb 6.74m over 47m
+  [JumpCourse] runner jumpSpeed=4.9 walk=3.9 sprint=5.4 gravity=19.6 apex=0.61m
+  [PulseLine] jump+sprint: cleared 20/20, completed
+  [PulseLine] jump+walk:   cleared 19/20, stopped at landing 20 (fell 2.12m below the route)
+  [PulseLine] no-jump:     cleared  0/20, stopped at landing 1
+  RESULT scenario=warmup-pulse-line outcome=PASS duration=35.57s
+
+  [Station] hub: deck confirmed across 22x35m      [Station] aim: deck confirmed across 25x19m
+  [Station] observation: 11x19m   connector: 9x8m   gallery: 22x20.5m   shaft: 9x53.5m
+  [Station] aim bay / observation deck / gallery access hatches are clear
+  [Station] arrival settled at (0, 320.96, -31.5) (dropped -0.46m)
+  RESULT scenario=warmup-station outcome=PASS duration=4.93s
+  ```
+
+  Those runs established the real Tutorial movement constants (`jump 4.9 / walk 3.9 / sprint 5.4`,
+  apex **0.61 m** — far below what a hand-authored course would assume) and caught five defects worth
+  recording, four of which only a live dummy could find:
+
+  1. The route's step-rise cap was applied to the gap arithmetic but not to the landing placement.
+  2. The harness's course verb teleported without the ordered-move mark, tripping the TeleportMonitor.
+  3. Take-off timing was computed against the pad centre instead of the acceptance point, which made a
+     jump onto the deep finish pad fire past the take-off edge and read as impossible.
+  4. Difficulty measured against a walk/sprint blend left the closing hops within 2% of walk reach, and a
+     walking dummy completed the whole course. Difficulty is now a fraction of a **sprinter's** reach.
+  5. Deep closing pads hand a walker both a longer run-up and a bigger landing area; the closing pads are
+     now deliberately shallow so the final hop genuinely needs the sprint.
+
 - Model geometry contracts: run each `tests/models/test_*_model.py` script (`10/10` current model contracts).
 - Shared HSM renderer: `node ../.tests/UI/smoke-test.js`; all 22 WarmupScp draft/Aim EN+CN fixtures parse with
   zero static issues against the shared native-background collision harness.
-- Dev-only isolated live harness: `tests/WarmupRangeVerifier`. Its current 253-check run verifies the full-width shell,
-  nearly hall-wide counter, two symmetric native attachment workstations, three bright non-HDR point lights per hall half, six persistent dispensers, dummy settling,
-  two real product bots continuously walking/jumping, non-head upper-chest tracking, a genuine participant firearm hit
-  from the real player side of the counter, a measured 0.5–0.6-second response and native held-fire ammo consumption,
-  combat strafing, multi-round native held fire, retaliation ADS, a stationary-attacker lethal reset within 2.5 seconds,
-  the UI-only seam, 2.2 m reload-cover traversal, exact 12-second input release,
-  all six weapon pickups, three smoothed sliding targets, 20 authored spheres, pooled same-toy sphere relocation, exact teardown, ambient isolation,
-  and successful lane restart. It must never ship to production.
+- Dev-only isolated live harness: `tests/WarmupRangeVerifier`. **Not yet updated for the station rework** —
+  its 253 checks assert the old single-hall seam geometry and will fail until migrated to the new layout.
+  It must never ship to production.
 
 ### Known limits / conflicts
 
@@ -219,33 +297,66 @@ SCP 名额交换给选择它的玩家。
 > 本插件由旧的 “scpsl-custom-room-plugin” / `ScpslCustomRoomPlugin` 改名而来。它并不是 SCP-002 那种自定义房间，
 > 而是一个暖场 SCP 选择器，所以改成了能体现功能的名字。
 
+### 空间站
+
+玩家出生在 SCP 展厅，正对展品通道。其余舱室都是可选的，需要步行前往。
+
+```
+                                      +Z
+         z=71    +---------+          ^
+                 |  跑酷竖井  |          |   宽 9 m，高 13.5 m
+                 +--+   +--+
+       z=17.5
+ +---------------+  |   |  +--------------------------------+
+ |     观景舱     |    中枢    |          瞄准训练舱            |   z = +/-9.5
+ +---------------+  |   |  +--------------------------------+
+ x=-22        x=-11 +--+---+ x=11                       x=36
+                 |  通道   |
+       z=-25.5   +--+   +--+
+                 | SCP 展厅 |   天花板 7.5 m
+         z=-46   +---------+
+```
+
+平面布局来自服务器用 ProjectMER 搭建的房间，数值被整理成具名常量，因此可以直接在代码里扩展：新增一个舱室
+只需要添加一个 zone 和连接它的舱门，外壳构建器会自动补齐墙体、密封和照明。
+
+每个活动舱都是**失败即关闭**的：布置期间舱门是实心隔板，只有该活动的世界、道具和调度器全部启动成功后才会移除。
+
 ### 功能
 
-- 服务器**等待玩家**时，所有人被设为 `Tutorial` 并传送到悬空选择房间，房间里排列着 SCP 模型
-  （049、079、096、106、173、939、3114），每个模型前有一枚大硬币。
-- **捡起硬币**即选择该 SCP（拾取会被取消，硬币留在原处）。提示会显示倒计时和当前选择，并在所选 SCP 旁标注
-  有多少玩家选了同一个（例如 `SCP-096　·　5 人`），下方每个候选 SCP 也会带一个小小的 `·N` 计数。回合开始前
-  可随时更改。（提示只在文本变化时才重新发送，不会刷屏占用网络。）
-- 插件不会强制原版大厅倒计时。唯一例外是单人使用已启用的原生机器人时，训练场会临时持有大厅锁，
-  防止计入人数的 dummy 错误触发开局；第二名真实玩家加入、最后一名玩家离开或训练场停止时会同步释放。
-- 默认关闭的**瞄准训练场**会把 SCP 展厅和训练区合并成一个等宽、完整的长方形大厅，没有门洞、瓶颈或第二个房间。
-  六把永久保留的真实枪械清晰摆在射击台上；中央 19.2 米 × 22 米区域分成三条 6.4 米宽训练道：带掩体的实战机器人、不同距离与速度的三条平行永久移动靶，以及命中后
-  立即消失并在其他位置重生的 Aim-Lab 球形反应靶。有效命中普通靶或球形靶时会向射手发送原生命中标记；
-  移动靶在 15 Hz 网络关键帧之间使用客户端插值，不再按调度更新逐格跳动。
-- 可显式启用最多两名原生 RA 机器人。它们不绑定路点，而是通过原生 FPC 马达持续横向移动；两个槽位都
-  只装备 Crossvec。机器人移动时会按受限冷却跳跃，近距离会更频繁跳跃，远距离则
-  按住原生开镜。只有训练玩家使用其受控枪械真正命中后，机器人才能锁定第一名攻击者，并持续瞄准躯干、
-  横移和按住原生全自动开火；锁定固定 12 秒且不会被重复命中延长。弹匣将空时会停止射击/开镜，移动到
-  对应槽位的 2.2 米高掩体后装弹，再恢复战斗。机器人可正常死亡，并以新的受控身份和随机步枪重生。
-- 机器人子弹造成真实伤害。对训练玩家的致命一击会在原版死亡前取消，同步把同一玩家重新初始化为
-  `Tutorial` 并送回入口，不经过旁观者状态。离开训练场或回合开始时，所有训练场拥有的枪械、拾取物、靶子、
-  载具、机器人和提示都会销毁。
-- 玩家进入训练场后，完整 SCP 选择面板会折叠为一行状态；独立的中英双语 HSM 训练卡使用互不重叠的
-  事件、主卡、指引和状态区域。
+- 服务器**等待玩家**时，所有人会以 `Tutorial` 身份被移入空间站，出生在 SCP 展厅，正面朝向一排 SCP 模型
+  （049、079、096、106、173、939、3114），每个模型立在矮台上，前方悬浮一枚大硬币。展厅中央通道保持空置，
+  以便正对看到服务器 Logo。
+- **拿取硬币**即选择该 SCP（拾取被取消，硬币保持原位）。提示面板显示大厅倒计时和你当前的选择，并标注有多少玩家
+  选了同一个 SCP（例如 `SCP-096　·　5 人选择`），职业行的每个标签上还有 `·N` 计数。回合开始前可随时改选。
+  （面板只在文本变化时重新发送，不会刷屏。）
+- 插件不会强制原版大厅倒计时。唯一例外是单人使用原生机器人时的临时大厅锁，防止被计数的假人误启动回合；
+  当第二名真实玩家加入、最后一名真实玩家离开或训练场停止时会同步释放。
+- 默认关闭的**瞄准训练场**位于东侧训练舱，沿舱室方向 21.5 m 射击。射击柜台上永久摆放六把枪械，两侧墙边对称放置
+  两个原生改装台。舱内有三条训练道：带掩体的实战机器人、三个不同距离与速度的永久平移靶、以及命中后立即把同一个
+  靶体传送到下一个点位的 Aim-Lab 球形靶。拿取柜台枪械会获得一把独立的背包副本，展示用的枪械仍然可见可再次取用。
+- 最多两名显式启用的原生 RA 机器人使用原生 FPC 位移持续走位，两个槽位都使用 Crossvec。命中它们会触发
+  0.5–0.6 秒反应延迟后的 12 秒锁定还击：机器人会持续开镜、瞄准非头部躯干并自动射击；弹药不足时后撤到 2.2 m
+  掩体后换弹再返回。机器人正常死亡并以新身份重生。
+- 机器人的子弹造成真实伤害。对训练参与者的致命命中会在原版死亡前被取消，同一名玩家被同步重新初始化为
+  `Tutorial` 并送回训练场入口，不会出现旁观画面。离开训练舱或回合开始会销毁所有训练场拥有的枪械、掉落物、
+  靶体、机器人和提示。
+- HUD 在训练舱门口切换。在中枢和展厅只显示 SCP 选择面板；进入训练舱后隐藏选择面板，只显示中英文训练提示。
+  枪械归属、伤害路由和机器人激怒仍然覆盖舱门内侧，站在门口射击行为正常。训练 HUD 使用左侧窄通道
+  （`Activities.Aim.HudX`，默认 -1077），位于原生物品栏列表和物品轮盘之间。
+- 默认关闭的**脉冲路线跑酷**独占北侧竖井（宽 9 m、长 53.5 m、高 13.5 m）。在 START 台上站立 0.6 秒，
+  经过 3 秒倒计时后，依次跳过一串发光落点直到尽头的终点台。踩空会被送回上一个已通过的落点——在下坠早期就会
+  触发，因此不会扣血——计时器继续走。可重复使用的 RESET 硬币可原地重开，中英文 HSM 卡片显示计时、分段、
+  进度和本次热身的最佳成绩。
+- **跑酷路线由游戏自身的物理生成，而非手工摆放。** 构建时插件会读取当前 Tutorial 职业真实的跳跃速度、
+  行走速度和冲刺速度，让每一跳都占用该跳跃实际可达距离的目标比例——从轻松的开局逐步过渡到必须冲刺的收尾。
+  如果生成结果不可能完成、过于简单、超出竖井范围或顶部空间不足，该玩法会拒绝开放，而不是上线一条坏掉的路线。
+  这一点比听起来更重要：SCP:SL 真实的跳跃高度约为 **0.61 m**，远低于手工设计时会假设的数值。
+
 - 回合开始时，插件把玩家交还给游戏进行原版职业分配，然后**交换**被选中的 SCP 名额：
   - 如果原版生成了某人选择的 SCP，则从该选择池里选一名玩家获得该名额，被替换的原 SCP 玩家获得选择者原本的（人类）职业。
   - 如果原版本回合没有生成该 SCP，则跳过该选择。插件**不会额外创建 SCP**，也不会随机生成回退职业，只会重排原版已分配的职业。
-- 选择房间和所有模型在**回合开始时销毁**。
+- 空间站和所有模型在**回合开始时销毁**。
 - 若主要 SCP 在配置的回合早期窗口内、且生命值仍高于阈值时断线，其原职业会开放替补。玩家可输入
   `.volunteer <编号>`（别名 `.v`）参加抽选；**默认同时允许旁观者和仍存活的非 SCP 玩家参加**。
   第一名志愿者会启动短暂抽选，结算时只保留仍在线、仍符合条件的 UserId。
@@ -328,7 +439,10 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
 
 ### 测试
 
-- C# 纯逻辑与运行时邻接测试：`76/76` 通过（包含 SCP 替补策略、状态和中英文本）。
+- C# 纯逻辑与运行时邻接测试：`81/81` 通过（新增舱室拼接、墙体密封、展厅站位、训练舱三道和跑酷路线契约）。
+- 实机假人验证：`ptest run warmup standard`（`.tests/Playtest` 共享 harness）。`warmup-pulse-line` 用射线
+  扫描竖井发现落点，再驱动三个真实假人：冲刺+跳跃必须全程通过，仅行走+跳跃必须在收尾停下，完全不跳必须
+  第一跳就失败。2026-08-28 实测：22 个落点、爬升 7.07 m、跳跃+冲刺 21/21 通过。
 - SCP、Logo、枪架和保留的移动靶载具模型契约：`10/10` 通过。
 - WarmupScp 选择/训练场中英文 HSM fixture：22 个全部为零静态问题。
 - 隔离本地端口的 dev-only 实机验证：`253/253` 通过，覆盖全宽场景、全宽柜台、每半区三盏超亮非 HDR 点光源、
@@ -340,6 +454,7 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
 - 选择器/训练场 HUD 依赖 HintServiceMeow，并使用稳定 HSM hint ID；替补通知使用全局广播，且可选同步到客户端控制台。
 - 不要同时安装独立版 SCPReplacer，否则两个插件会同时处理同一次断线并发出竞争抽选。ScpSwap 可以共存：
   本插件会在抽选结算前再次确认对应 SCP 职业仍为空缺。
+- `tests/WarmupRangeVerifier` 尚未适配空间站改版，其断言仍基于旧的单一大厅接缝，迁移前会失败。
 - 大厅音乐为每名玩家使用一个过滤后的音频发送器，因此加入时淡入是按玩家独立生效的。音频文件不要太长；
   `MusicMaxSeconds` 会限制误放入的超大文件。
 - 隔离实机 harness 已验证 AdminToy 碰撞、扩宽训练道、枪架位置、平滑永久移动靶同步、球形靶生成、两名产品

@@ -61,178 +61,277 @@ namespace WarmupScpSelector.Warmup
         public Quaternion Rotation { get; }
     }
 
-    /// <summary>Single source of truth for the three training lanes inside the continuous selector hall.</summary>
+    /// <summary>
+    /// Single source of truth for the three training lanes inside the station's Aim Bay - the long east
+    /// arm of the hub.
+    ///
+    /// The range fires ALONG +X, down the arm's 21.5 m length, with the three lanes stacked across Z:
+    /// <code>
+    ///   z +9.5  +--------------------------------------------+
+    ///           |  lane 3   spheres                          |
+    ///   z +2.9  +--------------------------------------------+
+    ///           |  lane 2   sliding targets                  |
+    ///   z -3.1  +--------------------------------------------+
+    ///           |  lane 1   bots and cover                   |
+    ///   z -9.5  +--------------------------------------------+
+    ///          x=11      14.5 (counter)  -- downrange -->   x=36
+    /// </code>
+    ///
+    /// Everything is authored in a single range frame - <see cref="Range"/>(lateral, up, downrange) -
+    /// so lateral offsets are Z, downrange is X, and no call site has to remember the axis mapping.
+    /// That frame is also why the target and workstation rotations are what they are: the whole range is
+    /// the old -Z-downrange layout turned by <see cref="RangeRotation"/>, and every authored orientation
+    /// is that same turn applied to a facing.
+    /// </summary>
     public sealed class AimRangeLayout
     {
-        public const float Width = 19.2f;
-        public const float Depth = 22f;
+        /// <summary>Interior height of the bay.</summary>
         public const float Height = 5f;
+
+        /// <summary>Total width across the three lanes (the bay's Z extent).</summary>
+        public const float Width = 19f;
+
+        /// <summary>Usable downrange length, counter to backstop.</summary>
+        public const float Depth = 21.5f;
+
         public const float LaneWidth = Width / 3f;
-        public const float ShootingCounterDepth = 6.8f;
         public const float ShootingCounterHeight = 1.1f;
-        public const float AttachmentWorkstationDepth = 3.966f;
+
+        /// <summary>How far downrange of the bay entrance the shooting counter sits.</summary>
+        public const float ShootingCounterDepth = 3.5f;
+
         public const float AttachmentWorkstationWallInset = 0.22f;
 
-        public AimRangeLayout(Vector3 galleryOrigin, float galleryFrontZ, float galleryWidth = Width, float galleryDepth = 9f)
-        {
-            GalleryOrigin = galleryOrigin;
-            DoorPlaneZ = galleryOrigin.z + galleryFrontZ;
-            ShellWidth = Mathf.Max(Width, galleryWidth);
-            ShootingCounterWidth = ShellWidth - 0.6f;
-            RangeCenter = new Vector3(galleryOrigin.x, galleryOrigin.y, DoorPlaneZ - Depth / 2f);
-            EntranceSpawn = new Vector3(galleryOrigin.x, galleryOrigin.y + 0.5f, DoorPlaneZ - 1.6f);
-            float hallDepth = Depth + Mathf.Max(1f, galleryDepth);
-            float hallCenterZ = DoorPlaneZ + (Mathf.Max(1f, galleryDepth) - Depth) / 2f;
-            VerifiedBounds = new Bounds(
-                new Vector3(galleryOrigin.x, galleryOrigin.y + Height / 2f, hallCenterZ - 0.05f),
-                new Vector3(ShellWidth - 0.5f, Height + 0.5f, hallDepth - 0.4f));
-            MaintenanceBounds = new Bounds(
-                new Vector3(galleryOrigin.x, galleryOrigin.y + Height / 2f, hallCenterZ),
-                new Vector3(ShellWidth + 4f, Height + 8f, hallDepth + 6f));
+        // Lane boundaries across Z. Lane 3 is the widest because the sphere cloud needs the most clear width.
+        private const float LaneOneToTwoZ = -3.1f;
+        private const float LaneTwoToThreeZ = 2.9f;
+        private const float LaneOneCenterZ = -6.3f;
+        private const float LaneTwoCenterZ = -0.1f;
+        private const float LaneThreeCenterZ = 6.2f;
 
-            // Six persistent dispensers sit visibly on the low shooting counter. They remain inside the same
-            // uninterrupted hall as the selector displays; there is no rack, shelf, or separate armoury room.
-            float counterZ = -ShootingCounterDepth;
+        /// <summary>Clear width the sphere cloud may spread across inside lane 3, leaving a wall margin.</summary>
+        private const float SphereClearWidth = 6f;
+
+        public AimRangeLayout(WarmupHallLayout hall)
+        {
+            Hall = hall;
+            StationZone bay = hall.AimBay;
+            DeckY = hall.Origin.y;
+            EntranceX = bay.MinX;
+            BackstopX = bay.MaxX;
+            ShootingLineX = bay.MinX + ShootingCounterDepth;
+            BayMinZ = bay.MinZ;
+            BayMaxZ = bay.MaxZ;
+            ShellWidth = bay.Depth;
+            ShootingCounterWidth = ShellWidth - 0.6f;
+            RangeCenter = hall.World((ShootingLineX + BackstopX) / 2f, 0f, bay.CenterZ);
+            EntranceSpawn = hall.World(EntranceX + 1.4f, 0.5f, bay.CenterZ);
+            MovingTargetOrigin = hall.World(ShootingLineX, 0f, 0f);
+
+            // Ownership deliberately reaches back through the hatch: a player standing in the hub doorway
+            // can already shoot into the bay, so the session that governs damage routing must own them there.
+            VerifiedBounds = new Bounds(
+                hall.World((EntranceX - 3f + BackstopX) / 2f, Height / 2f, bay.CenterZ),
+                new Vector3(BackstopX - EntranceX + 3f, Height + 0.5f, ShellWidth - 0.3f));
+            MaintenanceBounds = new Bounds(
+                hall.World((EntranceX + BackstopX) / 2f, Height / 2f, bay.CenterZ),
+                new Vector3(BackstopX - EntranceX + 8f, Height + 8f, ShellWidth + 6f));
+            UiBounds = new Bounds(
+                hall.World((EntranceX + BackstopX) / 2f, Height / 2f, bay.CenterZ),
+                new Vector3(BackstopX - EntranceX, Height + 0.5f, ShellWidth));
+
+            // Six dispensers on the low counter, spread across all three lanes so no lane owns the guns.
             float pickupY = ShootingCounterHeight + 0.28f;
-            Quaternion counterRotation = MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 90f, 0f));
             ShelfAnchors = new[]
             {
-                new AimShelfAnchor(0, Local(-7.4f, pickupY, counterZ), counterRotation),
-                new AimShelfAnchor(1, Local(-4.45f, pickupY, counterZ), counterRotation),
-                new AimShelfAnchor(2, Local(-1.5f, pickupY, counterZ), counterRotation),
-                new AimShelfAnchor(3, Local(1.5f, pickupY, counterZ), counterRotation),
-                new AimShelfAnchor(4, Local(4.45f, pickupY, counterZ), counterRotation),
-                new AimShelfAnchor(5, Local(7.4f, pickupY, counterZ), counterRotation),
+                new AimShelfAnchor(0, Range(-7.6f, pickupY, 0f), RangeRotation),
+                new AimShelfAnchor(1, Range(-4.6f, pickupY, 0f), RangeRotation),
+                new AimShelfAnchor(2, Range(-1.6f, pickupY, 0f), RangeRotation),
+                new AimShelfAnchor(3, Range(1.6f, pickupY, 0f), RangeRotation),
+                new AimShelfAnchor(4, Range(4.6f, pickupY, 0f), RangeRotation),
+                new AimShelfAnchor(5, Range(7.6f, pickupY, 0f), RangeRotation),
             };
 
-            // Two native attachment workstations sit symmetrically against the side walls. Their interaction space
-            // is around x +/-17.17 in the standard 37 m hall; the roots stay close to the wall so the prefab faces
-            // inward without narrowing the walking corridor.
-            float workstationX = ShellWidth / 2f - AttachmentWorkstationWallInset;
-            float workstationZ = -AttachmentWorkstationDepth;
+            // Two native attachment workstations against the long side walls, facing into the bay.
+            float workstationLateral = ShellWidth / 2f - AttachmentWorkstationWallInset;
             AttachmentWorkstationAnchors = new[]
             {
                 new AimWorkstationAnchor(
-                    Local(-workstationX, 0f, workstationZ),
-                    MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 90f, 0f))),
+                    Range(-workstationLateral, 0f, 4f),
+                    MerWorldTransformComposer.QuaternionFromEuler(Vector3.zero)),
                 new AimWorkstationAnchor(
-                    Local(workstationX, 0f, workstationZ),
-                    MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, -90f, 0f))),
+                    Range(workstationLateral, 0f, 4f),
+                    MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 180f, 0f))),
             };
 
+            // Lane 2: three sliding targets at different depths, travelling across the lane in Z.
             SlidingTargetTracks = new[]
             {
-                SlidingTrack(0, y: 1.30f, depth: -10.2f, halfWidth: 2.35f, minimumSpeed: 1.05f, maximumSpeed: 1.35f),
-                SlidingTrack(1, y: 2.15f, depth: -14.7f, halfWidth: 2.15f, minimumSpeed: 1.35f, maximumSpeed: 1.75f),
-                SlidingTrack(2, y: 1.55f, depth: -19.0f, halfWidth: 2.40f, minimumSpeed: 1.70f * 1.35f, maximumSpeed: 2.15f * 1.35f),
+                SlidingTrack(0, up: 1.30f, downrange: 6.0f, halfWidth: 2.35f, minimumSpeed: 1.05f, maximumSpeed: 1.35f),
+                SlidingTrack(1, up: 2.15f, downrange: 10.5f, halfWidth: 2.15f, minimumSpeed: 1.35f, maximumSpeed: 1.75f),
+                SlidingTrack(2, up: 1.55f, downrange: 15.0f, halfWidth: 2.40f, minimumSpeed: 1.70f * 1.35f, maximumSpeed: 2.15f * 1.35f),
             };
 
+            // Lane 1 cover: tall blocks against the outer wall, low blocks against the lane 2 divider, with
+            // a clear patrol corridor left between them. Sizes are thin downrange and wide across, because
+            // the shooter is always looking along +X.
             BotCovers = new[]
             {
-                new AimBotCover(0, Local(-8.0f, 1.1f, -9.35f), new Vector3(1.9f, 2.2f, 0.45f), Local(-8.0f, 0f, -10.15f), true),
-                new AimBotCover(0, Local(-4.75f, 0.85f, -10.9f), new Vector3(1.55f, 1.7f, 0.45f), Local(-4.75f, 0f, -11.6f), false),
-                new AimBotCover(0, Local(-7.9f, 1.1f, -12.85f), new Vector3(1.8f, 2.2f, 0.5f), Local(-7.9f, 0f, -13.65f), true),
-                new AimBotCover(1, Local(-8.05f, 1.1f, -15.45f), new Vector3(1.9f, 2.2f, 0.5f), Local(-8.05f, 0f, -16.25f), true),
-                new AimBotCover(1, Local(-4.65f, 0.85f, -17.55f), new Vector3(1.55f, 1.7f, 0.45f), Local(-4.65f, 0f, -18.25f), false),
-                new AimBotCover(1, Local(-7.75f, 1.1f, -19.55f), new Vector3(1.9f, 2.2f, 0.5f), Local(-7.75f, 0f, -20.35f), true),
+                Cover(0, lateral: -8.5f, downrange: 5.5f, tall: true),
+                Cover(0, lateral: -3.9f, downrange: 8.5f, tall: false),
+                Cover(0, lateral: -8.5f, downrange: 11.0f, tall: true),
+                Cover(1, lateral: -8.5f, downrange: 14.0f, tall: true),
+                Cover(1, lateral: -3.9f, downrange: 16.5f, tall: false),
+                Cover(1, lateral: -8.5f, downrange: 19.0f, tall: true),
             };
 
+            // Patrol corridors run down the middle of lane 1, clear of every cover block.
             BotPaths = new[]
             {
-                new AimBotPath(0, new[]
-                {
-                    new RangePathSegment(Point(-8.25f, 0f, -10.0f), Point(-6.2f, 0f, -10.0f), 1.8d),
-                    new RangePathSegment(Point(-6.2f, 0f, -10.0f), Point(-6.2f, 0f, -13.65f), 2.8d),
-                    new RangePathSegment(Point(-6.2f, 0f, -13.65f), Point(-7.9f, 0f, -13.65f), 1.5d),
-                    new RangePathSegment(Point(-7.9f, 0f, -13.65f), Point(-6.2f, 0f, -13.65f), 1.5d),
-                    new RangePathSegment(Point(-6.2f, 0f, -13.65f), Point(-6.2f, 0f, -10.0f), 2.8d),
-                    new RangePathSegment(Point(-6.2f, 0f, -10.0f), Point(-8.25f, 0f, -10.0f), 1.8d),
-                }),
-                new AimBotPath(1, new[]
-                {
-                    new RangePathSegment(Point(-8.3f, 0f, -16.25f), Point(-6.2f, 0f, -16.25f), 1.8d),
-                    new RangePathSegment(Point(-6.2f, 0f, -16.25f), Point(-6.2f, 0f, -20.35f), 3.1d),
-                    new RangePathSegment(Point(-6.2f, 0f, -20.35f), Point(-7.75f, 0f, -20.35f), 1.4d),
-                    new RangePathSegment(Point(-7.75f, 0f, -20.35f), Point(-6.2f, 0f, -20.35f), 1.4d),
-                    new RangePathSegment(Point(-6.2f, 0f, -20.35f), Point(-6.2f, 0f, -16.25f), 3.1d),
-                    new RangePathSegment(Point(-6.2f, 0f, -16.25f), Point(-8.3f, 0f, -16.25f), 1.8d),
-                }),
+                new AimBotPath(0, Patrol(fromDownrange: 5.5f, toDownrange: 11.5f)),
+                new AimBotPath(1, Patrol(fromDownrange: 14f, toDownrange: 19.5f)),
             };
 
-            // Lane 3 owns the entire right-hand wing, from the +3.2 m divider to the outer wall. Centering the
-            // cloud in that dynamic bay lets a widened selector hall use its otherwise-empty horizontal space.
-            SphereBayWidth = ShellWidth / 2f - LaneWidth / 2f;
-            SphereLaneOrigin = Local(LaneWidth / 2f + SphereBayWidth / 2f, 0f, -7.0f);
-            SphereLaneRotation = new Quaternion(0f, 0f, 0f, 1f);
-        }
-
-        public Vector3 GalleryOrigin { get; }
-        public float DoorPlaneZ { get; }
-        public float ShellWidth { get; }
-        public float ShootingCounterWidth { get; }
-        public Vector3 RangeCenter { get; }
-        public Vector3 EntranceSpawn { get; }
-        public Bounds VerifiedBounds { get; }
-        public Bounds MaintenanceBounds { get; }
-        public float RequiredRetaliationDistance => VerifiedBounds.size.magnitude;
-        public IReadOnlyList<AimShelfAnchor> ShelfAnchors { get; }
-        public IReadOnlyList<AimWorkstationAnchor> AttachmentWorkstationAnchors { get; }
-        public IReadOnlyList<SlidingTargetTrackDefinition> SlidingTargetTracks { get; }
-        public IReadOnlyList<AimBotCover> BotCovers { get; }
-        public IReadOnlyList<AimBotPath> BotPaths { get; }
-        public float SphereBayWidth { get; }
-        public Vector3 SphereLaneOrigin { get; }
-        public Quaternion SphereLaneRotation { get; }
-
-        public Vector3 MovingTargetOrigin => new Vector3(GalleryOrigin.x, GalleryOrigin.y, DoorPlaneZ);
-
-        public bool ContainsVerified(Vector3 worldPosition) => VerifiedBounds.Contains(worldPosition);
-
-        /// <summary>The far-left wing reserved for Pulse Line when that optional lane starts successfully.</summary>
-        public bool ContainsParkourBay(Vector3 worldPosition)
-        {
-            float leftWall = GalleryOrigin.x - ShellWidth / 2f;
-            return worldPosition.x >= leftWall && worldPosition.x <= GalleryOrigin.x - 9.9f &&
-                worldPosition.y >= GalleryOrigin.y - 0.25f && worldPosition.y <= GalleryOrigin.y + Height + 0.5f &&
-                worldPosition.z <= DoorPlaneZ - 4.45f && worldPosition.z >= DoorPlaneZ - Depth;
+            SphereBayWidth = SphereClearWidth;
+            SphereLaneOrigin = Range(LaneThreeCenterZ, 0f, 0.5f);
+            SphereLaneRotation = RangeRotation;
         }
 
         /// <summary>
-        /// UI-only boundary at the former room seam. Gameplay/session ownership intentionally uses the larger
-        /// VerifiedBounds, so a player on the selector side can still shoot and provoke bots without seeing the
-        /// Aim HUD. Crossing the floor line swaps the original SCP panel for the Aim HUD.
+        /// Turn that maps the authored range frame onto the bay: local -Z (downrange) becomes world +X,
+        /// and local +X (lateral) becomes world +Z.
         /// </summary>
-        public bool ContainsAimUi(Vector3 worldPosition)
-        {
-            float halfWidth = ShellWidth / 2f;
-            return worldPosition.x >= GalleryOrigin.x - halfWidth && worldPosition.x <= GalleryOrigin.x + halfWidth &&
-                worldPosition.y >= GalleryOrigin.y - 0.25f && worldPosition.y <= GalleryOrigin.y + Height + 0.25f &&
-                worldPosition.z <= DoorPlaneZ && worldPosition.z >= DoorPlaneZ - Depth;
-        }
+        public static Quaternion RangeRotation => MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, -90f, 0f));
+
+        public WarmupHallLayout Hall { get; }
+
+        public float DeckY { get; }
+
+        /// <summary>Local X of the hatch plane between the hub and the bay.</summary>
+        public float EntranceX { get; }
+
+        /// <summary>Local X of the shooting counter; downrange offsets are measured from here.</summary>
+        public float ShootingLineX { get; }
+
+        /// <summary>Local X of the far bulkhead the lanes fire into.</summary>
+        public float BackstopX { get; }
+
+        public float BayMinZ { get; }
+
+        public float BayMaxZ { get; }
+
+        /// <summary>Width across the lanes. Named for continuity with the counter and validation code.</summary>
+        public float ShellWidth { get; }
+
+        public float ShootingCounterWidth { get; }
+
+        public Vector3 RangeCenter { get; }
+
+        public Vector3 EntranceSpawn { get; }
+
+        /// <summary>Origin bot path points and lane geometry are expressed relative to.</summary>
+        public Vector3 MovingTargetOrigin { get; }
+
+        public Bounds VerifiedBounds { get; }
+
+        public Bounds MaintenanceBounds { get; }
+
+        public Bounds UiBounds { get; }
+
+        public float RequiredRetaliationDistance => VerifiedBounds.size.magnitude;
+
+        public IReadOnlyList<AimShelfAnchor> ShelfAnchors { get; }
+
+        public IReadOnlyList<AimWorkstationAnchor> AttachmentWorkstationAnchors { get; }
+
+        public IReadOnlyList<SlidingTargetTrackDefinition> SlidingTargetTracks { get; }
+
+        public IReadOnlyList<AimBotCover> BotCovers { get; }
+
+        public IReadOnlyList<AimBotPath> BotPaths { get; }
+
+        public float SphereBayWidth { get; }
+
+        public Vector3 SphereLaneOrigin { get; }
+
+        public Quaternion SphereLaneRotation { get; }
+
+        /// <summary>Lane divider positions across Z, used by the world builder.</summary>
+        public float DividerOneZ => LaneOneToTwoZ;
+
+        public float DividerTwoZ => LaneTwoToThreeZ;
+
+        public float LaneOneCenter => LaneOneCenterZ;
+
+        public float LaneTwoCenter => LaneTwoCenterZ;
+
+        public float LaneThreeCenter => LaneThreeCenterZ;
+
+        public bool ContainsVerified(Vector3 worldPosition) => WarmupHallLayout.ContainsPoint(VerifiedBounds, worldPosition);
+
+        /// <summary>
+        /// Whether the Aim HUD should replace the SCP draft panel. This is the bay proper, while gameplay
+        /// ownership uses the larger <see cref="VerifiedBounds"/>: a player in the hatch can shoot into the
+        /// bay without the HUD swapping in under them.
+        /// </summary>
+        public bool ContainsAimUi(Vector3 worldPosition) => WarmupHallLayout.ContainsPoint(UiBounds, worldPosition);
+
+        /// <summary>World position from range-frame coordinates: lateral across Z, downrange along +X.</summary>
+        public Vector3 Range(float lateral, float up, float downrange) =>
+            Hall.World(ShootingLineX + downrange, up, lateral);
 
         private SlidingTargetTrackDefinition SlidingTrack(
             int slotId,
-            float y,
-            float depth,
+            float up,
+            float downrange,
             float halfWidth,
             float minimumSpeed,
             float maximumSpeed)
         {
-            Vector3 center = Local(0f, y, depth);
-            Quaternion rotation = MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 90f, 0f));
+            Vector3 center = Range(LaneTwoCenterZ, up, downrange);
             return new SlidingTargetTrackDefinition(
                 slotId,
-                center + new Vector3(-halfWidth, 0f, 0f),
-                center + new Vector3(halfWidth, 0f, 0f),
-                rotation,
+                center + new Vector3(0f, 0f, -halfWidth),
+                center + new Vector3(0f, 0f, halfWidth),
+                RangeRotation,
                 Vector3.one,
                 minimumSpeed,
                 maximumSpeed);
         }
 
-        private Vector3 Local(float x, float y, float depthFromDoor) =>
-            new Vector3(GalleryOrigin.x + x, GalleryOrigin.y + y, DoorPlaneZ + depthFromDoor);
+        private AimBotCover Cover(int slotId, float lateral, float downrange, bool tall)
+        {
+            float height = tall ? 2.2f : 1.7f;
+            float across = tall ? 1.9f : 1.6f;
+            return new AimBotCover(
+                slotId,
+                Range(lateral, height / 2f, downrange),
+                new Vector3(0.5f, height, across),
+                Range(lateral, 0f, downrange + 0.9f),
+                tall);
+        }
 
-        private static RangePoint Point(float x, float y, float depthFromDoor) => new RangePoint(x, y, depthFromDoor);
+        /// <summary>
+        /// A closed patrol loop down lane 1: out along the corridor, a short strafe across it, and back.
+        /// Points are world deltas from <see cref="MovingTargetOrigin"/>, which is what the bot controller
+        /// composes them against.
+        /// </summary>
+        private static RangePathSegment[] Patrol(float fromDownrange, float toDownrange)
+        {
+            const float nearZ = -7f;
+            const float farZ = -5.4f;
+            float length = toDownrange - fromDownrange;
+            double runSeconds = Mathf.Max(1.2f, length / 1.75f);
+            const double strafeSeconds = 1.2d;
+            return new[]
+            {
+                new RangePathSegment(Point(fromDownrange, nearZ), Point(toDownrange, nearZ), runSeconds),
+                new RangePathSegment(Point(toDownrange, nearZ), Point(toDownrange, farZ), strafeSeconds),
+                new RangePathSegment(Point(toDownrange, farZ), Point(fromDownrange, farZ), runSeconds),
+                new RangePathSegment(Point(fromDownrange, farZ), Point(fromDownrange, nearZ), strafeSeconds),
+            };
+        }
+
+        private static RangePoint Point(float downrange, float lateral) => new RangePoint(downrange, 0f, lateral);
     }
 }

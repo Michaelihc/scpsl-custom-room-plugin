@@ -12,53 +12,34 @@ using PrimitiveFlags = AdminToys.PrimitiveFlags;
 namespace WarmupScpSelector.Warmup;
 
 /// <summary>
-/// Builds and tears down the selector room: a plain floor with low walls, one pedestal per offered SCP
-/// carrying that SCP's model and label, and one big coin in front of each model. The room floats just
-/// above the static surface zone (resolved at build time) — SCP:SL collision/physics get unreliable at
-/// extreme coordinates, so anchoring to the real, already-loaded surface region keeps the floor walkable
-/// without colliding with any map geometry.
+/// Builds and tears down the warmup station: the pressurised shell from <see cref="WarmupHallLayout"/>,
+/// the SCP draft gallery (one stand, model, label, and coin per offered SCP), the branded back wall, and
+/// the observation deck's viewport.
+///
+/// The station floats just above the static surface zone (resolved at build time). SCP:SL collision and
+/// physics get unreliable at extreme coordinates, so anchoring to the real, already-loaded surface region
+/// is what keeps a primitive deck actually walkable instead of something players fall straight through.
 /// </summary>
 public sealed class SelectorRoom
 {
-    // Local layout (relative to the room origin, which sits at the floor surface center).
-    private const float FloorTopY = 0f;
-    private const float SpawnZ = -3f;
-    private const float RowZ = 2.5f;
-    private const float FloorCenterZ = -0.25f;
-    private const float FloorDepth = 9f;
-    private const float FloorThickness = 0.4f;
-    private const float WallHeight = 5f;
-    private const float WallThickness = 0.3f;
-    private const float PedestalHeight = 1f;
-    private const float PedestalDepth = 1.4f;
-    private const float CenterDisplayClearance = 3f;
+    private const int MaxOptions = 16;
+    private const float StandWidthCap = 1.9f;
     private const float LogoScale = 0.39f;
     private const float LogoHdrBoost = 4.5f;
     private const float LogoHdrAlpha = 0.65f;
-    private const int MaxOptions = 16;
 
-    // 莺歌傲然 brand theme: a near-black navy gallery where the SCP models, teal floor seam, and
-    // cream/gold server logo carry the saturation. Gold owns the supporting text. The lights stay near-white
-    // on purpose so the muted SCP model primitives render close to true
-    // color (a tinted light would wash them out). The surface is dark at night and players get no flashlight,
-    // so the room reads on its own ambient + point lights. Tuned with tools/build_room_preview.py.
-    private static readonly Color FloorColor = Hex("#161B26");
-    private static readonly Color FloorSeamColor = Hex("#33EEDA");   // glowing teal seam so the ground plane reads with no flashlight
-    private static readonly Color WallColor = Hex("#10141D");
-    private static readonly Color CeilingColor = Hex("#0A0D13");
-    private static readonly Color PedestalColor = Hex("#1A2130");
-    private static readonly Color MainLightColor = Hex("#F4F3EE");   // overhead + spawn fill
-    private static readonly Color PlaceholderColor = Hex("#5A6472");
-
-    // The logo's resolved bounds are 6.419467 x 7.950564; centering around this authored-space point makes
-    // its visual bounds land exactly on the requested wall anchor. It is embedded alongside the SCP models.
+    /// <summary>
+    /// The logo's resolved bounds are 6.419467 x 7.950564; centring around this authored-space point makes
+    /// its visual bounds land exactly on the requested wall anchor.
+    /// </summary>
     private static readonly Vector3 LogoAssetCenter = new(-0.003987f, 0.291070f, -0.08f);
 
-    // Back-wall world text below the primitive logo. Language-independent brand copy; GB2312-safe, no emoji.
+    /// <summary>Back-wall world text below the logo. Language-independent brand copy; GB2312-safe, no emoji.</summary>
     private const string BannerMarkup =
         "<align=center><size=135%><b>" +
         "<color=#6BFF6B>莺</color><color=#2DFFBE>歌</color><color=#3CE2E7>傲</color><color=#4FCBFF>然</color>" +
         "</b></size>\n<size=46%><color=#FFE08A>祝你玩得愉快　·　欢迎加入 QQ 群 860705092</color></size></align>";
+
     private static readonly Dictionary<RoleTypeId, string> BuiltInModels = new()
     {
         [RoleTypeId.Scp049] = "scp-049",
@@ -75,8 +56,7 @@ public sealed class SelectorRoom
     private readonly List<Pickup> _pickups = new();
     private readonly List<ScpOption> _offered = new();
     private PrimitiveObjectToy? _aimDoorGate;
-    private Vector3 _aimDoorCenter;
-    private Vector3 _aimDoorSize;
+    private PrimitiveObjectToy? _parkourDoorGate;
 
     public SelectorRoom(WarmupScpSelectorPlugin plugin)
     {
@@ -85,30 +65,31 @@ public sealed class SelectorRoom
 
     private Config Config => _plugin.Config;
 
+    private bool UseChinese => string.Equals(Config.Language, "cn", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Coin pickup serial -> the SCP role it selects.</summary>
     public Dictionary<ushort, RoleTypeId> CoinRoles { get; } = new();
 
-    /// <summary>The SCP options actually built into the room, left to right; the status panel reads this so its
-    /// chip row always matches the pedestals/coins on offer.</summary>
+    /// <summary>The SCP options actually built into the gallery, in stand order.</summary>
     public IReadOnlyList<ScpOption> OfferedOptions => _offered;
 
-    /// <summary>Where warmup players are teleported to (and spawned), facing the pedestals.</summary>
+    /// <summary>Resolved station layout for the current build; activity lanes anchor off this.</summary>
+    public WarmupHallLayout? Hall { get; private set; }
+
+    /// <summary>Where warmup players are teleported to (and spawned).</summary>
     public Vector3 SpawnPosition { get; private set; }
 
-    /// <summary>Resolved room origin (floor-surface center) for the current build; used to place activity stations.</summary>
+    /// <summary>Horizontal spawn rotation in degrees, so arrivals face the SCP stands.</summary>
+    public float SpawnYaw { get; private set; }
+
+    /// <summary>Station deck centre for the current build.</summary>
     public Vector3 Origin { get; private set; }
 
-    /// <summary>Resolved width shared by the selector gallery and its continuous Aim hall.</summary>
-    public float Width { get; private set; }
-
-    /// <summary>Depth of the selector-gallery portion of the continuous hall.</summary>
-    public float Depth => FloorDepth;
-
-    /// <summary>World Z where the selector floor meets the optional Aim hall.</summary>
-    public float AimRangeDoorPlaneZ { get; private set; }
-
-    /// <summary>Whether the room authored a fail-closed full-width seam for this warmup.</summary>
+    /// <summary>Whether the Aim Bay hatch was sealed for this warmup and is waiting to be opened.</summary>
     public bool AimRangeDoorPrepared { get; private set; }
+
+    /// <summary>Whether the parkour shaft hatch was sealed for this warmup and is waiting to be opened.</summary>
+    public bool ParkourDoorPrepared { get; private set; }
 
     public bool IsSpawned { get; private set; }
 
@@ -117,153 +98,237 @@ public sealed class SelectorRoom
         Despawn();
 
         Vector3 origin = ResolveOrigin();
+        WarmupHallLayout hall = new(origin);
+        Hall = hall;
+        Origin = origin;
+        SpawnPosition = hall.SpawnPosition;
+        SpawnYaw = hall.SpawnYaw;
+
         // Valid, distinct SCP options only: skip nulls/non-SCP, collapse duplicate roles so each SCP gets
-        // exactly one pedestal + coin, and cap the count so a pathological config can't spawn a huge room.
+        // exactly one stand + coin, and cap the count so a pathological config cannot flood the gallery.
         List<ScpOption> options = (Config.ScpOptions ?? new List<ScpOption>())
             .Where(o => o != null && ScpOption.IsScpRole(o.Role))
             .GroupBy(o => o.Role)
             .Select(g => g.First())
             .Take(MaxOptions)
             .ToList();
+
+        float spacing = Sanitize(Config.PedestalSpacing, 2.4f, 6f, 3.7f);
+        float standWidth = Mathf.Min(spacing * 0.7f, StandWidthCap);
+        IReadOnlyList<GalleryDisplaySlot> slots = hall.BuildDisplaySlots(options.Count, spacing, standWidth);
+        if (slots.Count < options.Count)
+        {
+            Logger.Warn(
+                $"[WarmupScpSelector] Gallery fits {slots.Count} stands but {options.Count} SCP options are configured; " +
+                "the extras were dropped. Reduce PedestalSpacing or ScpOptions.");
+            options = options.Take(slots.Count).ToList();
+        }
+
         _offered.AddRange(options); // single source of truth for the live status-panel chip row
-        int count = options.Count;
-        float spacing = Sanitize(Config.PedestalSpacing, 2f, 20f, 4f);
-        List<float> displayXs = Enumerable.Range(0, count)
-            .Select(i => DisplayX(i, count, spacing))
-            .ToList();
-        float rowWidth = displayXs.Count > 0 ? displayXs.Max(x => Mathf.Abs(x)) * 2f : 0f;
-        float floorWidth = rowWidth + 7f;
-        float pedestalWidth = Mathf.Min(spacing * 0.7f, 1.6f);
 
-        Origin = origin;
-        Width = floorWidth;
-        SpawnPosition = origin + new Vector3(0f, 0.5f, SpawnZ);
+        StationShellBuilder shell = new(hall, _toys, UseChinese);
+        shell.Build();
 
-        // Floor (top surface at the room origin Y) and four perimeter walls so Tutorial players can't fall off.
-        AddBox(origin + new Vector3(0f, FloorTopY - FloorThickness / 2f, FloorCenterZ), new Vector3(floorWidth, FloorThickness, FloorDepth), FloorColor, collidable: true);
-        // Glowing brand seam: a bright teal border ring inset on the floor (a bright plate with a slightly
-        // smaller floor-colored plate on top, leaving a lit border). Purely visual, sitting a few cm proud.
-        AddBox(origin + new Vector3(0f, FloorTopY + 0.02f, FloorCenterZ), new Vector3(floorWidth - 0.5f, 0.04f, FloorDepth - 0.5f), FloorSeamColor, collidable: false);
-        AddBox(origin + new Vector3(0f, FloorTopY + 0.03f, FloorCenterZ), new Vector3(floorWidth - 0.9f, 0.04f, FloorDepth - 0.9f), FloorColor, collidable: false);
-        float wallMidY = FloorTopY + WallHeight / 2f;
-        float backZ = FloorCenterZ + FloorDepth / 2f;
-        float frontZ = FloorCenterZ - FloorDepth / 2f;
-        AddBox(origin + new Vector3(0f, wallMidY, backZ), new Vector3(floorWidth, WallHeight, WallThickness), WallColor, collidable: true);
-        if (Config.ActivitiesEnabled && Config.Activities?.Aim?.Enabled == true)
-        {
-            BuildAimRangeSeam(origin, floorWidth, frontZ);
-        }
-        else
-        {
-            AddBox(origin + new Vector3(0f, wallMidY, frontZ), new Vector3(floorWidth, WallHeight, WallThickness), WallColor, collidable: true);
-        }
-        AddBox(origin + new Vector3(-floorWidth / 2f, wallMidY, FloorCenterZ), new Vector3(WallThickness, WallHeight, FloorDepth), WallColor, collidable: true);
-        AddBox(origin + new Vector3(floorWidth / 2f, wallMidY, FloorCenterZ), new Vector3(WallThickness, WallHeight, FloorDepth), WallColor, collidable: true);
-        // Ceiling: encloses the room so the night skybox can't show behind the labels (which made them invisible).
-        AddBox(origin + new Vector3(0f, FloorTopY + WallHeight, FloorCenterZ), new Vector3(floorWidth, WallThickness, FloorDepth), CeilingColor, collidable: true);
-
-        // The centered primitive logo sits high on the back wall; the server name and welcome/QQ line sit
-        // beneath it. Displays are split into left/right banks below so neither is hidden by an SCP model.
-        Vector3 wallContentZ = new(0f, 0f, backZ - WallThickness / 2f - 0.06f);
-        SpawnLogo(origin + wallContentZ + new Vector3(0f, FloorTopY + 3.15f, 0f), LogoScale);
-        AddBanner(origin + wallContentZ + new Vector3(0f, FloorTopY + 0.95f, -0.01f));
-
-        // Three strong, broad point lights illuminate the entire selector half. Do not regress to one
-        // light per model or HDR/emissive colors: the combined hall deliberately uses a few bright lights.
-        float lightY = FloorTopY + WallHeight - 0.6f;
-        foreach (float x in new[] { -floorWidth / 3f, 0f, floorWidth / 3f })
-        {
-            AddLight(origin + new Vector3(x, lightY, FloorCenterZ), 24f, 18f);
-        }
-
-        // Models face the players (who stand on -Z): rotate the +Z-authored models 180 degrees about Y.
-        Quaternion facing = Quaternion.Euler(0f, 180f, 0f);
-
-        for (int i = 0; i < count; i++)
-        {
-            ScpOption option = options[i];
-            float x = displayXs[i];
-
-            AddBox(origin + new Vector3(x, FloorTopY + PedestalHeight / 2f, RowZ), new Vector3(pedestalWidth, PedestalHeight, PedestalDepth), PedestalColor, collidable: true);
-
-            Vector3 modelBase = origin + new Vector3(x, FloorTopY + PedestalHeight, RowZ + 0.05f);
-            float modelTop = SpawnModel(ResolveModelName(option), modelBase, facing, Sanitize(Config.ModelScale, 0.05f, 10f, 1f));
-
-            // Label faces the player (-Z) with identity rotation; the 180-degree model facing mirrored the text.
-            AddLabel(origin + new Vector3(x, FloorTopY + PedestalHeight + modelTop + 0.45f, RowZ), option.Label, Quaternion.identity);
-
-            // Big coin floating clearly IN FRONT of the model (toward the players) and frozen so it can't
-            // fall, roll, or clip into the model the way a resting pickup did.
-            Vector3 coinPos = origin + new Vector3(x, FloorTopY + 1.1f, RowZ - PedestalDepth / 2f - 0.8f);
-            Pickup? coin = Pickup.Create(Config.SelectorItem, coinPos, Quaternion.Euler(90f, 0f, 0f), Vector3.one * Sanitize(Config.SelectorCoinScale, 1f, 20f, 6f), networkSpawn: false);
-            if (coin != null)
-            {
-                _pickups.Add(coin); // track before spawn so a throw mid-setup is still cleaned up by Despawn
-                CoinRoles[coin.Serial] = option.Role;
-                coin.IsLocked = false;
-                coin.Spawn();
-                try
-                {
-                    if (coin.Rigidbody != null)
-                    {
-                        coin.Rigidbody.isKinematic = true; // freeze in place: no gravity, no roll, no clip
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Warn($"[WarmupScpSelector] Could not freeze coin: {ex.Message}");
-                }
-            }
-        }
+        BuildGallery(hall, shell, options, slots);
+        BuildObservationViewport(hall, shell);
+        PrepareHatchGates(hall);
 
         IsSpawned = true;
-        _plugin.LogDebug($"Built selector room at {origin}: {_toys.Count} toys, {_pickups.Count} coins.");
+        _plugin.LogDebug($"Built warmup station at {origin}: {_toys.Count} toys, {_pickups.Count} coins, {slots.Count} stands.");
     }
 
-    // The hall is fail-closed during synchronous setup. Its temporary full-width wall disappears only after the
-    // aligned continuation, counter guns, targets, and scheduler are ready; no doorway geometry remains afterward.
-    private void BuildAimRangeSeam(Vector3 origin, float floorWidth, float frontZ)
+    // ---- Gallery -------------------------------------------------------------------------------
+
+    private void BuildGallery(
+        WarmupHallLayout hall,
+        StationShellBuilder shell,
+        IReadOnlyList<ScpOption> options,
+        IReadOnlyList<GalleryDisplaySlot> slots)
     {
-        AimRangeDoorPlaneZ = origin.z + frontZ;
-        AimRangeDoorPrepared = true;
-        _aimDoorCenter = origin + new Vector3(0f, WallHeight / 2f, frontZ);
-        _aimDoorSize = new Vector3(floorWidth, WallHeight, WallThickness);
-        _aimDoorGate = AddBox(_aimDoorCenter, _aimDoorSize, WallColor, collidable: true);
+        SpawnLogo(hall.LogoAnchor, LogoScale);
+        AddBanner(hall.BannerAnchor);
+
+        float modelScale = Sanitize(Config.ModelScale, 0.05f, 10f, 1f);
+        float coinScale = Sanitize(Config.SelectorCoinScale, 1f, 20f, 6f);
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            ScpOption option = options[i];
+            GalleryDisplaySlot slot = slots[i];
+
+            // A low collidable plinth. The models themselves are visible-only primitives, so without it a
+            // player just walks through the exhibit.
+            shell.AddBox(
+                new Vector3(slot.StandTopCenter.x, slot.StandTopCenter.y - WarmupHallLayout.StandHeight / 2f, slot.StandTopCenter.z),
+                new Vector3(slot.StandWidth, WarmupHallLayout.StandHeight, slot.StandDepth),
+                StationPalette.DeckPanel,
+                collidable: true);
+            shell.AddBox(
+                new Vector3(slot.StandTopCenter.x, slot.StandTopCenter.y + 0.02f, slot.StandTopCenter.z),
+                new Vector3(slot.StandWidth - 0.1f, 0.03f, slot.StandDepth - 0.1f),
+                StationPalette.Cyan,
+                collidable: false);
+
+            float modelTop = SpawnModel(ResolveModelName(option), slot.StandTopCenter, slot.Facing, modelScale);
+            AddLabel(new Vector3(slot.StandTopCenter.x, slot.StandTopCenter.y + modelTop + 0.45f, slot.StandTopCenter.z), option.Label);
+
+            // Big coin floating clearly IN FRONT of the model and frozen, so it cannot fall, roll, or clip
+            // into the exhibit the way a resting pickup did.
+            Pickup? coin = Pickup.Create(
+                Config.SelectorItem,
+                slot.CoinPosition,
+                Quaternion.Euler(90f, 0f, 0f),
+                Vector3.one * coinScale,
+                networkSpawn: false);
+            if (coin == null)
+            {
+                continue;
+            }
+
+            _pickups.Add(coin); // track before spawn so a throw mid-setup is still cleaned up by Despawn
+            CoinRoles[coin.Serial] = option.Role;
+            coin.IsLocked = false;
+            coin.Spawn();
+            try
+            {
+                if (coin.Rigidbody != null)
+                {
+                    coin.Rigidbody.isKinematic = true; // freeze in place: no gravity, no roll, no clip
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"[WarmupScpSelector] Could not freeze coin: {ex.Message}");
+            }
+        }
     }
 
-    public bool OpenAimRangeDoor()
+    /// <summary>
+    /// The observation deck's reason to exist: a dark viewport with a deterministic star field behind it.
+    /// Purely decorative, and cheap - one dark plate plus a fixed handful of specks.
+    /// </summary>
+    private void BuildObservationViewport(WarmupHallLayout hall, StationShellBuilder shell)
     {
-        if (!AimRangeDoorPrepared || _aimDoorGate == null)
+        StationZone deck = hall.ObservationDeck;
+        float wallX = deck.MinX + 0.32f;
+
+        shell.AddBox(hall.World(wallX, 2.6f, deck.CenterZ), new Vector3(0.12f, 3.4f, 14f), StationPalette.Void, collidable: false);
+
+        // Deterministic scatter: a fixed generator so the view is identical every warmup and in tests.
+        System.Random random = new System.Random(20260828);
+        for (int i = 0; i < 46; i++)
+        {
+            float z = deck.CenterZ + (float)(random.NextDouble() - 0.5d) * 13f;
+            float y = 1.1f + (float)random.NextDouble() * 3f;
+            float size = 0.04f + (float)random.NextDouble() * 0.05f;
+            shell.AddBox(hall.World(wallX + 0.08f, y, z), new Vector3(0.02f, size, size), StationPalette.Star, collidable: false);
+        }
+
+        // Frame the viewport so it reads as a window rather than a hole in the wall.
+        foreach (float edge in new[] { -1.75f, 1.75f })
+        {
+            shell.AddBox(hall.World(wallX + 0.1f, 2.6f + edge * 1.0f, deck.CenterZ), new Vector3(0.1f, 0.16f, 14.3f), StationPalette.Frame, collidable: false);
+        }
+
+        shell.AddLabel(
+            hall.World(deck.MinX + 0.6f, 4.35f, deck.CenterZ),
+            UseChinese ? "<color=#4FCBFF>观景舱</color>" : "<color=#4FCBFF>OBSERVATION</color>",
+            Quaternion.Euler(0f, -90f, 0f),
+            380f);
+    }
+
+    // ---- Hatch gates ---------------------------------------------------------------------------
+
+    /// <summary>
+    /// Seals the activity compartments during setup. Each lane is fail-closed: its hatch panel is removed
+    /// only once that lane's world, props, and scheduler have all started successfully, so a half-built
+    /// range or an unvalidated parkour route is never reachable.
+    /// </summary>
+    private void PrepareHatchGates(WarmupHallLayout hall)
+    {
+        if (Config.ActivitiesEnabled && Config.Activities?.Aim?.Enabled == true)
+        {
+            _aimDoorGate = BuildHatchGate(hall, hall.AimBay);
+            AimRangeDoorPrepared = true;
+        }
+
+        if (Config.ActivitiesEnabled && Config.Activities?.Parkour?.Enabled == true)
+        {
+            _parkourDoorGate = BuildHatchGate(hall, hall.ParkourShaft);
+            ParkourDoorPrepared = true;
+        }
+    }
+
+    private PrimitiveObjectToy BuildHatchGate(WarmupHallLayout hall, StationZone zone)
+    {
+        (Vector3 center, Vector3 size) = HatchGateGeometry(hall, zone);
+        PrimitiveObjectToy gate = PrimitiveObjectToy.Create(center, Quaternion.identity, size, networkSpawn: false);
+        _toys.Add(gate);
+        gate.Type = PrimitiveType.Cube;
+        gate.Color = StationPalette.Bulkhead;
+        gate.Flags = PrimitiveFlags.Visible | PrimitiveFlags.Collidable;
+        gate.IsStatic = true;
+        gate.Spawn();
+        return gate;
+    }
+
+    private static (Vector3 Center, Vector3 Size) HatchGateGeometry(WarmupHallLayout hall, StationZone zone)
+    {
+        if (zone.Id == "aim")
+        {
+            return (hall.World(zone.MinX, WarmupHallLayout.HatchHeight / 2f, zone.CenterZ),
+                new Vector3(0.35f, WarmupHallLayout.HatchHeight, zone.Depth));
+        }
+
+        return (hall.World(zone.CenterX, WarmupHallLayout.HatchHeight / 2f, zone.MinZ),
+            new Vector3(zone.Width, WarmupHallLayout.HatchHeight, 0.35f));
+    }
+
+    public bool OpenAimRangeDoor() => OpenGate(ref _aimDoorGate, AimRangeDoorPrepared, "Aim Bay");
+
+    public void CloseAimRangeDoor()
+    {
+        if (AimRangeDoorPrepared && _aimDoorGate == null && IsSpawned && Hall != null)
+        {
+            _aimDoorGate = BuildHatchGate(Hall, Hall.AimBay);
+        }
+    }
+
+    public bool OpenParkourDoor() => OpenGate(ref _parkourDoorGate, ParkourDoorPrepared, "parkour shaft");
+
+    public void CloseParkourDoor()
+    {
+        if (ParkourDoorPrepared && _parkourDoorGate == null && IsSpawned && Hall != null)
+        {
+            _parkourDoorGate = BuildHatchGate(Hall, Hall.ParkourShaft);
+        }
+    }
+
+    private static bool OpenGate(ref PrimitiveObjectToy? gate, bool prepared, string label)
+    {
+        if (!prepared || gate == null)
         {
             return false;
         }
 
         try
         {
-            if (!_aimDoorGate.IsDestroyed)
+            if (!gate.IsDestroyed)
             {
-                _aimDoorGate.Destroy();
+                gate.Destroy();
             }
 
-            _aimDoorGate = null;
+            gate = null;
             return true;
         }
         catch (Exception ex)
         {
-            Logger.Warn($"[WarmupScpSelector] Could not open Aim Range door: {ex.Message}");
+            Logger.Warn($"[WarmupScpSelector] Could not open {label} hatch: {ex.Message}");
             return false;
         }
     }
 
-    public void CloseAimRangeDoor()
-    {
-        if (!AimRangeDoorPrepared || _aimDoorGate != null || !IsSpawned)
-        {
-            return;
-        }
-
-        _aimDoorGate = AddBox(_aimDoorCenter, _aimDoorSize, WallColor, collidable: true);
-    }
+    // ---- Teardown ------------------------------------------------------------------------------
 
     public void Despawn()
     {
@@ -299,15 +364,16 @@ public sealed class SelectorRoom
         CoinRoles.Clear();
         _offered.Clear();
         _aimDoorGate = null;
-        _aimDoorCenter = default;
-        _aimDoorSize = default;
-        AimRangeDoorPlaneZ = 0f;
+        _parkourDoorGate = null;
         AimRangeDoorPrepared = false;
-        Width = 0f;
+        ParkourDoorPrepared = false;
+        Hall = null;
         IsSpawned = false;
     }
 
-    /// <summary>Spawns one model's primitives at <paramref name="baseWorld"/>; returns the model's height above its base.</summary>
+    // ---- Models and signage --------------------------------------------------------------------
+
+    /// <summary>Spawns one model's primitives at <paramref name="baseWorld"/>; returns its height above that base.</summary>
     private float SpawnModel(string modelName, Vector3 baseWorld, Quaternion facing, float scale)
     {
         if (string.IsNullOrWhiteSpace(modelName))
@@ -320,6 +386,7 @@ public sealed class SelectorRoom
         {
             return SpawnPlaceholderCube(baseWorld, facing, scale);
         }
+
         float topY = 0f;
         foreach (MerPrimitive primitive in primitives)
         {
@@ -328,12 +395,12 @@ public sealed class SelectorRoom
                 continue;
             }
 
-            Vector3 worldPos = baseWorld + facing * (primitive.Position * scale);
-            Quaternion worldRot = facing * Quaternion.Euler(primitive.Rotation);
-            Vector3 worldScale = primitive.Scale * scale;
-
-            PrimitiveObjectToy toy = PrimitiveObjectToy.Create(worldPos, worldRot, worldScale, networkSpawn: false);
-            _toys.Add(toy); // track before configure/spawn so a throw mid-setup is still cleaned up by Despawn
+            PrimitiveObjectToy toy = PrimitiveObjectToy.Create(
+                baseWorld + facing * (primitive.Position * scale),
+                facing * Quaternion.Euler(primitive.Rotation),
+                primitive.Scale * scale,
+                networkSpawn: false);
+            _toys.Add(toy); // track before configure/spawn so a throw mid-setup is still cleaned up
             toy.Type = primitive.Type;
             toy.Color = primitive.Color;
             toy.Flags = PrimitiveFlags.Visible;
@@ -368,9 +435,8 @@ public sealed class SelectorRoom
             {
                 if (!parents.TryGetValue(parentTransform.ObjectId, out PrimitiveObjectToy parent))
                 {
-                    Vector3 parentPosition = centerWorld + (parentTransform.Position - LogoAssetCenter) * scale;
                     parent = PrimitiveObjectToy.Create(
-                        parentPosition,
+                        centerWorld + (parentTransform.Position - LogoAssetCenter) * scale,
                         Quaternion.Euler(parentTransform.Rotation),
                         parentTransform.Scale * scale,
                         networkSpawn: false);
@@ -398,9 +464,8 @@ public sealed class SelectorRoom
                 continue;
             }
 
-            Vector3 worldPosition = centerWorld + (primitive.Position - LogoAssetCenter) * scale;
             PrimitiveObjectToy toy = PrimitiveObjectToy.Create(
-                worldPosition,
+                centerWorld + (primitive.Position - LogoAssetCenter) * scale,
                 Quaternion.Euler(primitive.Rotation),
                 primitive.Scale * scale,
                 networkSpawn: false);
@@ -412,20 +477,47 @@ public sealed class SelectorRoom
             toy.Spawn();
         }
 
-        // The center selector light is shared with the room instead of adding a fourth point light.
-        // Unclamped translucent base colors restore the branded logo bloom within that light budget.
+        // The gallery's own deck lights carry the logo; unclamped translucent base colors restore its
+        // bloom without spending a dedicated light toy on it.
     }
 
-    private PrimitiveObjectToy AddBox(Vector3 center, Vector3 size, Color color, bool collidable)
+    /// <summary>Neutral fallback block for custom/future SCPs whose model cannot be resolved.</summary>
+    private float SpawnPlaceholderCube(Vector3 baseWorld, Quaternion facing, float scale)
     {
-        PrimitiveObjectToy toy = PrimitiveObjectToy.Create(center, Quaternion.identity, size, networkSpawn: false);
-        _toys.Add(toy); // track before configure/spawn so a throw mid-setup is still cleaned up by Despawn
-        toy.Type = PrimitiveType.Cube;
-        toy.Color = color;
-        toy.Flags = collidable ? PrimitiveFlags.Visible | PrimitiveFlags.Collidable : PrimitiveFlags.Visible;
-        toy.IsStatic = true;
-        toy.Spawn();
-        return toy;
+        float height = 1.7f * scale;
+        PrimitiveObjectToy cube = PrimitiveObjectToy.Create(
+            baseWorld + new Vector3(0f, height / 2f, 0f),
+            facing,
+            new Vector3(1.1f, 1.7f, 1.1f) * scale,
+            networkSpawn: false);
+        _toys.Add(cube);
+        cube.Type = PrimitiveType.Cube;
+        cube.Color = StationPalette.Placeholder;
+        cube.Flags = PrimitiveFlags.Visible;
+        cube.IsStatic = true;
+        cube.Spawn();
+        return height;
+    }
+
+    /// <summary>Exhibit label. Identity rotation faces the arrival aisle at -Z.</summary>
+    private void AddLabel(Vector3 center, string label)
+    {
+        TextToy text = TextToy.Create(center, Quaternion.identity, Vector3.one * 0.2f, networkSpawn: false);
+        _toys.Add(text);
+        text.TextFormat = $"<align=center><b>{label}</b></align>";
+        text.DisplaySize = new Vector2(220f, 40f);
+        text.IsStatic = true;
+        text.Spawn();
+    }
+
+    private void AddBanner(Vector3 center)
+    {
+        TextToy text = TextToy.Create(center, Quaternion.identity, Vector3.one * 0.45f, networkSpawn: false);
+        _toys.Add(text);
+        text.TextFormat = BannerMarkup;
+        text.DisplaySize = new Vector2(1000f, 200f);
+        text.IsStatic = true;
+        text.Spawn();
     }
 
     private static string ResolveModelName(ScpOption option)
@@ -438,83 +530,17 @@ public sealed class SelectorRoom
         return BuiltInModels.TryGetValue(option.Role, out string modelName) ? modelName : string.Empty;
     }
 
-    // Neutral fallback block for custom/future SCPs whose model cannot be resolved.
-    private float SpawnPlaceholderCube(Vector3 baseWorld, Quaternion facing, float scale)
-    {
-        float height = 1.7f * scale;
-        Vector3 size = new Vector3(1.1f, 1.7f, 1.1f) * scale;
-        PrimitiveObjectToy cube = PrimitiveObjectToy.Create(baseWorld + new Vector3(0f, height / 2f, 0f), facing, size, networkSpawn: false);
-        _toys.Add(cube);
-        cube.Type = PrimitiveType.Cube;
-        cube.Color = PlaceholderColor;
-        cube.Flags = PrimitiveFlags.Visible;
-        cube.IsStatic = true;
-        cube.Spawn();
-        return height;
-    }
+    private static Color LogoHdrColor(Color authored) => new(
+        authored.r * LogoHdrBoost,
+        authored.g * LogoHdrBoost,
+        authored.b * LogoHdrBoost,
+        LogoHdrAlpha);
 
-    private void AddLight(Vector3 center, float intensity, float range, Color? color = null)
-    {
-        LightSourceToy light = LightSourceToy.Create(center, Quaternion.identity, Vector3.one, networkSpawn: false);
-        _toys.Add(light);
-        light.Color = color ?? MainLightColor;
-        light.Intensity = intensity;
-        light.Range = range;
-        light.Type = LightType.Point;
-        light.ShadowType = LightShadows.None;
-        light.IsStatic = true;
-        light.Spawn();
-    }
-
-    private void AddLabel(Vector3 center, string label, Quaternion facing)
-    {
-        TextToy text = TextToy.Create(center, facing, Vector3.one * 0.2f, networkSpawn: false);
-        _toys.Add(text); // track before configure/spawn so a throw mid-setup is still cleaned up by Despawn
-        text.TextFormat = $"<align=center><b>{label}</b></align>";
-        text.DisplaySize = new Vector2(220f, 40f);
-        text.IsStatic = true;
-        text.Spawn();
-    }
-
-    // Server name + welcome/QQ line beneath the logo. Faces the player line (−Z) with identity rotation.
-    private void AddBanner(Vector3 center)
-    {
-        TextToy text = TextToy.Create(center, Quaternion.identity, Vector3.one * 0.45f, networkSpawn: false);
-        _toys.Add(text); // track before configure/spawn so a throw mid-setup is still cleaned up by Despawn
-        text.TextFormat = BannerMarkup;
-        text.DisplaySize = new Vector2(1000f, 200f);
-        text.IsStatic = true;
-        text.Spawn();
-    }
-
-    // Split the ordered displays into left/right banks around a genuinely centered logo opening. An odd
-    // count cannot form complete pairs, so its unmatched display goes on the far-right outer edge rather
-    // than widening one side of the central opening (the old seven-option layout was -7m vs +3m inside).
-    private static float DisplayX(int index, int count, float spacing)
-    {
-        int leftCount = count / 2;
-        return index < leftCount
-            ? -CenterDisplayClearance - (leftCount - 1 - index) * spacing
-            : CenterDisplayClearance + (index - leftCount) * spacing;
-    }
-
-    private static Color LogoHdrColor(Color authored)
-    {
-        return new Color(
-            authored.r * LogoHdrBoost,
-            authored.g * LogoHdrBoost,
-            authored.b * LogoHdrBoost,
-            LogoHdrAlpha);
-    }
-
-    private static Color Hex(string hex)
-    {
-        return ColorUtility.TryParseHtmlString(hex, out Color color) ? color : Color.magenta;
-    }
-
-    // Anchor the room just above the static surface zone — sane, already-loaded coordinates where the
-    // primitive floor is reliably walkable. SCP:SL collision/physics misbehave at extreme/empty coords
-    // (e.g. a hand-picked (0,1000,0)), which is why a freshly placed player fell straight through.
+    /// <summary>
+    /// Anchor the station just above the static surface zone - sane, already-loaded coordinates where a
+    /// primitive deck is reliably walkable. SCP:SL collision and physics misbehave at extreme or empty
+    /// coordinates (a hand-picked (0, 1000, 0) is exactly where a freshly placed player fell through).
+    /// </summary>
     private Vector3 ResolveOrigin()
     {
         try
@@ -522,8 +548,7 @@ public sealed class SelectorRoom
             Room? surface = Room.Get(FacilityZone.Surface).FirstOrDefault();
             if (surface != null)
             {
-                float clearance = Sanitize(Config.SurfaceClearance, 5f, 80f, 20f);
-                return surface.Position + new Vector3(0f, clearance, 0f);
+                return surface.Position + new Vector3(0f, Sanitize(Config.SurfaceClearance, 5f, 80f, 20f), 0f);
             }
 
             Logger.Warn("[WarmupScpSelector] Surface zone not found; using fallback RoomOrigin.");
@@ -536,15 +561,8 @@ public sealed class SelectorRoom
         return SanitizeOrigin(Config.RoomOrigin, new Vector3(0f, 1015f, 0f));
     }
 
-    private static float Sanitize(float value, float min, float max, float fallback)
-    {
-        if (float.IsNaN(value) || float.IsInfinity(value))
-        {
-            return fallback;
-        }
-
-        return Mathf.Clamp(value, min, max);
-    }
+    private static float Sanitize(float value, float min, float max, float fallback) =>
+        float.IsNaN(value) || float.IsInfinity(value) ? fallback : Mathf.Clamp(value, min, max);
 
     private static Vector3 SanitizeOrigin(Vector3 value, Vector3 fallback)
     {

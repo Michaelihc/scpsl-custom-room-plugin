@@ -6,6 +6,7 @@ using LabApi.Events.Arguments.PlayerEvents;
 using LabApi.Features.Wrappers;
 using MEC;
 using PlayerRoles;
+using PlayerRoles.FirstPersonControl;
 using PlayerRoles.RoleAssign;
 using UnityEngine;
 using WarmupScpSelector.Activities;
@@ -100,6 +101,9 @@ internal sealed class SelectorController
 
     // Exposed so activity lanes (Aim first, Task #3+) can register themselves for lifecycle/teardown.
     internal ActivityManager Activities => _activities;
+
+    /// <summary>The station built for the current warmup. Null before it is built or after teardown.</summary>
+    internal SelectorRoom Room => _room;
 
     private bool UseChinese => string.Equals(Config.Language, "cn", StringComparison.OrdinalIgnoreCase);
 
@@ -451,7 +455,7 @@ internal sealed class SelectorController
         // Only redirect Tutorial spawns for players WE moved in, never unrelated Tutorial players.
         if (_participantState.IsMovedIn(Key(player)))
         {
-            ev.SetSpawnpoint(_room.SpawnPosition, 0f);
+            ev.SetSpawnpoint(_room.SpawnPosition, _room.SpawnYaw);
         }
     }
 
@@ -600,11 +604,16 @@ internal sealed class SelectorController
             if (_parkourLane.Enabled)
             {
                 _activities.RegisterLane(_parkourLane);
-                bool started = _parkourLane.Start(_aimLane.Layout);
-                _aimLane.SetParkourCarveout(started);
-                if (!started)
+                // The shaft is its own compartment, so the route is generated against the station layout
+                // and against the movement constants the running game actually reports.
+                if (_parkourLane.Start(_room.Hall, ResolveJumpModel()) && _room.OpenParkourDoor())
                 {
-                    Logger.Warn("[WarmupScpSelector] Parkour stayed closed because its Aim-hall subarea was unavailable.");
+                    _plugin.LogDebug("Pulse Line opened.");
+                }
+                else
+                {
+                    _parkourLane.StopAll();
+                    Logger.Warn("[WarmupScpSelector] Pulse Line stayed closed: its route or shaft hatch was unavailable.");
                 }
             }
         }
@@ -612,6 +621,37 @@ internal sealed class SelectorController
         {
             Logger.Warn($"[WarmupScpSelector] Activity setup failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Reads the Tutorial role's real movement constants so the parkour route is laid out against what
+    /// the running build actually does, not against numbers baked in when the course was written. Falls
+    /// back to the documented defaults if the template cannot be read.
+    /// </summary>
+    private static ParkourJumpModel ResolveJumpModel()
+    {
+        try
+        {
+            if (RoleTypeId.Tutorial.TryGetRoleTemplate(out FpcStandardRoleBase template) && template.FpcModule != null)
+            {
+                return new ParkourJumpModel(
+                    template.FpcModule.JumpSpeed,
+                    template.FpcModule.WalkSpeed,
+                    template.FpcModule.SprintSpeed,
+                    FpcGravityController.DefaultGravity.magnitude);
+            }
+
+            Logger.Warn("[WarmupScpSelector] Tutorial movement template unavailable; parkour uses fallback jump constants.");
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[WarmupScpSelector] Could not read Tutorial movement constants: {ex.Message}");
+        }
+
+        return new ParkourJumpModel(
+            ParkourJumpModel.FallbackJumpSpeed,
+            ParkourJumpModel.FallbackWalkSpeed,
+            ParkourJumpModel.FallbackSprintSpeed);
     }
 
     // Round-start hazard teardown. Wrapped so it can never throw out of the core OnBeforeVanillaRoleAssignment

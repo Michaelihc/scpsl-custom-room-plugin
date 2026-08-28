@@ -30,6 +30,12 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 
     internal ScpReplacementService? ReplacementService => _replacement;
 
+    /// <summary>
+    /// The warmup station currently standing, or null outside warmup. Exposed so live verification and
+    /// companion plugins can anchor on the real room instead of hardcoding world coordinates.
+    /// </summary>
+    public SelectorRoom? WarmupRoom => _controller?.Room;
+
     public override string Name => "WarmupScpSelector";
 
     public override string Description => "Warmup SCP draft plus early-round replacement for healthy SCP disconnects.";

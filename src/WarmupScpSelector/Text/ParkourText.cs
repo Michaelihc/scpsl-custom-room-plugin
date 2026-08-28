@@ -70,7 +70,7 @@ namespace WarmupScpSelector.Text
             switch (phase)
             {
                 case ParkourPhase.Countdown:
-                    text = chinese ? "准备正常跳跃；无需蹲跳" : "Normal jump only; no crouch boost needed";
+                    text = chinese ? "冲刺起跳 · 收尾段必须冲刺" : "Sprint into every jump; the last hops need it";
                     break;
                 case ParkourPhase.Active:
                     text = chinese ? "按顺序踩过亮边平台 · 抓硬币重置" : "Land in order · grab RESET to restart";
@@ -79,7 +79,7 @@ namespace WarmupScpSelector.Text
                     text = chinese ? "离开再踏上起点即可重跑" : "Step off, then return to START to rerun";
                     break;
                 default:
-                    text = chinese ? "青色是路线 · 金色是捷径线" : "Cyan marks the route · gold marks a cut";
+                    text = chinese ? "青色是路线 · 金色是分段点" : "Cyan marks the route · gold marks a split";
                     break;
             }
 

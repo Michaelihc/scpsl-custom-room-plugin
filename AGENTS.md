@@ -3,23 +3,41 @@
 ## Project Snapshot
 
 - LabAPI `net48` plugin named `WarmupScpSelector` (was the EXILED `ScpslCustomRoomPlugin`).
-- Purpose: a **warmup SCP draft** plus early-round SCP disconnect replacement. During waiting-for-players, players are moved into one floating room
-  showing a model of each offered SCP with a big coin; grabbing a coin picks that SCP. At round start
+- Purpose: a **warmup SCP draft** plus early-round SCP disconnect replacement. During waiting-for-players, players are moved into one floating
+  **space station** whose south gallery shows a model of each offered SCP with a big coin; grabbing a coin picks that SCP. At round start
   vanilla still chooses the SCP role multiset, but the plugin remaps the pending SCP recipients before
   role initialization/networking. It never creates extra SCPs — it only rearranges vanilla's assignment.
   After round start, a healthy early-disconnecting SCP can open that exact vacant role to a short
   UserId-backed `.volunteer` lottery; spectators and living non-SCP humans are both eligible by default.
-- The room + models **despawn on round start**.
+- The station + models **despawn on round start**.
+- The station's plan is derived from the authored ProjectMER room the server owner built (`DT.json`): a
+  central hub with an east Aim Bay, a west observation deck, a south SCP gallery down a short connector,
+  and a north parkour shaft. The numbers were regularised into named constants rather than kept as an
+  exported asset, so the room is code-extensible; the topology is the author's.
 
 ## Architecture
 
 - `src/WarmupScpSelector/Plugin.cs` — entry point; wires LabAPI events + the core `RoleAssigner`/pending-role hooks.
 - `Warmup/SelectorController.cs` — small event-driven orchestrator (build room, record picks, hand off, atomic remap).
-- `Warmup/SelectorRoom.cs` — builds/despawns the floating room: floor + walls + per-SCP pedestal, model, label, coin.
-  Themed to the server brand **莺歌傲然**: a near-black navy gallery, a glowing teal floor seam, near-white lights
-  (so SCP models stay true), and the cream/gold primitive server logo centered on the back wall above a gold
-  welcome/QQ line. SCP displays are split into left/right banks so the logo stays unobstructed. The brand palette
-  is the source of truth in `scpsl-plugins-metarepo/.server/server-identity-preview.html`.
+- `Warmup/WarmupHallLayout.cs` — **single source of truth for the whole station**: compartments
+  (`StationZone`), hatches (`StationOpening`), the SCP gallery stands, spawn point, and logo anchor. Its
+  `BuildWallSegments` is pure geometry that cuts hatches out of compartment faces and is what guarantees a
+  sealed shell; a shared face is never built twice because the narrower compartment's face lies entirely
+  inside the hatch. Extending the station means adding a zone + an opening — the shell builder walls and
+  lights it for free. `ContainsPoint` exists because `Bounds.Contains` is a native ECall and would make
+  every occupancy rule untestable headlessly.
+- `Warmup/StationShellBuilder.cs` — spawns that geometry: deck, overhead, bulkheads with ribs, hatch
+  frames, amber threshold striping, teal wayfinding strips, bilingual hatch signage, deck lighting.
+- `Warmup/StationPalette.cs` — the one **orbital-station** theme (cold graphite structure, near-white deck
+  lighting, brand teal/cyan for wayfinding, amber for caution, gold for brand text). Two rules: lights stay
+  near-white (a tinted lamp washes out the muted SCP model primitives) and saturation is a signal, never
+  decoration. Brand hues come from `scpsl-plugins-metarepo/.server/brand/server-identity-preview.html`.
+- `Warmup/SelectorRoom.cs` — builds/despawns the station: shell, SCP gallery (low collidable plinth +
+  model + label + frozen coin per offered SCP), the cream/gold primitive server logo high on the gallery
+  back wall above the welcome/QQ line, and the observation deck's star-field viewport. The gallery's centre
+  aisle is deliberately left empty so the logo reads straight down it from the arrival point. Per-lane
+  **hatch gates** replace the old full-width seam: each activity compartment is sealed during setup and its
+  panel removed only once that lane started successfully.
 - `Models/MerModelLoader.cs` — vendored reader: parses embedded `.mer.json` primitives and one-level
   ProjectMER empty-parent hierarchies into `PrimitiveObjectToy` data (+ MiniJson). `Models/MerWorldSpawner.cs`
   composes those transforms at arbitrary world roots, returns named markers without spawning marker geometry,
@@ -36,38 +54,43 @@
   registered `IActivityLane`s; switching lanes releases the prior lane first; no Harmony). `SelectorController`
   runs `StopForRoundStart` **before** the Tutorial→None flip (the hazard-cleanup ordering invariant).
   `LaneHintIds`/`LaneFlashTracker` back the provider's per-lane `warmupscp.<lane>.hero/.flash/.footer` IDs +
-  token-guarded flash. `Activities/AimRange/AimRangeActivityLane` is the default-off Aim Range orchestrator: it
-  opens a fail-closed full-width seam only after its collidable world, six persistent shooting-counter weapon dispensers,
-  two symmetric native attachment workstations,
-  deterministic target deck, event routes, and one shared scheduler start successfully. The selector gallery and training
-  area then read and behave as one uninterrupted full-width rectangular hall; full-hall occupancy owns exclusive sessions.
-  Replacement/drop/disconnect/disable/round-start destroys an issued gun and clears its reserve, removes lane hints,
-  invalidates callbacks, closes the temporary seam gate, and despawns the training world before Tutorial→None.
-- `Activities/AimRange/RangeBotController.cs` owns up to two native RA dummies by authored slot plus live
-  hub/network/player identity and spawn generation (never shared dummy `UserId`). Authored slots stay dormant until
-  humans connect and reconcile every scheduler tick. A solo human is supported under a controller-owned temporary
-  lobby lock (released on the second human or teardown) so counted dummies cannot falsely start the round; zero humans
-  spawn none and one public slot always remains spare. Each spawn gets a Crossvec.
-  Locomotion follows the `toy-tricks-demo` native-motor pattern directly, with no waypoint binding: small world-space
-  `FpcMotor.ReceivedPosition` steps drive uninterrupted lane-1 patrol and combat strafing through clear authored
-  corridors, with bounded native jumps and a stall watchdog. A genuine tracked-firearm hit locks the first attacker's
-  validated live hub after a 0.5–0.6 second reaction delay for a fixed 12-second
-  lease that repeat hits cannot refresh. Bots keep strafing with tighter combat steps while aiming, hold native ADS
-  throughout retaliation, jump more often
-  inside 6 m, aim within the upper portion of a non-head body collider, and use native `Shoot->Hold`/`Release`; initial
-  fire still requires `ShotWeapon` plus ammo consumption.
-  At low ammo they release fire/ADS, move behind slot-owned 2.2 m cover, invoke native `Reload->Click`, and resume.
-  Every held input is released on LOS/session/lease loss, death, respawn, disable, and teardown. Lane events and bot
-  advancement share the scheduler clock. `RangeBotLogic`, `RangeBotRegistry`, `RangeBotValidatedSettings`, and
-  `RangeBotNative` keep state/ownership/config/native operations separated. Capability failures disable only that bot;
-  no navmesh, repeated teleport, direct-damage, or synthetic-fire fallback exists.
-- `Activities/Parkour/ParkourActivityLane.cs` is the default-off Pulse Line game. It requires the Aim hall and owns the
-  formerly empty far-left bay behind the counter; a full-height divider isolates it from lane-1 bot fire. One shared
-  20 Hz loop handles occupancy, 0.6 s start hold, authoritative three-second countdown, ordered swept-segment gates,
-  timer/HSM updates, fall recovery, finish/PB, and the reusable reset coin. The folded single-player route has 17
-  static cream landings across four sectors, stays below 2.75 m for ceiling clearance, and returns to FIN beside START.
-  Falling to the hall floor teleports to the last completed landing without stopping the clock. `ActivityManager`
-  exclusivity removes the Aim gun/session when entering the bay; Aim only carves out the bay after parkour starts.
+  token-guarded flash. `Activities/AimRange/AimRangeActivityLane` is the default-off Aim Range orchestrator,
+  now housed in the station's **east Aim Bay** (x 11..36, z +/-9.5). It opens that bay's hatch only after its
+  furniture, six persistent shooting-counter weapon dispensers, two symmetric native attachment workstations,
+  deterministic target deck, event routes, and one shared scheduler start successfully.
+  Replacement/drop/disconnect/disable/round-start destroys an issued gun and clears its reserve, removes lane
+  hints, invalidates callbacks, re-seals the bay hatch, and despawns the range furniture before Tutorial->None.
+- `Warmup/AimRangeLayout.cs` — the range fires **along +X** down the arm, with the three lanes stacked across
+  Z: lane 1 bots+cover (z -9.5..-3.1), lane 2 sliding targets (-3.1..2.9), lane 3 spheres (2.9..9.5, the widest
+  because the cloud needs the most clear width). Everything is authored through one `Range(lateral, up,
+  downrange)` frame, and every authored rotation is `RangeRotation` (a -90 degree turn) applied to the old
+  -Z-downrange facing — that is why the sliding targets are identity and the sphere lane is Euler(0,-90,0).
+  `Warmup/AimRangeWorld.cs` adds only range furniture (counter, lane dividers, cover, rails, workstations,
+  counter lighting, signage); the bay's deck/walls/overhead belong to the station shell.
+- `Activities/Parkour/ParkourActivityLane.cs` is the default-off **Pulse Line**, now in the station's own
+  9 m x 53.5 m x 13.5 m **parkour shaft** north of the hub. It no longer depends on the Aim range at all.
+  One shared 20 Hz loop handles occupancy, 0.6 s start hold, authoritative three-second countdown, ordered
+  swept-segment gates, timer/HSM updates, fall recovery, finish/PB, and the reusable reset coin.
+- **The route is generated, not hand-placed** (`ParkourLayout` + `ParkourJumpModel`). `ParkourJumpModel` is
+  the closed form of the native arc (`y = J*t - g*t^2/2`, gravity 19.6 from `FpcGravityController`), caught on
+  the DESCENDING branch — the ascending root gives barely a third of the reach. `SelectorController.ResolveJumpModel`
+  reads the **live Tutorial prefab's** `JumpSpeed`/`WalkSpeed`/`SprintSpeed`, so the geometry adapts to what the
+  game actually ships. Measured 2026-08-28: `jump 4.9 / walk 3.9 / sprint 5.4`, apex **0.61 m** — far below what
+  a hand-authored course would assume, which is exactly why the route is generated.
+  Each hop's gap comes from a difficulty ramp (0.45 -> 0.86 of the reach a **sprinting** player has), the
+  sideways swing is taken out of that same budget, and the step rise is capped on the PLACEMENT, not just in
+  the gap arithmetic. The layout **fails closed** if the result would be impossible (>0.92), trivial
+  (<0.72 peak), out of the shaft, or short on headroom.
+- Three calibration facts were established in game and are easy to get wrong again:
+  1. **Gap is edge-to-CENTRE**, not edge-to-edge. A player runs to the take-off pad's far edge and aims for
+     the middle of the next pad; crediting the landing's near half as free reach makes the course about a
+     third easier than the numbers claim.
+  2. **Difficulty is anchored to sprint speed.** A blend between walk and sprint put the closing hops within
+     2% of walk reach, and a walking dummy completed the entire course.
+  3. A fixed-metre lateral zig-zag silently eats the whole jump budget and makes late hops unclearable —
+     the swing must be a fraction of the hop, not a constant.
+- Fall recovery catches a miss ~0.2 s into the fall (`HasFallenOffRoute`: 1.75 m below the last cleared
+  landing), not on impact, so a slip from the top of the shaft never reaches the fall-damage table.
 - Aim lethal human damage is cancelled first in `AimRangeActivityLane.OnDying`, then synchronously reinitializes the
   same player as Tutorial with only `UseSpawnpoint`; the nested spawn routes to the range entrance, `LifeId` must
   change, and the tracked range gun/current reserve are restored. Bot aggro is cleared before reset, a secondary
@@ -77,9 +100,10 @@
   The collision-free bilingual HSM range HUD is implemented (see `Text/AimRangeText.cs`): per player, three lane
   IDs — `warmupscp.aim.flash` (Y592, force-shown event verdict), `warmupscp.aim.hero` (Y700, a three-line card =
   muted eyebrow + short 5-cell state rail + value-first hits/accuracy strip), `warmupscp.aim.footer` (Y805, one
-  short active-voice instruction). The former room seam is UI-only: the selector side shows only the untouched original
-  `warmupscp.status` SCP draft panel, while the training side removes that panel and shows only the three Aim IDs.
-  Combat, issued guns, damage routing, and bot provocation still use full-hall occupancy. The three Aim zones render
+  short active-voice instruction). The HUD switches at the bay threshold (`ContainsAimUi`): outside it, only the
+  untouched original `warmupscp.status` SCP draft panel; inside, that panel is removed and only the three Aim IDs
+  show. Combat, issued guns, damage routing, and bot provocation use the larger `ContainsVerified` bounds, which
+  reach back through the hatch so a shooter standing in the doorway still behaves normally. The three Aim zones render
   on one configurable HSM center-X `Activities.Aim.HudX` (default -1077, aimed at the narrow corridor between
   the native inventory list (x0..214) and the inventory wheel (x498..1404) at 1920x1080 while TAB is held).
   SUSPECT since the 2026-08-18 in-game HSM recalibration (see `..\.tests\AGENTS.md`): center-X is actually
@@ -92,15 +116,15 @@
   `HsmHintDisplayProvider` resolves a per-hint X (override else global `DefaultX`) and `Services/HintChangeCache`
   backs a provider-level change-skip cache for every non-flash stable ID (player + normalized id + X/Y/text, so a
   horizontal move re-pushes); flash bypasses it and keeps token expiry.
-  `Warmup/AimRangeWorld.cs` keeps all collision in explicit AdminToy boxes. The old weapon-rack visual and all
+  `Warmup/AimRangeWorld.cs` keeps all range collision in explicit AdminToy boxes and adds only furniture; the bay's
+  deck, bulkheads, overhead, and general lighting come from the station shell. The old weapon-rack visual and all
   shelf/cradle collision are no longer spawned; `AimRangeLayout` places six persistent guns on the shooting counter
   and two symmetric native attachment workstations against the side walls.
   Interacting with a dispenser cancels native pickup and grants a separately owned inventory copy, leaving the displayed gun.
-  The counter wall spans `ShellWidth - 0.6 m`; exactly three intensity-24/range-16 point lights illuminate the training
-  half and exactly three intensity-24/range-18 point lights illuminate the selector half, all with ordinary non-HDR light colors.
-  The branded logo retains its HDR albedo boost and shares the selector's center light for bloom; it does not own a fourth light.
-  The outer training shell matches the dynamic gallery width, eliminating the former doorway/choke; the centered
-  19.2 m × 22 m play zone gives three 6.4 m lanes: lane 1 has cover-backed walking/peeking bots; lane 2 owns three simultaneous
+  The counter spans `ShellWidth - 0.6 m` across the bay, and three intensity-24/range-16 point lights sit over the
+  firing line, with ordinary non-HDR light colors. The branded logo keeps its HDR albedo boost and shares a gallery
+  light for bloom; it does not own a light of its own.
+  The 19 m x 21.5 m bay gives three lanes: lane 1 has cover-backed walking/peeking bots; lane 2 owns three simultaneous
   persistent native `ShootingTargetToy`s on parallel absolute-time tracks at different depths and deterministic
   dynamically varying deterministic speeds (pre-damage is cancelled so they never lower/die); lane 3 owns 20 spread-out,
   visible collidable Aim-Lab spheres whose
@@ -114,16 +138,23 @@
   `Text/ActivityGlyphs.cs` — signature glyphs (`━ ╌ │ ◆ ◇ ▲ ▼`) with ASCII fallbacks (glyph reality gate; preview in `tools/preview/banner.html`).
 - `generated/models/*.mer.json` — embedded SCP models, server logo, and retained legacy Aim rack/moving-target
   assets (no longer spawned by the three-lane runtime; WithCulture=false + LogicalName in the csproj).
-- `tools/` — Python model pipeline: `scp_builder.py` (Builder API), `build_scp_*_asset.py` (per-SCP), `render_model_preview.py` (offline renderer, including parented/sheared logo quads; `--exposure N` brightens dark room previews to approximate in-scene point lights), `build_room_preview.py` (emits the themed room + real models/logo to render/inspect offline). `tools/preview/banner.html` previews the welcome line + status-panel TMP markup in a browser (serve over localhost; `file://` is blocked).
+- `tools/` — Python model pipeline: `scp_builder.py` (Builder API), `build_scp_*_asset.py` (per-SCP), `render_model_preview.py` (offline renderer, including parented/sheared logo quads; `--exposure N` brightens dark room previews to approximate in-scene point lights), `build_room_preview.py` (**STALE** — still emits the pre-station single hall; not updated for the station rework). `tools/preview/banner.html` previews the welcome line + status-panel TMP markup in a browser (serve over localhost; `file://` is blocked).
 - `tests/models/` — `scp_model_contract.py` + `test_scp_*_model.py` geometry contracts.
-- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity/replacement tests (76 tests currently, including bot lifecycle,
+- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity/replacement tests (81 currently, including station
+  compartment tiling, wall-panel sealing, gallery stands, the Aim Bay's three lanes, the parkour jump model and
+  generated route across a jump-speed sweep, bot lifecycle,
   exact automatic-rifle presets, fixed aggro lock, continuous-path/tall-cover contracts, stale generations, damage policy,
   config validation, lethal reset state, pure MER
-  root/one-level-parent transform composition, continuous full-room bounds and persistent counter-armoury layout,
-  widened three-lane bounds, deterministic absolute-time sliding motion, one-credit immediate sphere relocation, and the
+  root/one-level-parent transform composition, station compartment tiling and wall-panel sealing, gallery stand
+  placement, the Aim Bay's three-lane bounds and persistent counter armoury, deterministic absolute-time sliding motion, one-credit immediate sphere relocation, and the
   Aim HSM UI/cache contracts).
-  The dev-only live verifier currently passes `253/253`, including pooled same-toy sphere relocation, a 0.564 s first return shot, and native stationary-attacker lethal reset in 1.022 s,
-  all-retaliation ADS, non-head aim, the UI-only seam, and both three-light hall halves.
+  `tests/WarmupPlaytestScenarios/` ships this plugin's live dummy scenarios for the shared `.tests\Playtest`
+  harness: `warmup-station` (raycast-walks every compartment for deck/walls/hatches, settles a dummy at the
+  arrival point) and `warmup-pulse-line` (discovers the route by raycast, then brackets it with three real
+  dummies — sprint+jump must complete, walk+jump must stop late, no-jump must stop at the first landing).
+  Run with `ptest run warmup standard`. The station geometry comes from public API, not reflection.
+  `tests/WarmupRangeVerifier` is **NOT updated for the station rework** — its 253 checks assert the old
+  single-hall seam and will fail until migrated.
 
 ## Key mechanic (why it is simple now)
 

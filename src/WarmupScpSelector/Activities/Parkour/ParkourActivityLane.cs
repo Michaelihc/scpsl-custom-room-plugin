@@ -13,7 +13,7 @@ using Logger = LabApi.Features.Console.Logger;
 
 namespace WarmupScpSelector.Activities.Parkour
 {
-    /// <summary>Timed ordered-gate parkour running in the isolated far-left wing of the Aim hall.</summary>
+    /// <summary>Timed ordered-gate parkour running in the station's dedicated parkour shaft.</summary>
     internal sealed class ParkourActivityLane : IActivityLane
     {
         private sealed class Session
@@ -55,8 +55,8 @@ namespace WarmupScpSelector.Activities.Parkour
 
         public string LaneId => LaneHintIds.Parkour;
 
+        // The shaft is its own compartment, so Pulse Line no longer depends on the Aim range being open.
         public bool Enabled => _plugin.Config.ActivitiesEnabled &&
-            _plugin.Config.Activities?.Aim?.Enabled == true &&
             _plugin.Config.Activities?.Parkour?.Enabled == true;
 
         public bool IsRunning => _running;
@@ -67,20 +67,24 @@ namespace WarmupScpSelector.Activities.Parkour
 
         private float FlashDuration => Sanitize(_plugin.Config.Activities?.FlashDurationSeconds ?? 0.7f, 0.05f, 10f, 0.7f);
 
-        public bool Start(AimRangeLayout? aimLayout)
+        public bool Start(WarmupHallLayout? hall, ParkourJumpModel model)
         {
             StopInternal(clearBests: true);
-            if (!Enabled || aimLayout == null)
+            if (!Enabled || hall == null)
             {
                 return false;
             }
 
             try
             {
-                if (!_world.Build(aimLayout) || _world.Layout == null)
+                if (!_world.Build(hall, model, UseChinese) || _world.Layout == null)
                 {
                     return false;
                 }
+
+                _plugin.LogDebug(
+                    $"Pulse Line built: {_world.Layout.Platforms.Count} landings, peak difficulty " +
+                    $"{_world.Layout.PeakDifficulty:0.00} ({model}).");
 
                 Subscribe();
                 _running = true;
@@ -245,9 +249,10 @@ namespace WarmupScpSelector.Activities.Parkour
                 return;
             }
 
-            // The hall floor is the recovery floor. A runner who drops into the deep course bay returns to
-            // the last ordered landing immediately; elapsed time keeps running, so no artificial penalty is needed.
-            if (layout.DeepCourseBounds.Contains(position) && position.y < layout.Origin.y + 0.30f)
+            // A miss is caught EARLY - about a fifth of a second into the fall - rather than on impact, so a
+            // slip from the top of the shaft never reaches the fall-damage table. Elapsed time keeps running,
+            // so the lost height is the whole penalty.
+            if (layout.HasFallenOffRoute(position, session.LastCompletedGate))
             {
                 Recover(player, session, layout, now);
                 return;
@@ -287,9 +292,7 @@ namespace WarmupScpSelector.Activities.Parkour
 
         private void Recover(Player player, Session session, ParkourLayout layout, double now)
         {
-            Vector3 recovery = session.LastCompletedGate >= 0
-                ? layout.Platforms[session.LastCompletedGate].RecoveryPosition
-                : layout.StartPlate.RecoveryPosition;
+            Vector3 recovery = layout.RecoveryPosition(session.LastCompletedGate);
             player.Position = recovery;
             session.PreviousPosition = recovery;
             session.Run.RecoveryGraceEndsAt = now + Sanitize(Config.RecoveryGraceSeconds, 0.15f, 1f, 0.35f);

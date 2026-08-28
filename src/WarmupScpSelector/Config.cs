@@ -16,7 +16,7 @@ public sealed class Config
     [Description("Whether debug logging is enabled.")]
     public bool Debug { get; set; } = false;
 
-    [Description("Master switch for the optional warmup activity suite (Aim / Dodgeball / Parkour / Duel lanes). Default OFF: the SCP draft behaves exactly as before. Turning it on only enables lanes that are also gated on under Activities. Aim turns the entire continuous selector hall into the activity area, with persistent counter guns, deterministic native targets, owned native RA bots, lethal human reset, and a collision-free bilingual HSM HUD; persistence/scoring remain separate work.")]
+    [Description("Master switch for the optional warmup activity suite. Default OFF: the SCP draft behaves exactly as before. Turning it on only enables lanes that are also gated on under Activities. Each lane owns one station compartment: Aim fits out the east Aim Bay with persistent counter guns, deterministic native targets, owned native RA bots, lethal human reset, and a bilingual HSM HUD; Parkour generates the Pulse Line in the north shaft. Persistence/scoring remain separate work.")]
     public bool ActivitiesEnabled { get; set; } = false;
 
     [Description("Shared settings for the warmup activity suite. Only applies when ActivitiesEnabled is true.")]
@@ -28,14 +28,14 @@ public sealed class Config
     [Description("Player-facing language: \"cn\" for Simplified Chinese (default), \"en\" for English.")]
     public string Language { get; set; } = "cn";
 
-    [Description("Meters to float the selector room above the surface zone. SCP:SL collision/physics misbehave at extreme coords, so the room is anchored just above the static surface (no map gen there) at sane coordinates where its floor is actually walkable. Enough to clear surface structures.")]
+    [Description("Meters to float the warmup station above the surface zone. SCP:SL collision/physics misbehave at extreme coords, so the room is anchored just above the static surface (no map gen there) at sane coordinates where its floor is actually walkable. Enough to clear surface structures.")]
     public float SurfaceClearance { get; set; } = 20f;
 
-    [Description("Fallback world-space origin used only if the surface zone cannot be found (it normally always can). Avoid extreme coordinates.")]
+    [Description("Fallback world-space origin (station deck centre) used only if the surface zone cannot be found (it normally always can). Avoid extreme coordinates.")]
     public Vector3 RoomOrigin { get; set; } = new(0f, 1015f, 0f);
 
-    [Description("Horizontal spacing between adjacent SCP display pedestals, in meters.")]
-    public float PedestalSpacing { get; set; } = 4f;
+    [Description("Horizontal spacing between adjacent SCP display stands in the gallery back rank, in meters. Wider spacing fits fewer stands in the back rank and pushes the rest onto the side walls.")]
+    public float PedestalSpacing { get; set; } = 3.7f;
 
     [Description("Uniform scale applied to each spawned SCP model.")]
     public float ModelScale { get; set; } = 1f;
@@ -94,7 +94,7 @@ public sealed class Config
     [Description("Safety cap for the decoded music length in seconds.")]
     public int MusicMaxSeconds { get; set; } = 240;
 
-    [Description("SCPs offered in the selector room, left to right. Each gets one model + one coin. Model is the embedded .mer.json basename; leave it blank to use this plugin's built-in model for known SCP roles.")]
+    [Description("SCPs offered in the gallery, in stand order (back rank first, then side walls). Each gets one model + one coin. Model is the embedded .mer.json basename; leave it blank to use this plugin's built-in model for known SCP roles.")]
     public List<ScpOption> ScpOptions { get; set; } = new()
     {
         new ScpOption(RoleTypeId.Scp049, "SCP-049", "scp-049"),
