@@ -151,13 +151,23 @@
   generated shell, decor, and exhibits (looked up in this plugin's `Schematics/` then ProjectMER's). It
   fails soft: not configured, missing, unreadable, or a failed spawn all fall back to generating.
   Two things are never taken from an asset, and both are load-bearing:
-  1. **The parkour shaft.** Its landings and its gates are two views of one generated route; an editor
-     that nudges a landing moves the geometry but not the gate, and the course breaks silently. Authored
-     shaft blocks are skipped and the shaft is built entirely by code - shell INCLUDED. Skipping the
-     authored blocks without rebuilding the shell left the shaft with no floor at all and dropped players
-     out of the station; `warmup-station` caught it.
+  1. **The Aim Bay.** Its dividers and cover are what the bots path around and shoot from, and the lane
+     spawns that furniture itself, so taking it from the asset too would spawn every piece twice. The
+     compartment is skipped and rebuilt by code, shell INCLUDED - skipping a compartment without
+     rebuilding its shell once left the parkour shaft with no floor and dropped players out of the
+     station; `warmup-station` caught it.
   2. **Pickups.** Selection coins carry a serial-to-SCP-role binding and counter guns carry owned-weapon
      bookkeeping. A static copy looks right and does nothing, so code spawns them at the anchors.
+
+  The parkour shaft, by contrast, IS spawned from the asset, and `AuthoredParkourRoute` recovers the
+  gates from those landings, so geometry and gates stay one thing and an author's route drives the run.
+- **Block ids are opaque; only a MISSING id means "no id".** ProjectMER writes `ObjectId` from Unity's
+  `GetInstanceID()`, and a file saved in the map editor can come back with EVERY id negative (real case:
+  `DT (2).json`, -18862..-1678). The reader used to treat negative as absent, which unparented all 574
+  child blocks - and an unparented child spawns its LOCAL offset at the station origin, so the author's
+  model and the logo's shear quads piled into the middle of the hub (578 blocks within 3 m of the centre,
+  measured off a live export). `StationAssetBlock.NoId` is the sentinel; a child whose parent exists but
+  was not spawned falls back to `ApproximateRootPosition` rather than to the origin.
 - Keep the exported `marker_*` blocks when editing. They are the anchor contract, and without them an
   importer has to infer gameplay positions from geometry - a landing detector run over a real edited file
   picked a ceiling panel as a landing, which would have been a 9.9 m impossible hop.
@@ -165,14 +175,14 @@
   assets (no longer spawned by the three-lane runtime; WithCulture=false + LogicalName in the csproj).
 - `tools/` — Python model pipeline: `scp_builder.py` (Builder API), `build_scp_*_asset.py` (per-SCP), `render_model_preview.py` (offline renderer, including parented/sheared logo quads; `--exposure N` brightens dark room previews to approximate in-scene point lights), `build_room_preview.py` (**STALE** — still emits the pre-station single hall; not updated for the station rework). `tools/preview/banner.html` previews the welcome line + status-panel TMP markup in a browser (serve over localhost; `file://` is blocked).
 - `tests/models/` — `scp_model_contract.py` + `test_scp_*_model.py` geometry contracts.
-- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity/replacement tests (81 currently, including station
+- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity/replacement tests (85 currently, including station
   compartment tiling, wall-panel sealing, gallery stands, the Aim Bay's three lanes, the parkour jump model and
   generated route across a jump-speed sweep, bot lifecycle,
   exact automatic-rifle presets, fixed aggro lock, continuous-path/tall-cover contracts, stale generations, damage policy,
   config validation, lethal reset state, pure MER
   root/one-level-parent transform composition, station compartment tiling and wall-panel sealing, gallery stand
   placement, the Aim Bay's three-lane bounds and persistent counter armoury, deterministic absolute-time sliding motion, one-credit immediate sphere relocation, and the
-  Aim HSM UI/cache contracts).
+  Aim HSM UI/cache contracts, and authored-schematic hierarchy resolution under negative ObjectIds).
   `tests/WarmupPlaytestScenarios/` ships this plugin's live dummy scenarios for the shared `.tests\Playtest`
   harness: `warmup-station` (raycast-walks every compartment for deck/walls/hatches, settles a dummy at the
   arrival point) and `warmup-pulse-line` (discovers the route by raycast, then brackets it with three real

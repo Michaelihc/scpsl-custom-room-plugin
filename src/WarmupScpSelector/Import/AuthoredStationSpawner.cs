@@ -92,7 +92,7 @@ internal sealed class AuthoredStationSpawner
 
                 _toys.Add(toy);
                 spawned++;
-                if (block.ObjectId >= 0)
+                if (block.HasObjectId)
                 {
                     parents[block.ObjectId] = toy.Transform;
                 }
@@ -159,7 +159,7 @@ internal sealed class AuthoredStationSpawner
     private static IEnumerable<StationAssetBlock> Ordered(StationAsset asset)
     {
         Dictionary<int, StationAssetBlock> byId = asset.Blocks
-            .Where(b => b.ObjectId >= 0)
+            .Where(b => b.HasObjectId)
             .GroupBy(b => b.ObjectId)
             .ToDictionary(g => g.Key, g => g.First());
 
@@ -181,9 +181,14 @@ internal sealed class AuthoredStationSpawner
 
     private AdminToy? Spawn(StationAssetBlock block, WarmupHallLayout hall, Transform? parent, ref int unsupported)
     {
-        // A root-level block is authored relative to the schematic root, which is the station origin. A
-        // child is authored relative to its parent, so it is spawned in local space untouched.
-        Vector3 position = parent == null ? hall.Origin + block.Position : block.Position;
+        // A child is authored relative to its parent, so it is spawned in local space untouched. Anything
+        // else is authored relative to the schematic root, which is the station origin.
+        //
+        // ApproximateRootPosition (rather than Position) is what makes the fallback safe: a block whose
+        // parent exists in the file but was NOT spawned - a marker, a pickup, a code-owned compartment -
+        // still lands roughly where it was authored instead of dropping its local offset on the station
+        // origin. For a genuinely root-level block the two are identical.
+        Vector3 position = parent != null ? block.Position : hall.Origin + block.ApproximateRootPosition;
         Quaternion rotation = Quaternion.Euler(block.Rotation);
 
         switch (block.BlockType)

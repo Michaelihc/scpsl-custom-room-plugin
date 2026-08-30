@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using PlayerRoles;
 using UnityEngine;
 using WarmupScpSelector.Activities;
 using WarmupScpSelector.Activities.AimRange;
 using WarmupScpSelector.Activities.Parkour;
+using WarmupScpSelector.Import;
 using WarmupScpSelector.Models;
 using WarmupScpSelector.Replacement;
 using WarmupScpSelector.Selection;
@@ -114,6 +116,7 @@ namespace WarmupScpSelector.Tests
                 ScpReplacementWeightedHumanRolesRejectInvalidEntries,
                 ScpReplacementCooldownIsSharedAndResettable,
                 ScpReplacementTextIsBilingualAndMarkupSafe,
+                AuthoredSchematicWithNegativeObjectIdsKeepsItsHierarchy,
             };
 
             int failed = 0;
@@ -2153,6 +2156,78 @@ namespace WarmupScpSelector.Tests
             return Math.Abs(point.x - center.x) <= size.x / 2f &&
                 Math.Abs(point.y - center.y) <= size.y / 2f &&
                 Math.Abs(point.z - center.z) <= size.z / 2f;
+        }
+
+        /// <summary>
+        /// A schematic saved by the in-game map editor can carry NEGATIVE ObjectIds - ProjectMER writes
+        /// Unity's GetInstanceID(), and a whole file of those came back negative (DT (2).json: -18862..-1678).
+        /// The reader used to treat "negative" as "absent", which unparented all 574 child blocks; an
+        /// unparented child spawns its LOCAL offset at the station origin, so every model in the file piled
+        /// up in the middle of the hub. Ids are opaque: only a MISSING id means no id.
+        /// </summary>
+        private static void AuthoredSchematicWithNegativeObjectIdsKeepsItsHierarchy()
+        {
+            const string json = @"{
+              ""RootObjectId"": -1644,
+              ""Blocks"": [
+                { ""Name"": ""head"", ""ObjectId"": -7378, ""ParentId"": -1644, ""BlockType"": 1,
+                  ""Position"": { ""x"": -12.97, ""y"": -0.04, ""z"": -7.45 },
+                  ""Rotation"": { ""x"": 0, ""y"": 90, ""z"": 0 },
+                  ""Scale"": { ""x"": 0.88, ""y"": 0.88, ""z"": 0.88 } },
+                { ""Name"": ""head_skull"", ""ObjectId"": -7398, ""ParentId"": -7378, ""BlockType"": 1,
+                  ""Position"": { ""x"": 0.01, ""y"": 1.61, ""z"": -0.02 },
+                  ""Rotation"": { ""x"": 0, ""y"": 0, ""z"": 0 },
+                  ""Scale"": { ""x"": 0.38, ""y"": 0.26, ""z"": 0.35 } },
+                { ""Name"": ""deck"", ""ParentId"": -1644, ""BlockType"": 1,
+                  ""Position"": { ""x"": 1, ""y"": 2, ""z"": 3 },
+                  ""Rotation"": { ""x"": 0, ""y"": 0, ""z"": 0 },
+                  ""Scale"": { ""x"": 1, ""y"": 1, ""z"": 1 } }
+              ]
+            }";
+
+            string path = Path.Combine(Path.GetTempPath(), "warmup_negative_ids_" + Guid.NewGuid().ToString("N") + ".json");
+            try
+            {
+                File.WriteAllText(path, json);
+                StationAsset? asset = StationAsset.TryLoad(path);
+                if (asset == null)
+                {
+                    throw new Exception("A schematic with negative ObjectIds failed to load at all.");
+                }
+
+                StationAssetBlock parent = asset.Blocks.First(b => b.Name == "head");
+                StationAssetBlock child = asset.Blocks.First(b => b.Name == "head_skull");
+                StationAssetBlock rootLevel = asset.Blocks.First(b => b.Name == "deck");
+
+                AssertEqual(true, parent.HasObjectId, "a negative ObjectId is still an id");
+                AssertEqual(false, rootLevel.HasObjectId, "a block with no ObjectId key has no id");
+
+                // The child must resolve THROUGH its parent, not be treated as root-level.
+                AssertVectorNear(new Vector3(-12.96f, 1.57f, -7.47f), child.ApproximateRootPosition, 0.01f,
+                    "child of a negative-id parent resolves through the hierarchy");
+                AssertVectorNear(new Vector3(-12.97f, -0.04f, -7.45f), parent.ApproximateRootPosition, 0.01f,
+                    "parent stays where it was authored");
+                AssertVectorNear(new Vector3(1f, 2f, 3f), rootLevel.ApproximateRootPosition, 0.01f,
+                    "a root-level block is unaffected");
+
+                // The failure this guards against: the child collapsing onto its own local offset, which is
+                // what put every authored model in the middle of the hub.
+                if (child.ApproximateRootPosition.magnitude < 1f)
+                {
+                    throw new Exception("Child block collapsed to the station origin.");
+                }
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch (IOException)
+                {
+                    // A leftover temp file must never fail the suite.
+                }
+            }
         }
 
         private static void AssertNoCjk(string text, string label)

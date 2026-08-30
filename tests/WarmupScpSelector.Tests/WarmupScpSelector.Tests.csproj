@@ -51,11 +51,15 @@
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\WarmupHallLayout.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeLayout.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeMarkerAlignment.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Models\MerModelLoader.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Export\StationSchematic.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Import\StationAsset.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp" HintPath="$(ServerManagedPath)\Assembly-CSharp.dll" Private="true" />
     <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ServerManagedPath)\Assembly-CSharp-firstpass.dll" Private="true" />
+    <Reference Include="LabApi" HintPath="$(ServerManagedPath)\LabApi.dll" Private="true" />
     <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="true" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="true" />
   </ItemGroup>

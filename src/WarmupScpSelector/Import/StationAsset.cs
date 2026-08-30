@@ -12,11 +12,23 @@ namespace WarmupScpSelector.Import;
 /// <summary>One block read back from an authored ProjectMER schematic.</summary>
 internal sealed class StationAssetBlock
 {
+    /// <summary>
+    /// "This block carries no id". It cannot be a small negative number: ProjectMER writes ObjectId from
+    /// Unity's <c>GetInstanceID()</c>, and a whole file's worth of those can be NEGATIVE. Treating
+    /// negative as absent - which this reader used to do - silently unparents every child in such a file,
+    /// and an unparented child spawns its LOCAL offset at the station origin, piling every model into the
+    /// middle of the hub. Seen for real: DT (2).json, ids -18862..-1678.
+    /// </summary>
+    public const int NoId = int.MinValue;
+
     public string Name { get; set; } = string.Empty;
 
-    public int ObjectId { get; set; } = -1;
+    public int ObjectId { get; set; } = NoId;
 
-    public int ParentId { get; set; } = -1;
+    public int ParentId { get; set; } = NoId;
+
+    /// <summary>Whether this block can be named as a parent by another block.</summary>
+    public bool HasObjectId => ObjectId != NoId;
 
     public SchematicBlockType BlockType { get; set; } = SchematicBlockType.Primitive;
 
@@ -147,8 +159,8 @@ internal sealed class StationAsset
         StationAssetBlock block = new()
         {
             Name = raw.TryGetValue("Name", out object? name) && name is string text ? text : string.Empty,
-            ObjectId = Int(raw, "ObjectId", -1),
-            ParentId = Int(raw, "ParentId", -1),
+            ObjectId = Int(raw, "ObjectId", StationAssetBlock.NoId),
+            ParentId = Int(raw, "ParentId", StationAssetBlock.NoId),
             BlockType = (SchematicBlockType)Int(raw, "BlockType", (int)SchematicBlockType.Primitive),
             Position = Vector(raw, "Position", Vector3.zero),
             Rotation = Vector(raw, "Rotation", Vector3.zero),
@@ -176,7 +188,7 @@ internal sealed class StationAsset
         Dictionary<int, StationAssetBlock> byId = new();
         foreach (StationAssetBlock block in _blocks)
         {
-            if (block.ObjectId >= 0)
+            if (block.HasObjectId)
             {
                 byId[block.ObjectId] = block;
             }
