@@ -136,6 +136,21 @@
 - `Text/WarmupText.cs` — bilingual original draft hint/countdown strings (plus a retained, unused legacy collapsed-strip builder); `Text/AimRangeText.cs`
   — pure `AimRangeViewState` snapshot + the range hero card / footer / flash builders (one language per call);
   `Text/ActivityGlyphs.cs` — signature glyphs (`━ ╌ │ ◆ ◇ ▲ ▼`) with ASCII fallbacks (glyph reality gate; preview in `tools/preview/banner.html`).
+- `Export/` — ProjectMER schematic export so the room can be handed to someone else and edited in the
+  in-game map editor. `StationSchematic` is the format writer (verified against the vendored ProjectMER
+  source, NOT inferred from a sample: blocks are a flat list linked by `ParentId`, transforms are LOCAL
+  to the parent, colours are 8-char `RRGGBBAA` so alpha survives, and a text block's `DisplaySize` is
+  multiplied by 20 on load so it is stored divided by 20). `StationSchematicExporter` reads the LIVE
+  world rather than re-describing geometry from the layout - a second description would drift from the
+  builders invisibly. It sorts by hierarchy depth so a parent is always written before its children,
+  which is what preserves the logo's shear (a flattened child loses it and the emblem comes back subtly
+  wrong). Non-geometry - spawn point, hatches, firing line, parkour landings, coins, workstations - is
+  emitted as `marker_*` empties. Triggered by the `warmupexport` RA command or `Config.ExportSchematicName`.
+  A checked-in export lives in `generated/schematics/warmup_station/`.
+- **Merging an edited schematic back is NOT implemented.** The export is deliberately round-trip-ready
+  (stable names, markers for every anchor, station-local coordinates), but nothing reads it yet. The open
+  design choice is whether an authored file should REPLACE the generated station (asset-driven, anchors
+  bound from markers) or only inform the layout constants; do not pick one silently.
 - `generated/models/*.mer.json` — embedded SCP models, server logo, and retained legacy Aim rack/moving-target
   assets (no longer spawned by the three-lane runtime; WithCulture=false + LogicalName in the csproj).
 - `tools/` — Python model pipeline: `scp_builder.py` (Builder API), `build_scp_*_asset.py` (per-SCP), `render_model_preview.py` (offline renderer, including parented/sheared logo quads; `--exposure N` brightens dark room previews to approximate in-scene point lights), `build_room_preview.py` (**STALE** — still emits the pre-station single hall; not updated for the station rework). `tools/preview/banner.html` previews the welcome line + status-panel TMP markup in a browser (serve over localhost; `file://` is blocked).

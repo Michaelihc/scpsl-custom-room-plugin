@@ -25,6 +25,9 @@ public sealed class Config
     [Description("Early-round SCP disconnect replacement and optional .human opt-out settings. This system is independent of the waiting-for-players draft.")]
     public ScpReplacementConfig ScpReplacement { get; set; } = new();
 
+    [Description("Write the standing station to a ProjectMER schematic every time it is built, under that name. Empty (default) disables it. Use this to hand a fresh snapshot to someone editing the room in the in-game map editor; the same export is available on demand via the warmupexport RA command. Written to ProjectMER's Schematics folder when that plugin is installed, otherwise this plugin's own config folder.")]
+    public string ExportSchematicName { get; set; } = string.Empty;
+
     [Description("Player-facing language: \"cn\" for Simplified Chinese (default), \"en\" for English.")]
     public string Language { get; set; } = "cn";
 

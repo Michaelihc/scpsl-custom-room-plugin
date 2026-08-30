@@ -61,6 +61,9 @@ namespace WarmupScpSelector.Activities.Parkour
 
         public bool IsRunning => _running;
 
+        /// <summary>Live generated route while the lane runs; null otherwise. Used by the schematic export.</summary>
+        internal ParkourLayout? Layout => _running ? _world.Layout : null;
+
         private ParkourActivityConfig Config => _plugin.Config.Activities?.Parkour ?? new ParkourActivityConfig();
 
         private bool UseChinese => string.Equals(_plugin.Config.Language, "cn", StringComparison.OrdinalIgnoreCase);

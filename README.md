@@ -198,6 +198,41 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   stands in the back rank and pushes the remainder onto the side walls; the gallery holds ten in total.
 - `SurfaceClearance` and `RoomOrigin` — where the station floats. The origin is the hub's deck centre.
 
+### Handing the room to someone else
+
+The station can be exported as a **ProjectMER schematic** so an artist or mapper can open it in the
+in-game map editor, rearrange it, and hand the file back.
+
+```text
+warmupexport                 # RA / server console, during waiting-for-players
+warmupexport my_layout       # or under a chosen name
+```
+
+Or set `ExportSchematicName` in the config to write a fresh snapshot every time the station is built.
+The file lands in ProjectMER's own `Schematics/<name>/<name>.json` when that plugin is installed on the
+port (so it is immediately loadable with `mp spawn <name>`), otherwise in this plugin's config folder.
+A checked-in copy of the current room lives at `generated/schematics/warmup_station/`.
+
+Avoid `-` in the name: ProjectMER's schematic lister filters those out.
+
+What the export contains, and why:
+
+- **Everything actually spawned** — deck, bulkheads, overhead, hatch frames, the SCP models, the brand
+  logo, the parkour landings, the range furniture, lights, and text. It reads the live world rather than
+  re-describing the geometry from the layout code, because a second description would drift from the
+  builders and the drift would only surface when someone spawned the export and found it different.
+- **The logo's parenting.** Its ~200 quads get their shear from a non-uniformly scaled invisible parent
+  times a rotated child. Those are exported with `ParentId` and local transforms; flattened to world
+  space the emblem comes back subtly wrong rather than obviously broken.
+- **`marker_*` anchors** for everything that is not geometry: the spawn point, each compartment centre,
+  each hatch, the firing line and gun positions, and every parkour landing. Coins and native
+  workstations are geometry-less too and appear as markers.
+- Coordinates are **station-local**, so the file does not bake in the height the station happened to
+  float at.
+
+Merging an edited file back is not automatic yet — see the note in `AGENTS.md`. Move the `marker_*`
+blocks deliberately when you move the things they describe; they are the contract the merge will read.
+
 ### Models
 
 Each SCP is a stylized primitive model authored offline as `generated/models/scp-*.mer.json` and
@@ -436,6 +471,34 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   `CollapsedStatusY` 仅用于配置兼容，不再渲染。
 - `Activities.Aim.HudX`——训练侧 Aim HUD 通道的 HSM 中心 X（默认 `-1077`）。选择侧只显示原始居中的 SCP
   选择面板；越过地面分界线后 SCP 面板完全隐藏，只显示位于原生物品栏列表与物品转盘之间的 Aim HUD。
+
+### 把房间交给其他人编辑
+
+空间站可以导出为 **ProjectMER 图纸**，方便美术或地图作者在游戏内编辑器中打开、调整后再交回。
+
+```text
+warmupexport                 # 等待玩家阶段，在 RA / 服务器控制台执行
+warmupexport my_layout       # 或指定名称
+```
+
+也可以在配置里设置 `ExportSchematicName`，让每次搭建空间站时自动导出一份快照。若该端口安装了
+ProjectMER，文件会写入其 `Schematics/<name>/<name>.json`（可直接 `mp spawn <name>`）；否则写入本插件的
+配置目录。仓库内已附带一份当前房间：`generated/schematics/warmup_station/`。
+
+名称请勿使用 `-`：ProjectMER 的图纸列表会过滤掉带 `-` 的名称。
+
+导出内容及原因：
+
+- **实际生成的全部对象**——地板、舱壁、天花板、舱门框、SCP 模型、品牌 Logo、跑酷落点、靶场设施、灯光和文字。
+  它读取的是运行中的世界，而不是照着布局代码重新描述一遍；后者迟早会与实际构建产生偏差，而且只有等到有人
+  生成导出文件、发现它和游戏里不一样时才会暴露。
+- **Logo 的父子结构。** 它约 200 个面片的倾斜来自"非等比缩放的隐形父物体 × 旋转的子物体"。导出时保留
+  `ParentId` 和局部坐标；若压平为世界坐标，Logo 会变得略微错误而不是明显损坏。
+- **`marker_*` 锚点**——所有非几何信息：出生点、各舱室中心、各舱门、射击线与枪位、每个跑酷落点。硬币和原生
+  改装台同样没有几何体，也以锚点形式导出。
+- 坐标为**空间站局部坐标**，不会把空间站当时悬浮的高度写死进文件。
+
+目前尚不支持自动合并回来，详见 `AGENTS.md`。移动某个对象时请一并移动对应的 `marker_*`，合并时会以它们为准。
 
 ### 测试
 

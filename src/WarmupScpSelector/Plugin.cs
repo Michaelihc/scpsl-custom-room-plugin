@@ -36,6 +36,9 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
     /// </summary>
     public SelectorRoom? WarmupRoom => _controller?.Room;
 
+    /// <summary>Warmup orchestrator, for in-assembly tooling such as the schematic export command.</summary>
+    internal SelectorController? Controller => _controller;
+
     public override string Name => "WarmupScpSelector";
 
     public override string Description => "Warmup SCP draft plus early-round replacement for healthy SCP disconnects.";

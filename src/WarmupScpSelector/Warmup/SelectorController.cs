@@ -105,6 +105,12 @@ internal sealed class SelectorController
     /// <summary>The station built for the current warmup. Null before it is built or after teardown.</summary>
     internal SelectorRoom Room => _room;
 
+    /// <summary>Live Aim Bay layout while that lane runs; null otherwise.</summary>
+    internal AimRangeLayout? AimLayout => _aimLane.Layout;
+
+    /// <summary>Live Pulse Line route while that lane runs; null otherwise.</summary>
+    internal Activities.Parkour.ParkourLayout? ParkourLayout => _parkourLane.Layout;
+
     private bool UseChinese => string.Equals(Config.Language, "cn", StringComparison.OrdinalIgnoreCase);
 
     // ---- Server lifecycle ------------------------------------------------------------------------
@@ -134,6 +140,7 @@ internal sealed class SelectorController
 
             _active = true;
             PrepareActivities();
+            ExportSchematicIfRequested();
             _music.Start(_room.SpawnPosition);
 
             foreach (Player player in Participants().ToList())
@@ -652,6 +659,39 @@ internal sealed class SelectorController
             ParkourJumpModel.FallbackJumpSpeed,
             ParkourJumpModel.FallbackWalkSpeed,
             ParkourJumpModel.FallbackSprintSpeed);
+    }
+
+    /// <summary>
+    /// Optional snapshot of the station as a ProjectMER schematic, taken after the activity lanes have
+    /// built so their geometry and anchors are included. Never allowed to affect the warmup: a failed
+    /// export is logged and the round continues.
+    /// </summary>
+    private void ExportSchematicIfRequested()
+    {
+        string name = Config.ExportSchematicName?.Trim() ?? string.Empty;
+        if (name.Length == 0 || _room.Hall == null)
+        {
+            return;
+        }
+
+        try
+        {
+            string directory = Export.ExportStationCommand.ResolveSchematicsDirectory(_plugin);
+            if (Export.StationSchematicExporter.TryExport(
+                    _room.Hall, ParkourLayout, AimLayout, name, directory,
+                    out Export.StationExportResult result, out string error))
+            {
+                Logger.Info($"[WarmupScpSelector] Exported station schematic: {result} -> {result.Path}");
+            }
+            else
+            {
+                Logger.Warn($"[WarmupScpSelector] Station schematic export failed: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[WarmupScpSelector] Station schematic export failed: {ex.Message}");
+        }
     }
 
     // Round-start hazard teardown. Wrapped so it can never throw out of the core OnBeforeVanillaRoleAssignment
