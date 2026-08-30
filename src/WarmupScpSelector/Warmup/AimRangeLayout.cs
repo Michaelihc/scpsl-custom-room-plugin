@@ -144,12 +144,12 @@ namespace WarmupScpSelector.Warmup
             float pickupY = ShootingCounterHeight + 0.28f;
             ShelfAnchors = new[]
             {
-                new AimShelfAnchor(0, Range(-7.6f, pickupY, 0f), RangeRotation),
-                new AimShelfAnchor(1, Range(-4.6f, pickupY, 0f), RangeRotation),
-                new AimShelfAnchor(2, Range(-1.6f, pickupY, 0f), RangeRotation),
-                new AimShelfAnchor(3, Range(1.6f, pickupY, 0f), RangeRotation),
-                new AimShelfAnchor(4, Range(4.6f, pickupY, 0f), RangeRotation),
-                new AimShelfAnchor(5, Range(7.6f, pickupY, 0f), RangeRotation),
+                new AimShelfAnchor(0, Range(-7.6f, pickupY, 0f), DownrangeFacing),
+                new AimShelfAnchor(1, Range(-4.6f, pickupY, 0f), DownrangeFacing),
+                new AimShelfAnchor(2, Range(-1.6f, pickupY, 0f), DownrangeFacing),
+                new AimShelfAnchor(3, Range(1.6f, pickupY, 0f), DownrangeFacing),
+                new AimShelfAnchor(4, Range(4.6f, pickupY, 0f), DownrangeFacing),
+                new AimShelfAnchor(5, Range(7.6f, pickupY, 0f), DownrangeFacing),
             };
 
             // Two native attachment workstations against the long side walls, facing into the bay.
@@ -202,6 +202,21 @@ namespace WarmupScpSelector.Warmup
         /// and local +X (lateral) becomes world +Z.
         /// </summary>
         public static Quaternion RangeRotation => MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, -90f, 0f));
+
+        /// <summary>
+        /// Rotation for anything downrange that must FACE BACK AT THE SHOOTER.
+        ///
+        /// A <c>ShootingTargetToy</c>'s visible face is its local -X. In the old -Z-downrange range the
+        /// authored value was Euler(0, 90, 0), which points local -X at world +Z, back up the range. The
+        /// bay is that same range turned by <see cref="RangeRotation"/>, so the correct value here is the
+        /// COMPOSITION of the two - not the raw turn.
+        ///
+        /// Passing <see cref="RangeRotation"/> on its own leaves every sliding target 90 degrees off,
+        /// edge-on to the shooter. That is exactly what shipped, so this is expressed as the composition
+        /// rather than as a baked constant: if the range is ever turned again, the facing follows.
+        /// </summary>
+        public static Quaternion DownrangeFacing =>
+            RangeRotation * MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 90f, 0f));
 
         public WarmupHallLayout Hall { get; }
 
@@ -293,7 +308,7 @@ namespace WarmupScpSelector.Warmup
                 slotId,
                 center + new Vector3(0f, 0f, -halfWidth),
                 center + new Vector3(0f, 0f, halfWidth),
-                RangeRotation,
+                DownrangeFacing,
                 Vector3.one,
                 minimumSpeed,
                 maximumSpeed);

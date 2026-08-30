@@ -80,6 +80,8 @@ namespace WarmupScpSelector.Tests
                 RangeBotRegistryUsesLiveIdentityIndexes,
                 ParticipantIdentityRulesRejectNonHumans,
                 MerWorldTransformComposesOneLevelParent,
+                WarmupHandsBackEveryParticipantWhateverRoleTheyHold,
+                DownrangeTargetsFaceTheShooter,
                 EveryCompartmentIsReachableFromTheSpawnPoint,
                 StationCompartmentsTileWithoutOverlapOrGap,
                 StationWallPanelsSealEveryCompartmentFace,
@@ -1181,6 +1183,66 @@ namespace WarmupScpSelector.Tests
             AssertEqual(true, MerWorldTransformComposer.RotationAngleDegrees(
                 MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 180f, 0f)), child.Rotation) < 0.01f,
                 "child world rotation includes parent");
+        }
+
+        private static void WarmupHandsBackEveryParticipantWhateverRoleTheyHold()
+        {
+            // RoleAssigner.CheckPlayer returns false for anyone alive, so a participant left holding ANY
+            // live role is skipped by vanilla and keeps it. The hand-back used to require Tutorial, which
+            // let an RA-assigned SCP survive the handoff and spawn on top of vanilla's whole SCP multiset.
+            foreach (RoleTypeId live in new[]
+            {
+                RoleTypeId.Tutorial, RoleTypeId.Scp3114, RoleTypeId.Scp049, RoleTypeId.Scp173,
+                RoleTypeId.ClassD, RoleTypeId.NtfCaptain, RoleTypeId.Spectator, RoleTypeId.Overwatch,
+            })
+            {
+                AssertEqual(true, WarmupHandoffPolicy.ShouldHandBack(true, live),
+                    $"a participant holding {live} is handed back");
+            }
+
+            // Already handed back: nothing to do.
+            AssertEqual(false, WarmupHandoffPolicy.ShouldHandBack(true, RoleTypeId.None),
+                "a participant already at None is left alone");
+
+            // Ownership still gates it: players this selector never moved in stay untouched, whatever
+            // role they hold, so an admin or another plugin managing someone is not clobbered.
+            foreach (RoleTypeId role in new[] { RoleTypeId.Tutorial, RoleTypeId.Scp3114, RoleTypeId.None })
+            {
+                AssertEqual(false, WarmupHandoffPolicy.ShouldHandBack(false, role),
+                    $"a non-participant holding {role} is not touched");
+            }
+
+            // Spectator is NOT the hand-back target: CheckPlayer excludes a spectator that is not ready
+            // to respawn, so parking players there can drop them from assignment entirely.
+            AssertEqual(RoleTypeId.None, WarmupHandoffPolicy.HandoffRole, "participants are handed back as None");
+            AssertEqual(true, WarmupHandoffPolicy.HandBackSucceeded(RoleTypeId.None), "None means the hand-back landed");
+            AssertEqual(false, WarmupHandoffPolicy.HandBackSucceeded(RoleTypeId.Scp3114),
+                "a blocked hand-back is reported, not assumed successful");
+        }
+
+        private static void DownrangeTargetsFaceTheShooter()
+        {
+            WarmupHallLayout hall = new WarmupHallLayout(Vector3.zero);
+            AimRangeLayout layout = new AimRangeLayout(hall);
+
+            // A ShootingTargetToy's visible face is its local -X. Downrange of the counter, that face has
+            // to point back upstream at the shooter, i.e. world -X. Passing the bare frame turn instead of
+            // the composition left every target 90 degrees off, edge-on to the firing line.
+            Vector3 faced = AimRangeLayout.DownrangeFacing * new Vector3(-1f, 0f, 0f);
+            AssertEqual(true, Vector3.Dot(faced, new Vector3(-1f, 0f, 0f)) > 0.999f,
+                $"target face points back upstream at the shooter (got {faced.x:0.##},{faced.y:0.##},{faced.z:0.##})");
+
+            // And it must NOT be the raw range turn, which is the specific bug that shipped.
+            Vector3 rawTurned = AimRangeLayout.RangeRotation * new Vector3(-1f, 0f, 0f);
+            AssertEqual(true, Vector3.Dot(rawTurned, new Vector3(-1f, 0f, 0f)) < 0.5f,
+                "the raw range turn is a different rotation from the downrange facing");
+
+            foreach (SlidingTargetTrackDefinition track in layout.SlidingTargetTracks)
+            {
+                Vector3 trackFace = track.Rotation * new Vector3(-1f, 0f, 0f);
+                AssertEqual(true, Vector3.Dot(trackFace, new Vector3(-1f, 0f, 0f)) > 0.999f,
+                    $"sliding track {track.SlotId} faces the shooter");
+            }
         }
 
         private static void EveryCompartmentIsReachableFromTheSpawnPoint()

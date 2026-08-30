@@ -1052,15 +1052,25 @@ internal sealed class SelectorController
             {
                 try
                 {
-                    if (player != null && _participantState.IsMovedIn(Key(player)) && player.Role == RoleTypeId.Tutorial)
+                    // Hand back every player this selector moved in, WHATEVER role they now hold - not
+                    // only the ones still Tutorial. RoleAssigner.CheckPlayer returns false for anyone
+                    // alive, so a participant an admin RA-set to an SCP mid-lobby would otherwise be
+                    // skipped here and again by vanilla, and would carry that role into the round on top
+                    // of the multiset vanilla assigns to everyone else. See WarmupHandoffPolicy.
+                    if (player == null || !WarmupHandoffPolicy.ShouldHandBack(_participantState.IsMovedIn(Key(player)), player.Role))
                     {
-                        player.SetRole(RoleTypeId.None, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+                        continue;
+                    }
 
-                        // Detect a cancelled/no-op role change (another plugin can block it without throwing).
-                        if (player.Role == RoleTypeId.Tutorial)
-                        {
-                            Logger.Warn("[WarmupScpSelector] A warmup player could not be handed back to vanilla (role change blocked); they may be skipped by role assignment.");
-                        }
+                    RoleTypeId before = player.Role;
+                    player.SetRole(WarmupHandoffPolicy.HandoffRole, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+
+                    // Detect a cancelled/no-op role change (another plugin can block it without throwing).
+                    if (!WarmupHandoffPolicy.HandBackSucceeded(player.Role))
+                    {
+                        Logger.Warn(
+                            $"[WarmupScpSelector] A warmup player could not be handed back to vanilla (role change blocked, still {player.Role} from {before}); " +
+                            "they will be skipped by role assignment and keep that role.");
                     }
                 }
                 catch (Exception ex)

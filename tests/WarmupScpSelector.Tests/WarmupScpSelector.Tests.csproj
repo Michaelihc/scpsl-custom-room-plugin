@@ -47,6 +47,7 @@
     <Compile Include="..\..\src\WarmupScpSelector\Text\ParkourText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\ParticipantIdentity.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Models\MerWorldTransform.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Warmup\WarmupHandoffPolicy.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\WarmupHallLayout.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeLayout.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeMarkerAlignment.cs" />
