@@ -22,13 +22,13 @@ internal readonly struct AuthoredStationResult
 
     public int Spawned { get; }
 
-    /// <summary>Blocks inside the parkour shaft, deliberately not spawned.</summary>
+    /// <summary>Blocks inside a code-owned compartment (parkour shaft, aim bay), deliberately not spawned.</summary>
     public int SkippedShaft { get; }
 
     public int Unsupported { get; }
 
     public override string ToString() =>
-        $"{Spawned} blocks spawned, {SkippedShaft} shaft blocks skipped, {Unsupported} unsupported";
+        $"{Spawned} blocks spawned, {SkippedShaft} code-owned blocks skipped, {Unsupported} unsupported";
 }
 
 /// <summary>
@@ -36,12 +36,12 @@ internal readonly struct AuthoredStationResult
 ///
 /// Two rules make this safe, and both exist because of what a real edited file turned out to contain:
 ///
-/// 1. THE PARKOUR SHAFT IS NEVER SPAWNED FROM THE ASSET. The Pulse Line's gates are generated in code
-///    from the jump model, so its landings and its gates are two views of one thing. An editor that
-///    nudges a landing moves the geometry but not the gate, and the course silently breaks: gates hang
-///    in mid-air, and fall-recovery teleports to a position with no landing under it. The shaft is
-///    therefore left to the generator unless the author kept the marker_parkour_landing_* anchors, which
-///    is the supported way to hand a route back.
+/// 1. GAMEPLAY-BOUND COMPARTMENTS ARE NEVER SPAWNED FROM THE ASSET - see <see cref="IsCodeOwned"/>.
+///    The parkour shaft's landings and its generated gates are two views of one route, so an editor that
+///    nudges a landing moves the geometry but not the gate and the course silently breaks. The aim bay's
+///    dividers and cover are what the bots path around, and the lane spawns that furniture itself, so
+///    taking it from the asset too would spawn every piece twice. Both are left to code; the supported
+///    way to hand a route back is to keep the marker_* anchors.
 /// 2. PICKUPS ARE NEVER SPAWNED FROM THE ASSET. Selection coins and counter guns carry runtime identity
 ///    (serial to SCP role, owned-weapon bookkeeping); a static copy would look right and do nothing.
 ///    Code spawns them at the anchors as usual.
@@ -63,7 +63,6 @@ internal sealed class AuthoredStationSpawner
         Despawn();
         try
         {
-            StationZone shaft = hall.ParkourShaft;
             Dictionary<int, Transform> parents = new();
             int spawned = 0, skipped = 0, unsupported = 0;
 
@@ -71,10 +70,7 @@ internal sealed class AuthoredStationSpawner
             // shear only exists while that hierarchy does.
             foreach (StationAssetBlock block in Ordered(asset))
             {
-                Vector3 local = block.ApproximateRootPosition;
-                bool inShaft = local.z >= shaft.MinZ && local.z <= shaft.MaxZ &&
-                    local.x >= shaft.MinX - 1f && local.x <= shaft.MaxX + 1f;
-                if (inShaft)
+                if (IsCodeOwned(hall, block.ApproximateRootPosition))
                 {
                     skipped++;
                     continue;
@@ -135,6 +131,27 @@ internal sealed class AuthoredStationSpawner
         }
 
         _toys.Clear();
+    }
+
+    /// <summary>
+    /// Compartments whose geometry is bound to gameplay and is therefore always built by code, never
+    /// taken from an asset:
+    ///
+    /// - the PARKOUR SHAFT, because its landings and its generated gates are two views of one route;
+    /// - the AIM BAY, because its lane dividers and cover are what the bots path around and shoot from,
+    ///   and because the lane spawns that furniture itself - taking it from the asset as well would
+    ///   simply spawn every piece twice.
+    ///
+    /// A point is judged by its position relative to the compartment, with a little slack so wall-thick
+    /// blocks sitting exactly on a boundary go the same way as the compartment they belong to.
+    /// </summary>
+    public static bool IsCodeOwned(WarmupHallLayout hall, Vector3 local)
+    {
+        return Inside(hall.ParkourShaft, local) || Inside(hall.AimBay, local);
+
+        static bool Inside(StationZone zone, Vector3 p) =>
+            p.x >= zone.MinX - 1f && p.x <= zone.MaxX + 1f &&
+            p.z >= zone.MinZ - 1f && p.z <= zone.MaxZ + 1f;
     }
 
     /// <summary>Root-most first, so a parent transform always exists before its children ask for it.</summary>

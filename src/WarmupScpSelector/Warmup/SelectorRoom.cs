@@ -146,12 +146,15 @@ public sealed class SelectorRoom
         }
         else
         {
-            // The asset supplies the shell, decor, and exhibits everywhere EXCEPT the parkour shaft, whose
-            // authored blocks are skipped so its landings cannot drift from its generated gates. That
-            // compartment therefore has to be built here, shell included - skipping the authored blocks
-            // without rebuilding it left the shaft with no floor and dropped players out of the station.
-            shell.BuildZone(hall.ParkourShaft);
-            shell.BuildHatchesFor(hall.ParkourShaft);
+            // The asset supplies the shell, decor, and exhibits everywhere EXCEPT the compartments whose
+            // geometry is bound to gameplay - the parkour shaft and the aim bay. Their authored blocks are
+            // skipped, so those compartments must be built here, shell INCLUDED: skipping them without
+            // rebuilding left the shaft with no floor and dropped players out of the station.
+            foreach (StationZone owned in new[] { hall.ParkourShaft, hall.AimBay })
+            {
+                shell.BuildZone(owned);
+                shell.BuildHatchesFor(owned);
+            }
 
             // Only the gameplay-bound pieces are still spawned by code, at the same anchors, so coins keep
             // their serial-to-role binding.
