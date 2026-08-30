@@ -613,7 +613,7 @@ internal sealed class SelectorController
                 _activities.RegisterLane(_parkourLane);
                 // The shaft is its own compartment, so the route is generated against the station layout
                 // and against the movement constants the running game actually reports.
-                if (_parkourLane.Start(_room.Hall, ResolveJumpModel()) && _room.OpenParkourDoor())
+                if (_parkourLane.Start(_room.Hall, ResolveJumpModel(), _room.AuthoredAsset) && _room.OpenParkourDoor())
                 {
                     _plugin.LogDebug("Pulse Line opened.");
                 }

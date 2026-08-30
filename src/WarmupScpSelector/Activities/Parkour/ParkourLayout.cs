@@ -165,6 +165,67 @@ namespace WarmupScpSelector.Activities.Parkour
             Validate();
         }
 
+        /// <summary>
+        /// Builds the route from landings an author placed, rather than generating one.
+        ///
+        /// The author's difficulty is taken as intent and is NOT re-tuned: the generated course is
+        /// deliberately gentle and a human reported crossing it without sprinting, so a hand-made route
+        /// being harder is the point. Only genuine impossibility is rejected - a hop no jump can reach is
+        /// not "hard", it is a course that cannot be finished.
+        /// </summary>
+        public ParkourLayout(WarmupHallLayout hall, ParkourJumpModel model, IReadOnlyList<ParkourPlatform> authored)
+        {
+            if (hall == null)
+            {
+                throw new ArgumentNullException(nameof(hall));
+            }
+
+            if (!model.IsFinite)
+            {
+                throw new InvalidOperationException("parkour jump model is not usable");
+            }
+
+            if (authored == null || authored.Count < 3)
+            {
+                throw new InvalidOperationException("an authored parkour route needs a start, a finish, and at least one landing");
+            }
+
+            Hall = hall;
+            Model = model;
+            Origin = hall.Origin;
+            IsAuthored = true;
+
+            Bounds interior = hall.InteriorBounds(hall.ParkourShaft);
+            interior.Expand(new Vector3(0f, 1.2f, 0f));
+            ShaftBounds = interior;
+
+            // Nearest the hatch is the start, furthest is the finish, everything between is an ordered gate.
+            StartPlate = authored[0];
+            FinishPlate = authored[authored.Count - 1];
+            for (int i = 1; i < authored.Count - 1; i++)
+            {
+                _platforms.Add(authored[i]);
+            }
+
+            ResetCoinPosition = new Vector3(
+                StartPlate.Center.x + 2.9f,
+                StartPlate.SurfaceY + 0.55f,
+                StartPlate.Center.z);
+
+            ParkourPlatform previous = StartPlate;
+            for (int i = 0; i < _platforms.Count; i++)
+            {
+                _hops.Add(MeasureHop(i, previous, _platforms[i]));
+                previous = _platforms[i];
+            }
+
+            AppendFinishHop();
+            ValidateAuthored();
+        }
+
+        /// <summary>Whether this route came from an authored schematic rather than the generator.</summary>
+        public bool IsAuthored { get; }
+
         public WarmupHallLayout Hall { get; }
 
         public ParkourJumpModel Model { get; }
@@ -468,6 +529,30 @@ namespace WarmupScpSelector.Activities.Parkour
                     throw new InvalidOperationException("parkour landing has insufficient headroom");
                 }
             }
+        }
+
+        /// <summary>
+        /// Rejects only what cannot be played: a hop beyond the jump's reach at full sprint, or one that
+        /// climbs above the apex. Everything else is the author's call, including a course far harder
+        /// than the generator would ever produce.
+        /// </summary>
+        private void ValidateAuthored()
+        {
+            float peak = 0f;
+            foreach (ParkourHop hop in _hops)
+            {
+                float reachable = Model.MaxGap(hop.Rise, Model.SprintSpeed);
+                if (reachable <= 0.001f || hop.Gap > reachable)
+                {
+                    throw new InvalidOperationException(
+                        $"authored parkour hop {hop.Index} cannot be cleared even at a full sprint " +
+                        $"(gap {hop.Gap:0.##}m, rise {hop.Rise:0.##}m, reach {reachable:0.##}m)");
+                }
+
+                peak = Mathf.Max(peak, hop.Difficulty);
+            }
+
+            PeakDifficulty = peak;
         }
 
         private static bool Slab(float origin, float direction, float minimum, float maximum, ref float enter, ref float exit)

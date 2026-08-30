@@ -70,7 +70,7 @@ namespace WarmupScpSelector.Activities.Parkour
 
         private float FlashDuration => Sanitize(_plugin.Config.Activities?.FlashDurationSeconds ?? 0.7f, 0.05f, 10f, 0.7f);
 
-        public bool Start(WarmupHallLayout? hall, ParkourJumpModel model)
+        public bool Start(WarmupHallLayout? hall, ParkourJumpModel model, Import.StationAsset? authored = null)
         {
             StopInternal(clearBests: true);
             if (!Enabled || hall == null)
@@ -80,7 +80,7 @@ namespace WarmupScpSelector.Activities.Parkour
 
             try
             {
-                if (!_world.Build(hall, model, UseChinese) || _world.Layout == null)
+                if (!_world.Build(hall, model, UseChinese, authored) || _world.Layout == null)
                 {
                     return false;
                 }

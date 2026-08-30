@@ -95,6 +95,9 @@ public sealed class SelectorRoom
     /// <summary>Whether this build used an authored schematic instead of the generated geometry.</summary>
     public bool UsesAuthoredStation { get; private set; }
 
+    /// <summary>The authored schematic in use, so lanes can recover their own anchors from it.</summary>
+    internal Import.StationAsset? AuthoredAsset { get; private set; }
+
     /// <summary>Whether the Aim Bay hatch was sealed for this warmup and is waiting to be opened.</summary>
     public bool AimRangeDoorPrepared { get; private set; }
 
@@ -146,15 +149,12 @@ public sealed class SelectorRoom
         }
         else
         {
-            // The asset supplies the shell, decor, and exhibits everywhere EXCEPT the compartments whose
-            // geometry is bound to gameplay - the parkour shaft and the aim bay. Their authored blocks are
-            // skipped, so those compartments must be built here, shell INCLUDED: skipping them without
-            // rebuilding left the shaft with no floor and dropped players out of the station.
-            foreach (StationZone owned in new[] { hall.ParkourShaft, hall.AimBay })
-            {
-                shell.BuildZone(owned);
-                shell.BuildHatchesFor(owned);
-            }
+            // The asset supplies everything except the aim bay, whose furniture the Aim lane spawns
+            // itself. That compartment is built here, shell INCLUDED - skipping a compartment without
+            // rebuilding its shell once left the shaft with no floor and dropped players out entirely.
+            // The parkour shaft DOES come from the asset; the Pulse Line reads its gates off those pads.
+            shell.BuildZone(hall.AimBay);
+            shell.BuildHatchesFor(hall.AimBay);
 
             // Only the gameplay-bound pieces are still spawned by code, at the same anchors, so coins keep
             // their serial-to-role binding.
@@ -296,12 +296,13 @@ public sealed class SelectorRoom
             return false;
         }
 
+        AuthoredAsset = asset;
         Logger.Info($"[WarmupScpSelector] Authored station '{name}': {result} ({asset}).");
         if (result.SkippedShaft > 0)
         {
             Logger.Info(
-                $"[WarmupScpSelector] {result.SkippedShaft} authored blocks inside the parkour shaft were skipped: the Pulse Line " +
-                "generates its own landings so they cannot drift out of sync with its gates.");
+                $"[WarmupScpSelector] {result.SkippedShaft} authored blocks inside the Aim Bay were skipped: that lane spawns its " +
+                "own counter, dividers, and cover, so taking them from the asset too would spawn each piece twice.");
         }
 
         return true;
@@ -494,6 +495,7 @@ public sealed class SelectorRoom
         }
 
         UsesAuthoredStation = false;
+        AuthoredAsset = null;
         _toys.Clear();
         _pickups.Clear();
         CoinRoles.Clear();

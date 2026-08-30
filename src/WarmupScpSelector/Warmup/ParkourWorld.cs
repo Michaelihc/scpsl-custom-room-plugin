@@ -29,29 +29,35 @@ namespace WarmupScpSelector.Warmup
 
         public bool IsSpawned { get; private set; }
 
-        public bool Build(WarmupHallLayout hall, ParkourJumpModel model, bool chinese)
+        public bool Build(WarmupHallLayout hall, ParkourJumpModel model, bool chinese, Import.StationAsset? authored = null)
         {
             Despawn();
             try
             {
-                ParkourLayout layout = new ParkourLayout(hall, model);
+                // An authored schematic already contains the pads, traces, lights and signage - it was
+                // spawned with the rest of the station. Building them again here would double every pad,
+                // so authored mode only recovers the route and adds the reset coin.
+                ParkourLayout layout = BuildLayout(hall, model, authored);
                 Layout = layout;
 
-                AddPad(layout.StartPlate.Center, layout.StartPlate.Size, StationPalette.DeckPanel, StationPalette.Guide);
-                AddPad(layout.FinishPlate.Center, layout.FinishPlate.Size, StationPalette.DeckPanel, StationPalette.Signal);
-
-                Vector3 previous = layout.StartPlate.Center;
-                foreach (ParkourPlatform landing in layout.Platforms)
+                if (!layout.IsAuthored)
                 {
-                    Color lip = landing.GoldCut ? StationPalette.Gold : StationPalette.Cyan;
-                    AddPad(landing.Center, landing.Size, StationPalette.DeckPanel, lip);
-                    AddTrace(previous, landing.Center, lip);
-                    previous = landing.Center;
-                }
+                    AddPad(layout.StartPlate.Center, layout.StartPlate.Size, StationPalette.DeckPanel, StationPalette.Guide);
+                    AddPad(layout.FinishPlate.Center, layout.FinishPlate.Size, StationPalette.DeckPanel, StationPalette.Signal);
 
-                AddTrace(previous, layout.FinishPlate.Center, StationPalette.Signal);
-                AddShaftRunningLights(hall, layout);
-                AddSignage(layout, chinese);
+                    Vector3 previous = layout.StartPlate.Center;
+                    foreach (ParkourPlatform landing in layout.Platforms)
+                    {
+                        Color lip = landing.GoldCut ? StationPalette.Gold : StationPalette.Cyan;
+                        AddPad(landing.Center, landing.Size, StationPalette.DeckPanel, lip);
+                        AddTrace(previous, landing.Center, lip);
+                        previous = landing.Center;
+                    }
+
+                    AddTrace(previous, layout.FinishPlate.Center, StationPalette.Signal);
+                    AddShaftRunningLights(hall, layout);
+                    AddSignage(layout, chinese);
+                }
 
                 _resetCoin = Pickup.Create(
                     ItemType.Coin,
@@ -80,6 +86,40 @@ namespace WarmupScpSelector.Warmup
                 Despawn();
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Prefers the author's route when the asset describes one, and says so. Falls back to generating
+        /// if the file has no usable route or the one it has cannot be cleared at all.
+        /// </summary>
+        private static ParkourLayout BuildLayout(WarmupHallLayout hall, ParkourJumpModel model, Import.StationAsset? authored)
+        {
+            if (authored != null)
+            {
+                try
+                {
+                    IReadOnlyList<ParkourPlatform> route = Import.AuthoredParkourRoute.Extract(authored, hall);
+                    if (route.Count >= 3)
+                    {
+                        ParkourLayout layout = new ParkourLayout(hall, model, route);
+                        Logger.Info(
+                            $"[WarmupScpSelector] Pulse Line uses the authored route: {layout.Platforms.Count} landings, " +
+                            $"peak difficulty {layout.PeakDifficulty:0.00} of a sprinter's reach.");
+                        return layout;
+                    }
+
+                    Logger.Warn(
+                        $"[WarmupScpSelector] The authored station has no usable parkour route ({route.Count} landings found); " +
+                        "generating one instead.");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warn(
+                        $"[WarmupScpSelector] The authored parkour route was rejected ({ex.Message}); generating one instead.");
+                }
+            }
+
+            return new ParkourLayout(hall, model);
         }
 
         public void Despawn()

@@ -36,12 +36,10 @@ internal readonly struct AuthoredStationResult
 ///
 /// Two rules make this safe, and both exist because of what a real edited file turned out to contain:
 ///
-/// 1. GAMEPLAY-BOUND COMPARTMENTS ARE NEVER SPAWNED FROM THE ASSET - see <see cref="IsCodeOwned"/>.
-///    The parkour shaft's landings and its generated gates are two views of one route, so an editor that
-///    nudges a landing moves the geometry but not the gate and the course silently breaks. The aim bay's
-///    dividers and cover are what the bots path around, and the lane spawns that furniture itself, so
-///    taking it from the asset too would spawn every piece twice. Both are left to code; the supported
-///    way to hand a route back is to keep the marker_* anchors.
+/// 1. THE AIM BAY IS NEVER SPAWNED FROM THE ASSET - see <see cref="IsCodeOwned"/>. Its dividers and
+///    cover are what the bots path around, and the lane spawns that furniture itself, so taking it from
+///    the asset too would spawn every piece twice. The parkour shaft IS spawned from the asset, and the
+///    Pulse Line reads its gates back off those landings so geometry and gates stay one thing.
 /// 2. PICKUPS ARE NEVER SPAWNED FROM THE ASSET. Selection coins and counter guns carry runtime identity
 ///    (serial to SCP role, owned-weapon bookkeeping); a static copy would look right and do nothing.
 ///    Code spawns them at the anchors as usual.
@@ -137,17 +135,20 @@ internal sealed class AuthoredStationSpawner
     /// Compartments whose geometry is bound to gameplay and is therefore always built by code, never
     /// taken from an asset:
     ///
-    /// - the PARKOUR SHAFT, because its landings and its generated gates are two views of one route;
     /// - the AIM BAY, because its lane dividers and cover are what the bots path around and shoot from,
     ///   and because the lane spawns that furniture itself - taking it from the asset as well would
     ///   simply spawn every piece twice.
+    ///
+    /// The parkour shaft is deliberately NOT here. Its authored landings ARE spawned, and the Pulse Line
+    /// recovers its gates from them (AuthoredParkourRoute), so an author's route drives gameplay instead
+    /// of being overridden by the generated one - which a player reported crossing without sprinting.
     ///
     /// A point is judged by its position relative to the compartment, with a little slack so wall-thick
     /// blocks sitting exactly on a boundary go the same way as the compartment they belong to.
     /// </summary>
     public static bool IsCodeOwned(WarmupHallLayout hall, Vector3 local)
     {
-        return Inside(hall.ParkourShaft, local) || Inside(hall.AimBay, local);
+        return Inside(hall.AimBay, local);
 
         static bool Inside(StationZone zone, Vector3 p) =>
             p.x >= zone.MinX - 1f && p.x <= zone.MaxX + 1f &&
