@@ -61,6 +61,7 @@ public sealed class SelectorRoom
     private readonly List<AdminToy> _toys = new();
     private readonly List<Pickup> _pickups = new();
     private readonly List<ScpOption> _offered = new();
+    private readonly Import.AuthoredStationSpawner _authored = new();
     private PrimitiveObjectToy? _aimDoorGate;
     private PrimitiveObjectToy? _parkourDoorGate;
 
@@ -90,6 +91,9 @@ public sealed class SelectorRoom
 
     /// <summary>Station deck centre for the current build.</summary>
     public Vector3 Origin { get; private set; }
+
+    /// <summary>Whether this build used an authored schematic instead of the generated geometry.</summary>
+    public bool UsesAuthoredStation { get; private set; }
 
     /// <summary>Whether the Aim Bay hatch was sealed for this warmup and is waiting to be opened.</summary>
     public bool AimRangeDoorPrepared { get; private set; }
@@ -133,10 +137,27 @@ public sealed class SelectorRoom
         _offered.AddRange(options); // single source of truth for the live status-panel chip row
 
         StationShellBuilder shell = new(hall, _toys, UseChinese);
-        shell.Build();
+        UsesAuthoredStation = TrySpawnAuthoredStation(hall);
+        if (!UsesAuthoredStation)
+        {
+            shell.Build();
+            BuildGallery(hall, shell, options, slots);
+            BuildObservationViewport(hall, shell);
+        }
+        else
+        {
+            // The asset supplies the shell, decor, and exhibits everywhere EXCEPT the parkour shaft, whose
+            // authored blocks are skipped so its landings cannot drift from its generated gates. That
+            // compartment therefore has to be built here, shell included - skipping the authored blocks
+            // without rebuilding it left the shaft with no floor and dropped players out of the station.
+            shell.BuildZone(hall.ParkourShaft);
+            shell.BuildHatchesFor(hall.ParkourShaft);
 
-        BuildGallery(hall, shell, options, slots);
-        BuildObservationViewport(hall, shell);
+            // Only the gameplay-bound pieces are still spawned by code, at the same anchors, so coins keep
+            // their serial-to-role binding.
+            BuildGalleryCoins(slots, options);
+        }
+
         PrepareHatchGates(hall);
 
         IsSpawned = true;
@@ -193,12 +214,26 @@ public sealed class SelectorRoom
 
             float modelTop = SpawnModel(ResolveModelName(option), slot.StandTopCenter, slot.Facing, modelScale);
             AddLabel(new Vector3(slot.StandTopCenter.x, slot.StandTopCenter.y + modelTop + 0.45f, slot.StandTopCenter.z), option.Label);
+        }
 
+        BuildGalleryCoins(slots, options);
+    }
+
+    /// <summary>
+    /// The selection coins. Split out from the exhibits because they are GAMEPLAY, not decor: each coin's
+    /// serial is what maps a pickup to an SCP role. An authored schematic supplies the exhibits but must
+    /// never supply the coins - a static copy would look right and select nothing.
+    /// </summary>
+    private void BuildGalleryCoins(IReadOnlyList<GalleryDisplaySlot> slots, IReadOnlyList<ScpOption> options)
+    {
+        float coinScale = Sanitize(Config.SelectorCoinScale, 1f, 20f, 6f);
+        for (int i = 0; i < options.Count && i < slots.Count; i++)
+        {
             // Big coin floating clearly IN FRONT of the model and frozen, so it cannot fall, roll, or clip
             // into the exhibit the way a resting pickup did.
             Pickup? coin = Pickup.Create(
                 Config.SelectorItem,
-                slot.CoinPosition,
+                slots[i].CoinPosition,
                 Quaternion.Euler(90f, 0f, 0f),
                 Vector3.one * coinScale,
                 networkSpawn: false);
@@ -208,7 +243,7 @@ public sealed class SelectorRoom
             }
 
             _pickups.Add(coin); // track before spawn so a throw mid-setup is still cleaned up by Despawn
-            CoinRoles[coin.Serial] = option.Role;
+            CoinRoles[coin.Serial] = options[i].Role;
             coin.IsLocked = false;
             coin.Spawn();
             try
@@ -223,6 +258,71 @@ public sealed class SelectorRoom
                 Logger.Warn($"[WarmupScpSelector] Could not freeze coin: {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// Spawns an authored schematic in place of the generated geometry when one is configured and found.
+    /// Returns false for every other case - not configured, missing, unreadable, or a failed spawn - so
+    /// the station always falls back to generating itself rather than coming up empty.
+    /// </summary>
+    private bool TrySpawnAuthoredStation(WarmupHallLayout hall)
+    {
+        string name = Config.AuthoredStationAsset?.Trim() ?? string.Empty;
+        if (name.Length == 0)
+        {
+            return false;
+        }
+
+        string? path = ResolveAuthoredAssetPath(name);
+        if (path == null)
+        {
+            Logger.Warn($"[WarmupScpSelector] AuthoredStationAsset '{name}' was not found; generating the station instead.");
+            return false;
+        }
+
+        Import.StationAsset? asset = Import.StationAsset.TryLoad(path);
+        if (asset == null)
+        {
+            Logger.Warn($"[WarmupScpSelector] AuthoredStationAsset '{name}' could not be read; generating the station instead.");
+            return false;
+        }
+
+        if (!_authored.TrySpawn(asset, hall, out Import.AuthoredStationResult result, out string error))
+        {
+            Logger.Warn($"[WarmupScpSelector] AuthoredStationAsset '{name}' failed to spawn ({error}); generating the station instead.");
+            return false;
+        }
+
+        Logger.Info($"[WarmupScpSelector] Authored station '{name}': {result} ({asset}).");
+        if (result.SkippedShaft > 0)
+        {
+            Logger.Info(
+                $"[WarmupScpSelector] {result.SkippedShaft} authored blocks inside the parkour shaft were skipped: the Pulse Line " +
+                "generates its own landings so they cannot drift out of sync with its gates.");
+        }
+
+        return true;
+    }
+
+    /// <summary>Looks in this plugin's own Schematics folder first, then ProjectMER's.</summary>
+    private string? ResolveAuthoredAssetPath(string name)
+    {
+        foreach (string root in Export.ExportStationCommand.SchematicSearchRoots(_plugin))
+        {
+            string candidate = System.IO.Path.Combine(root, name, name + ".json");
+            if (System.IO.File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            string flat = System.IO.Path.Combine(root, name + ".json");
+            if (System.IO.File.Exists(flat))
+            {
+                return flat;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -381,6 +481,16 @@ public sealed class SelectorRoom
             }
         }
 
+        try
+        {
+            _authored.Despawn();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[WarmupScpSelector] Authored station teardown failed: {ex.Message}");
+        }
+
+        UsesAuthoredStation = false;
         _toys.Clear();
         _pickups.Clear();
         CoinRoles.Clear();

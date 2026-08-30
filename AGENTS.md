@@ -147,10 +147,20 @@
   wrong). Non-geometry - spawn point, hatches, firing line, parkour landings, coins, workstations - is
   emitted as `marker_*` empties. Triggered by the `warmupexport` RA command or `Config.ExportSchematicName`.
   A checked-in export lives in `generated/schematics/warmup_station/`.
-- **Merging an edited schematic back is NOT implemented.** The export is deliberately round-trip-ready
-  (stable names, markers for every anchor, station-local coordinates), but nothing reads it yet. The open
-  design choice is whether an authored file should REPLACE the generated station (asset-driven, anchors
-  bound from markers) or only inform the layout constants; do not pick one silently.
+- `Import/` — merge-back. `Config.AuthoredStationAsset` names a schematic that is spawned INSTEAD of the
+  generated shell, decor, and exhibits (looked up in this plugin's `Schematics/` then ProjectMER's). It
+  fails soft: not configured, missing, unreadable, or a failed spawn all fall back to generating.
+  Two things are never taken from an asset, and both are load-bearing:
+  1. **The parkour shaft.** Its landings and its gates are two views of one generated route; an editor
+     that nudges a landing moves the geometry but not the gate, and the course breaks silently. Authored
+     shaft blocks are skipped and the shaft is built entirely by code - shell INCLUDED. Skipping the
+     authored blocks without rebuilding the shell left the shaft with no floor at all and dropped players
+     out of the station; `warmup-station` caught it.
+  2. **Pickups.** Selection coins carry a serial-to-SCP-role binding and counter guns carry owned-weapon
+     bookkeeping. A static copy looks right and does nothing, so code spawns them at the anchors.
+- Keep the exported `marker_*` blocks when editing. They are the anchor contract, and without them an
+  importer has to infer gameplay positions from geometry - a landing detector run over a real edited file
+  picked a ceiling panel as a landing, which would have been a 9.9 m impossible hop.
 - `generated/models/*.mer.json` — embedded SCP models, server logo, and retained legacy Aim rack/moving-target
   assets (no longer spawned by the three-lane runtime; WithCulture=false + LogicalName in the csproj).
 - `tools/` — Python model pipeline: `scp_builder.py` (Builder API), `build_scp_*_asset.py` (per-SCP), `render_model_preview.py` (offline renderer, including parented/sheared logo quads; `--exposure N` brightens dark room previews to approximate in-scene point lights), `build_room_preview.py` (**STALE** — still emits the pre-station single hall; not updated for the station rework). `tools/preview/banner.html` previews the welcome line + status-panel TMP markup in a browser (serve over localhost; `file://` is blocked).

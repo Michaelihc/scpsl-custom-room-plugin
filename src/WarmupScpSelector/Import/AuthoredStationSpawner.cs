@@ -1,0 +1,218 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using LabApi.Features.Wrappers;
+using UnityEngine;
+using WarmupScpSelector.Export;
+using WarmupScpSelector.Warmup;
+using Logger = LabApi.Features.Console.Logger;
+using PrimitiveFlags = AdminToys.PrimitiveFlags;
+
+namespace WarmupScpSelector.Import;
+
+/// <summary>What an authored station spawn actually produced.</summary>
+internal readonly struct AuthoredStationResult
+{
+    public AuthoredStationResult(int spawned, int skippedShaft, int unsupported)
+    {
+        Spawned = spawned;
+        SkippedShaft = skippedShaft;
+        Unsupported = unsupported;
+    }
+
+    public int Spawned { get; }
+
+    /// <summary>Blocks inside the parkour shaft, deliberately not spawned.</summary>
+    public int SkippedShaft { get; }
+
+    public int Unsupported { get; }
+
+    public override string ToString() =>
+        $"{Spawned} blocks spawned, {SkippedShaft} shaft blocks skipped, {Unsupported} unsupported";
+}
+
+/// <summary>
+/// Spawns an authored station schematic in place of the generated static geometry.
+///
+/// Two rules make this safe, and both exist because of what a real edited file turned out to contain:
+///
+/// 1. THE PARKOUR SHAFT IS NEVER SPAWNED FROM THE ASSET. The Pulse Line's gates are generated in code
+///    from the jump model, so its landings and its gates are two views of one thing. An editor that
+///    nudges a landing moves the geometry but not the gate, and the course silently breaks: gates hang
+///    in mid-air, and fall-recovery teleports to a position with no landing under it. The shaft is
+///    therefore left to the generator unless the author kept the marker_parkour_landing_* anchors, which
+///    is the supported way to hand a route back.
+/// 2. PICKUPS ARE NEVER SPAWNED FROM THE ASSET. Selection coins and counter guns carry runtime identity
+///    (serial to SCP role, owned-weapon bookkeeping); a static copy would look right and do nothing.
+///    Code spawns them at the anchors as usual.
+///
+/// Everything else - shell, decor, models, lights, signage - comes from the file, so an artist's work
+/// lands as authored.
+/// </summary>
+internal sealed class AuthoredStationSpawner
+{
+    private readonly List<AdminToy> _toys = new();
+
+    public bool IsSpawned { get; private set; }
+
+    /// <summary>Spawns the asset at the station origin. Returns false and cleans up on any failure.</summary>
+    public bool TrySpawn(StationAsset asset, WarmupHallLayout hall, out AuthoredStationResult result, out string error)
+    {
+        result = default;
+        error = string.Empty;
+        Despawn();
+        try
+        {
+            StationZone shaft = hall.ParkourShaft;
+            Dictionary<int, Transform> parents = new();
+            int spawned = 0, skipped = 0, unsupported = 0;
+
+            // Parents before children: a child's transform is local to its parent, and the brand logo's
+            // shear only exists while that hierarchy does.
+            foreach (StationAssetBlock block in Ordered(asset))
+            {
+                Vector3 local = block.ApproximateRootPosition;
+                bool inShaft = local.z >= shaft.MinZ && local.z <= shaft.MaxZ &&
+                    local.x >= shaft.MinX - 1f && local.x <= shaft.MaxX + 1f;
+                if (inShaft)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                if (block.Name.StartsWith("marker_", StringComparison.OrdinalIgnoreCase) ||
+                    block.BlockType == SchematicBlockType.Pickup)
+                {
+                    continue; // anchors are data, pickups are runtime-owned
+                }
+
+                Transform? parent = block.ParentId != asset.RootObjectId && parents.TryGetValue(block.ParentId, out Transform? found)
+                    ? found
+                    : null;
+
+                AdminToy? toy = Spawn(block, hall, parent, ref unsupported);
+                if (toy == null)
+                {
+                    continue;
+                }
+
+                _toys.Add(toy);
+                spawned++;
+                if (block.ObjectId >= 0)
+                {
+                    parents[block.ObjectId] = toy.Transform;
+                }
+            }
+
+            IsSpawned = true;
+            result = new AuthoredStationResult(spawned, skipped, unsupported);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.GetBaseException().Message;
+            Despawn();
+            return false;
+        }
+    }
+
+    public void Despawn()
+    {
+        IsSpawned = false;
+        for (int i = _toys.Count - 1; i >= 0; i--)
+        {
+            try
+            {
+                if (!_toys[i].IsDestroyed)
+                {
+                    _toys[i].Destroy();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn($"[WarmupScpSelector] Authored station cleanup failed: {ex.Message}");
+            }
+        }
+
+        _toys.Clear();
+    }
+
+    /// <summary>Root-most first, so a parent transform always exists before its children ask for it.</summary>
+    private static IEnumerable<StationAssetBlock> Ordered(StationAsset asset)
+    {
+        Dictionary<int, StationAssetBlock> byId = asset.Blocks
+            .Where(b => b.ObjectId >= 0)
+            .GroupBy(b => b.ObjectId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        int Depth(StationAssetBlock block)
+        {
+            int depth = 0;
+            StationAssetBlock cursor = block;
+            while (cursor.ParentId != asset.RootObjectId && byId.TryGetValue(cursor.ParentId, out StationAssetBlock? parent) && depth < 16)
+            {
+                cursor = parent;
+                depth++;
+            }
+
+            return depth;
+        }
+
+        return asset.Blocks.OrderBy(Depth);
+    }
+
+    private AdminToy? Spawn(StationAssetBlock block, WarmupHallLayout hall, Transform? parent, ref int unsupported)
+    {
+        // A root-level block is authored relative to the schematic root, which is the station origin. A
+        // child is authored relative to its parent, so it is spawned in local space untouched.
+        Vector3 position = parent == null ? hall.Origin + block.Position : block.Position;
+        Quaternion rotation = Quaternion.Euler(block.Rotation);
+
+        switch (block.BlockType)
+        {
+            case SchematicBlockType.Primitive:
+            case SchematicBlockType.Empty:
+            {
+                PrimitiveObjectToy toy = parent == null
+                    ? PrimitiveObjectToy.Create(position, rotation, block.Scale, networkSpawn: false)
+                    : PrimitiveObjectToy.Create(position, rotation, block.Scale, parent, networkSpawn: false);
+                toy.Type = (PrimitiveType)block.Integer("PrimitiveType", (int)PrimitiveType.Cube);
+                toy.Color = block.TryColor(out Color color) ? color : Color.white;
+                toy.Flags = block.BlockType == SchematicBlockType.Empty
+                    ? PrimitiveFlags.None
+                    : (PrimitiveFlags)block.Integer("PrimitiveFlags", (int)PrimitiveFlags.Visible);
+                toy.IsStatic = true;
+                toy.Spawn();
+                return toy;
+            }
+
+            case SchematicBlockType.Light:
+            {
+                LightSourceToy light = LightSourceToy.Create(position, rotation, Vector3.one, networkSpawn: false);
+                light.Color = block.TryColor(out Color color) ? color : Color.white;
+                light.Intensity = block.Number("Intensity", 1f);
+                light.Range = block.Number("Range", 10f);
+                light.Type = (LightType)block.Integer("LightType", (int)LightType.Point);
+                light.ShadowType = (LightShadows)block.Integer("ShadowType", (int)LightShadows.None);
+                light.IsStatic = true;
+                light.Spawn();
+                return light;
+            }
+
+            case SchematicBlockType.Text:
+            {
+                TextToy text = TextToy.Create(position, rotation, block.Scale, networkSpawn: false);
+                text.TextFormat = block.Text("Text", string.Empty);
+                // ProjectMER stores DisplaySize pre-divided by 20; undo that on the way back in.
+                text.DisplaySize = block.Vector2Property("DisplaySize", new Vector2(10f, 2f)) * StationSchematic.TextDisplaySizeScale;
+                text.IsStatic = true;
+                text.Spawn();
+                return text;
+            }
+
+            default:
+                unsupported++;
+                return null;
+        }
+    }
+}

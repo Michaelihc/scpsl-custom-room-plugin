@@ -84,6 +84,12 @@ internal static class MerModelLoader
         }
     }
 
+    /// <summary>
+    /// Raw JSON access for readers that need block types this loader does not model (lights, text,
+    /// pickups). Keeps one JSON implementation in the plugin instead of a second parser.
+    /// </summary>
+    internal static object? ParseJson(string text) => MiniJson.Parse(text);
+
     public static List<MerPrimitive> Parse(string json)
     {
         List<MerPrimitive> primitives = new();

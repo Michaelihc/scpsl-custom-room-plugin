@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using CommandSystem;
 using LabApi.Loader;
@@ -80,6 +81,23 @@ public sealed class ExportStationCommand : ICommand
     /// Prefer ProjectMER's Schematics folder so the file is directly loadable by whoever edits it; fall
     /// back to this plugin's own config folder when ProjectMER is not installed on the port.
     /// </summary>
+    /// <summary>Every folder a schematic may live in, plugin-local first so a local copy wins.</summary>
+    internal static IEnumerable<string> SchematicSearchRoots(WarmupScpSelectorPlugin plugin)
+    {
+        yield return Path.Combine(plugin.GetConfigDirectory().FullName, "Schematics");
+        string projectMer;
+        try
+        {
+            projectMer = Path.Combine(PathManager.Configs.FullName, "ProjectMER", "Schematics");
+        }
+        catch
+        {
+            yield break;
+        }
+
+        yield return projectMer;
+    }
+
     internal static string ResolveSchematicsDirectory(WarmupScpSelectorPlugin plugin)
     {
         try

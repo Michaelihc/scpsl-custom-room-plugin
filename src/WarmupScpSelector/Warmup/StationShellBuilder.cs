@@ -50,10 +50,7 @@ internal sealed class StationShellBuilder
     {
         foreach (StationZone zone in _layout.Zones)
         {
-            BuildDeck(zone);
-            BuildOverhead(zone);
-            BuildWalls(zone);
-            BuildLighting(zone);
+            BuildZone(zone);
         }
 
         foreach (StationOpening opening in _layout.Openings)
@@ -62,6 +59,37 @@ internal sealed class StationShellBuilder
         }
 
         BuildWayfinding();
+    }
+
+    /// <summary>
+    /// The pressurised shell of one compartment: deck, overhead, walls, lighting.
+    ///
+    /// Exposed on its own because an authored schematic supplies most of the station but NEVER the
+    /// parkour shaft - that compartment stays code-owned so its landings and its gates cannot drift
+    /// apart. Without building the shaft's shell here too, skipping the authored shaft blocks left it
+    /// with no floor at all and players fell straight out of the station.
+    /// </summary>
+    public void BuildZone(StationZone zone)
+    {
+        BuildDeck(zone);
+        BuildOverhead(zone);
+        BuildWalls(zone);
+        BuildLighting(zone);
+    }
+
+    /// <summary>Frames and threshold striping for the hatches that open into the given compartment.</summary>
+    public void BuildHatchesFor(StationZone zone)
+    {
+        foreach (StationOpening opening in _layout.Openings)
+        {
+            bool touchesZone = opening.InConstantXWall
+                ? Mathf.Abs(opening.Plane - zone.MinX) < 0.01f || Mathf.Abs(opening.Plane - zone.MaxX) < 0.01f
+                : Mathf.Abs(opening.Plane - zone.MinZ) < 0.01f || Mathf.Abs(opening.Plane - zone.MaxZ) < 0.01f;
+            if (touchesZone)
+            {
+                BuildHatchFrame(opening);
+            }
+        }
     }
 
     // ---- Compartment structure -----------------------------------------------------------------
