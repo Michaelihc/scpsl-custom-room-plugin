@@ -193,6 +193,9 @@ public sealed class WarmupHallLayout
     /// <summary>How far the panel above a hatch reaches below the clear height, to break coplanarity.</summary>
     public const float AboveHatchDip = 0.02f;
 
+    /// <summary>How far the panel above a hatch reaches past the opening, into the panels either side.</summary>
+    public const float AboveHatchOverhang = 0.02f;
+
     /// <summary>
     /// Vertical offset applied to every compartment in the second half of the deck's two-colouring.
     ///
@@ -433,8 +436,11 @@ public sealed class WarmupHallLayout
                 // the ceiling either side of the doorway. The overlap hides inside the hatch lintel,
                 // which is thicker than the wall, so it costs nothing and closes no clearance a player
                 // can reach.
+                // Overhangs its opening by AboveHatchOverhang so its ends are buried in the panels either
+                // side instead of landing on the neighbouring overhead slab's own side plane.
                 segments.Add(new StationWallSegment(
-                    inConstantXWall, plane, from, to, hatch.Height - AboveHatchDip, zone.CeilingHeight));
+                    inConstantXWall, plane, from - AboveHatchOverhang, to + AboveHatchOverhang,
+                    hatch.Height - AboveHatchDip, zone.CeilingHeight));
             }
 
             cursor = Math.Max(cursor, to);

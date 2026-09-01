@@ -28,6 +28,18 @@ internal sealed class StationShellBuilder
     private const float RibY = 2.55f;
     private const float FrameThickness = 0.14f;
 
+    /// <summary>
+    /// How far a constant-X bulkhead pokes up into the overhead slab above it.
+    ///
+    /// Compartment faces are built as boxes centred on their own plane, so at every corner two
+    /// perpendicular walls cross in a 0.3 x 0.3 column - and both their top faces sit exactly on the
+    /// ceiling plane. That is a 15 cm square of z-fighting at the top of every corner in the station,
+    /// which reads in game as a small grey cube embedded in the wall. Lifting ONE of the two families
+    /// (the constant-X walls) parts them; the extra 2 mm is buried inside the overhead, so it opens no
+    /// gap the way lowering the other family would.
+    /// </summary>
+    private const float WallTopLift = 0.002f;
+
     // Hatch signage backplate. The panel hangs clear of the bulkhead behind it and the frame clear of the
     // panel, so no two of the three share a plane.
     private const float SignPlateThickness = 0.04f;
@@ -132,11 +144,14 @@ internal sealed class StationShellBuilder
     {
         foreach (StationWallSegment segment in _layout.BuildWallSegments(zone))
         {
+            // Constant-X walls own the corner: they reach WallTopLift higher so their top face is not on
+            // the ceiling plane the constant-Z walls share with them.
+            float lift = segment.InConstantXWall ? WallTopLift : 0f;
             Vector3 position = segment.InConstantXWall
-                ? _layout.World(segment.Plane, segment.MidY, segment.Center)
+                ? _layout.World(segment.Plane, segment.MidY + lift / 2f, segment.Center)
                 : _layout.World(segment.Center, segment.MidY, segment.Plane);
             Vector3 size = segment.InConstantXWall
-                ? new Vector3(WallThickness, segment.Height, segment.Span)
+                ? new Vector3(WallThickness, segment.Height + lift, segment.Span)
                 : new Vector3(segment.Span, segment.Height, WallThickness);
             AddBox(position, size, StationPalette.Bulkhead, collidable: true);
 
@@ -176,9 +191,12 @@ internal sealed class StationShellBuilder
             AddBox(position, size, StationPalette.Frame, collidable: false);
         }
 
+        // Dropped by WallTopLift so the lintel's top clears the ceiling plane the compartment walls on
+        // either side of the doorway share. It hangs inside the opening, so the 2 mm is invisible.
+        float lintelMidY = hatch.Height - FrameThickness / 2f - WallTopLift;
         Vector3 lintelPosition = hatch.InConstantXWall
-            ? _layout.World(hatch.Plane, hatch.Height - FrameThickness / 2f, center)
-            : _layout.World(center, hatch.Height - FrameThickness / 2f, hatch.Plane);
+            ? _layout.World(hatch.Plane, lintelMidY, center)
+            : _layout.World(center, lintelMidY, hatch.Plane);
         Vector3 lintelSize = hatch.InConstantXWall
             ? new Vector3(WallThickness + 0.08f, FrameThickness, span)
             : new Vector3(span, FrameThickness, WallThickness + 0.08f);
@@ -188,9 +206,12 @@ internal sealed class StationShellBuilder
         Vector3 sillPosition = hatch.InConstantXWall
             ? _layout.World(hatch.Plane, SeamProud + 0.01f, center)
             : _layout.World(center, SeamProud + 0.01f, hatch.Plane);
+        // Short of the jambs at both ends: run to the full opening and the sill's ends land on the jambs'
+        // outer faces.
+        float sillSpan = span - FrameThickness;
         Vector3 sillSize = hatch.InConstantXWall
-            ? new Vector3(0.5f, 0.03f, span)
-            : new Vector3(span, 0.03f, 0.5f);
+            ? new Vector3(0.5f, 0.03f, sillSpan)
+            : new Vector3(sillSpan, 0.03f, 0.5f);
         AddBox(sillPosition, sillSize, StationPalette.Caution, collidable: false);
     }
 

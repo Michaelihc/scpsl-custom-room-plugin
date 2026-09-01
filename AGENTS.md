@@ -39,9 +39,17 @@
   slabs' top faces on one plane across the full width of EVERY doorway, with the same band on the
   station's underside - compartments now sit 2 mm apart in Y under a two-colouring
   (`WarmupHallLayout.DeckOffset`), which keeps the overlap that stops a player falling through a seam.
-  Faces at deck level y=0 are buried inside the 0.4 m slab and are not worth chasing. Verify with a
-  coplanar scan over a live export, and include 90-degree-rotated boxes: they are still axis aligned,
-  and a scan that drops them misses most of an authored file.
+  The last family was the WALL CORNERS: faces are boxes centred on their own plane, so two perpendicular
+  walls cross in a 0.3 x 0.3 column and both tops land on the ceiling plane - a 15 cm square at the top
+  of every corner, which a player reports as "a small grey cube embedded in the wall". Constant-X walls
+  now reach `WallTopLift` (2 mm) higher, which parts them inside the overhead rather than opening the
+  gap that lowering the other family would; hatch lintels drop by the same amount for the same reason,
+  and the amber threshold sill stops short of the jambs.
+  Faces at deck level y=0 are buried inside the 0.4 m slab and are not worth chasing. Verify with
+  `tools/scan_coplanar.py` over a live export - the current station scans clean at a 5 cm^2 threshold.
+  Two traps in that scan, both of which hid real defects for a whole round of fixes: 90-degree-rotated
+  boxes are still axis aligned (permuted extents) and dropping them misses most of an authored file,
+  and same-colour pairs flicker just as visibly as contrasting ones.
   Hatch signage is per compartment (`BuildHatchSign`), each on a framed dark backplate because cyan on a
   white bulkhead has almost no contrast. The authored path must call it for the Aim Bay: that sign
   stands inside the code-owned volume, so an asset never carries it.
