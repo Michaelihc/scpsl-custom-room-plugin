@@ -156,9 +156,10 @@ public sealed class SelectorRoom
             shell.BuildZone(hall.AimBay);
             shell.BuildHatchesFor(hall.AimBay);
 
-            // Only the gameplay-bound pieces are still spawned by code, at the same anchors, so coins keep
-            // their serial-to-role binding.
-            BuildGalleryCoins(slots, options);
+            // Only the gameplay-bound pieces are still spawned by code, so coins keep their
+            // serial-to-role binding - but at the AUTHORED exhibits' anchors, not at a slot grid the
+            // live config may no longer agree with.
+            BuildGalleryCoins(hall, slots, options);
         }
 
         PrepareHatchGates(hall);
@@ -195,7 +196,6 @@ public sealed class SelectorRoom
         AddBanner(hall.BannerAnchor);
 
         float modelScale = Sanitize(Config.ModelScale, 0.05f, 10f, 1f);
-        float coinScale = Sanitize(Config.SelectorCoinScale, 1f, 20f, 6f);
 
         for (int i = 0; i < options.Count; i++)
         {
@@ -219,24 +219,48 @@ public sealed class SelectorRoom
             AddLabel(new Vector3(slot.StandTopCenter.x, slot.StandTopCenter.y + modelTop + 0.45f, slot.StandTopCenter.z), option.Label);
         }
 
-        BuildGalleryCoins(slots, options);
+        BuildGalleryCoins(hall, slots, options);
     }
 
     /// <summary>
     /// The selection coins. Split out from the exhibits because they are GAMEPLAY, not decor: each coin's
     /// serial is what maps a pickup to an SCP role. An authored schematic supplies the exhibits but must
     /// never supply the coins - a static copy would look right and select nothing.
+    ///
+    /// Which is exactly why the coin has to be told where the exhibit ended up. With an authored station
+    /// the anchor comes from that exhibit's own label (see <see cref="Import.AuthoredGalleryAnchors"/>);
+    /// the computed slot is only the fallback. Placing every coin on the computed grid instead put three
+    /// of them six metres from the SCP they draft as soon as PedestalSpacing stopped matching the asset.
     /// </summary>
-    private void BuildGalleryCoins(IReadOnlyList<GalleryDisplaySlot> slots, IReadOnlyList<ScpOption> options)
+    private void BuildGalleryCoins(
+        WarmupHallLayout hall,
+        IReadOnlyList<GalleryDisplaySlot> slots,
+        IReadOnlyList<ScpOption> options)
     {
         float coinScale = Sanitize(Config.SelectorCoinScale, 1f, 20f, 6f);
-        for (int i = 0; i < options.Count && i < slots.Count; i++)
+        IReadOnlyList<Vector3?> authored = Import.AuthoredGalleryAnchors.Resolve(AuthoredAsset, hall, options);
+        int recovered = 0;
+        for (int i = 0; i < options.Count; i++)
         {
+            Vector3? anchor = i < authored.Count ? authored[i] : null;
+            if (anchor.HasValue)
+            {
+                recovered++;
+            }
+            else if (i < slots.Count)
+            {
+                anchor = slots[i].CoinPosition;
+            }
+            else
+            {
+                continue;
+            }
+
             // Big coin floating clearly IN FRONT of the model and frozen, so it cannot fall, roll, or clip
             // into the exhibit the way a resting pickup did.
             Pickup? coin = Pickup.Create(
                 Config.SelectorItem,
-                slots[i].CoinPosition,
+                anchor.Value,
                 Quaternion.Euler(90f, 0f, 0f),
                 Vector3.one * coinScale,
                 networkSpawn: false);
@@ -260,6 +284,14 @@ public sealed class SelectorRoom
             {
                 Logger.Warn($"[WarmupScpSelector] Could not freeze coin: {ex.Message}");
             }
+        }
+
+        if (AuthoredAsset != null && recovered < options.Count)
+        {
+            Logger.Warn(
+                $"[WarmupScpSelector] {options.Count - recovered} of {options.Count} selection coins could not be " +
+                "matched to an authored exhibit label and fell back to the generated slot grid. If the coins do not " +
+                "line up with the models, keep each exhibit's SCP label in the schematic or match PedestalSpacing to it.");
         }
     }
 
@@ -398,16 +430,25 @@ public sealed class SelectorRoom
         return gate;
     }
 
+    /// <summary>
+    /// The gate is inset inside the clear opening rather than filling it exactly. Filled exactly, its
+    /// top and its two edges land on the same planes as the hatch frame's lintel and jambs, and those
+    /// coplanar faces flicker against each other for as long as the gate is up. Inset, the seam is
+    /// buried inside the frame, which is thicker than the gate on every side.
+    /// </summary>
+    private const float GateInset = 0.03f;
+
     private static (Vector3 Center, Vector3 Size) HatchGateGeometry(WarmupHallLayout hall, StationZone zone)
     {
+        float height = WarmupHallLayout.HatchHeight - GateInset;
         if (zone.Id == "aim")
         {
-            return (hall.World(zone.MinX, WarmupHallLayout.HatchHeight / 2f, zone.CenterZ),
-                new Vector3(0.35f, WarmupHallLayout.HatchHeight, zone.Depth));
+            return (hall.World(zone.MinX, height / 2f, zone.CenterZ),
+                new Vector3(0.35f, height, zone.Depth - GateInset * 2f));
         }
 
-        return (hall.World(zone.CenterX, WarmupHallLayout.HatchHeight / 2f, zone.MinZ),
-            new Vector3(zone.Width, WarmupHallLayout.HatchHeight, 0.35f));
+        return (hall.World(zone.CenterX, height / 2f, zone.MinZ),
+            new Vector3(zone.Width - GateInset * 2f, height, 0.35f));
     }
 
     public bool OpenAimRangeDoor() => OpenGate(ref _aimDoorGate, AimRangeDoorPrepared, "Aim Bay");

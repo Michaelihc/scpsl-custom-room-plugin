@@ -190,6 +190,9 @@ public sealed class WarmupHallLayout
     /// <summary>Clear height of every hatch between compartments.</summary>
     public const float HatchHeight = 5f;
 
+    /// <summary>How far the panel above a hatch reaches below the clear height, to break coplanarity.</summary>
+    public const float AboveHatchDip = 0.02f;
+
     // ---- Gallery display grid ----------------------------------------------------------------
     /// <summary>Back rank of stands, facing arriving players.</summary>
     public const float BackRankZ = -43.5f;
@@ -399,7 +402,14 @@ public sealed class WarmupHallLayout
 
             if (zone.CeilingHeight - hatch.Height > 0.01f)
             {
-                segments.Add(new StationWallSegment(inConstantXWall, plane, from, to, hatch.Height, zone.CeilingHeight));
+                // The panel above a hatch starts a hair BELOW the clear height, not exactly on it. At
+                // exactly the hatch height its downward face is coplanar with the shorter neighbour's
+                // overhead slab, and two down-facing surfaces at one depth flicker against each other on
+                // the ceiling either side of the doorway. The overlap hides inside the hatch lintel,
+                // which is thicker than the wall, so it costs nothing and closes no clearance a player
+                // can reach.
+                segments.Add(new StationWallSegment(
+                    inConstantXWall, plane, from, to, hatch.Height - AboveHatchDip, zone.CeilingHeight));
             }
 
             cursor = Math.Max(cursor, to);
@@ -459,12 +469,23 @@ public sealed class WarmupHallLayout
     public int DisplayCapacity(float spacing, float standWidth) =>
         BuildDisplaySlots(int.MaxValue, spacing, standWidth).Count;
 
+    /// <summary>
+    /// Where the selection coin for a display belongs, given that display's stand centre in station-local
+    /// metres: floating clear in front of the model, on the side arriving players walk in from.
+    ///
+    /// Public because an AUTHORED station anchors its coins to the exhibits the author actually placed
+    /// rather than to a freshly computed slot grid. The two only agree while the live config still
+    /// produces the grid the asset was exported from, and it does not have to.
+    /// </summary>
+    public Vector3 CoinAnchor(float standX, float standZ) =>
+        World(standX, CoinHeight, standZ + StandDepthMeters / 2f + CoinStandClearance);
+
     private GalleryDisplaySlot Slot(float x, float z, float standWidth, Quaternion facing) => new(
         World(x, StandHeight, z),
         standWidth,
         StandDepthMeters,
         facing,
-        World(x, CoinHeight, z + StandDepthMeters / 2f + CoinStandClearance));
+        CoinAnchor(x, z));
 
     /// <summary>Back-rank X offsets, mirrored outward from the clear centre aisle.</summary>
     private static IEnumerable<float> BackRankOffsets(float spacing, float limit)

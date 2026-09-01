@@ -54,6 +54,8 @@
     <Compile Include="..\..\src\WarmupScpSelector\Models\MerModelLoader.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Export\StationSchematic.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Import\StationAsset.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Import\AuthoredGalleryAnchors.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\ScpOption.cs" />
   </ItemGroup>
 
   <ItemGroup>

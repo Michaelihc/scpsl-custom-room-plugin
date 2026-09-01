@@ -70,9 +70,12 @@ namespace WarmupScpSelector.Warmup
                         collidable: true);
                 }
 
-                // Backstop facing: a visibly darker plate on the far bulkhead so rounds have somewhere to land.
+                // Backstop facing: a visibly darker plate on the far bulkhead so rounds have somewhere to
+                // land. It stands PROUD of that bulkhead rather than sunk into it: overlapping the wall
+                // put its top and bottom faces on the wall's own planes, which flickers along the top
+                // edge of the range.
                 AddBox(
-                    layout.Range(0f, AimRangeLayout.Height / 2f, downrangeLength - 0.2f),
+                    layout.Range(0f, AimRangeLayout.Height / 2f, downrangeLength - 0.35f),
                     new Vector3(0.35f, AimRangeLayout.Height, layout.ShellWidth - 0.4f),
                     StationPalette.Overhead,
                     collidable: true);

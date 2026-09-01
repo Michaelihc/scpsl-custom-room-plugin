@@ -28,6 +28,13 @@
   every occupancy rule untestable headlessly.
 - `Warmup/StationShellBuilder.cs` — spawns that geometry: deck, overhead, bulkheads with ribs, hatch
   frames, amber threshold striping, teal wayfinding strips, bilingual hatch signage, deck lighting.
+  Z-fighting rule for anything added here: two surfaces flicker when they face the SAME way at the same
+  depth, so an abutting pair is fine and a shared plane is not. The three that were real: a hatch gate
+  built to exactly fill its opening landed on the frame's own planes (now inset by `GateInset`), the
+  panel above a hatch shared its underside with the shorter neighbour's overhead (now dipped by
+  `WarmupHallLayout.AboveHatchDip` into the lintel, which is thicker than the wall), and the aim
+  backstop plate was sunk into the far bulkhead (now proud of it). Faces at deck level y=0 are buried in
+  the 0.4 m deck slab and are not worth chasing.
 - `Warmup/StationPalette.cs` — the one **orbital-station** theme (cold graphite structure, near-white deck
   lighting, brand teal/cyan for wayfinding, amber for caution, gold for brand text). Two rules: lights stay
   near-white (a tinted lamp washes out the muted SCP model primitives) and saturation is a signal, never
@@ -161,6 +168,12 @@
 
   The parkour shaft, by contrast, IS spawned from the asset, and `AuthoredParkourRoute` recovers the
   gates from those landings, so geometry and gates stay one thing and an author's route drives the run.
+  `Import/AuthoredGalleryAnchors.cs` does the same job for the SCP gallery: a coin is anchored to the
+  exhibit whose LABEL names that SCP, not to a freshly computed slot. Anchoring coins on the slot grid
+  is only correct while the live config still reproduces the grid the asset was exported from -
+  `pedestal_spacing` 3.7 -> 4.0 drops the back rank from six stands to four and left three coins 4.65 m
+  from the SCP they draft, with every authored label still in place, so a player read "SCP-096", took the
+  nearest coin, and got SCP-173. Unmatched options fall back to the slot and are logged.
 - **Block ids are opaque; only a MISSING id means "no id".** ProjectMER writes `ObjectId` from Unity's
   `GetInstanceID()`, and a file saved in the map editor can come back with EVERY id negative (real case:
   `DT (2).json`, -18862..-1678). The reader used to treat negative as absent, which unparented all 574
@@ -175,14 +188,15 @@
   assets (no longer spawned by the three-lane runtime; WithCulture=false + LogicalName in the csproj).
 - `tools/` — Python model pipeline: `scp_builder.py` (Builder API), `build_scp_*_asset.py` (per-SCP), `render_model_preview.py` (offline renderer, including parented/sheared logo quads; `--exposure N` brightens dark room previews to approximate in-scene point lights), `build_room_preview.py` (**STALE** — still emits the pre-station single hall; not updated for the station rework). `tools/preview/banner.html` previews the welcome line + status-panel TMP markup in a browser (serve over localhost; `file://` is blocked).
 - `tests/models/` — `scp_model_contract.py` + `test_scp_*_model.py` geometry contracts.
-- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity/replacement tests (85 currently, including station
+- `tests/WarmupScpSelector.Tests/` — headless C# planner/activity/replacement tests (86 currently, including station
   compartment tiling, wall-panel sealing, gallery stands, the Aim Bay's three lanes, the parkour jump model and
   generated route across a jump-speed sweep, bot lifecycle,
   exact automatic-rifle presets, fixed aggro lock, continuous-path/tall-cover contracts, stale generations, damage policy,
   config validation, lethal reset state, pure MER
   root/one-level-parent transform composition, station compartment tiling and wall-panel sealing, gallery stand
   placement, the Aim Bay's three-lane bounds and persistent counter armoury, deterministic absolute-time sliding motion, one-credit immediate sphere relocation, and the
-  Aim HSM UI/cache contracts, and authored-schematic hierarchy resolution under negative ObjectIds).
+  Aim HSM UI/cache contracts, authored-schematic hierarchy resolution under negative ObjectIds, and authored gallery coin
+  anchors surviving a slot-grid change).
   `tests/WarmupPlaytestScenarios/` ships this plugin's live dummy scenarios for the shared `.tests\Playtest`
   harness: `warmup-station` (raycast-walks every compartment for deck/walls/hatches, settles a dummy at the
   arrival point) and `warmup-pulse-line` (discovers the route by raycast, then brackets it with three real

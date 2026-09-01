@@ -117,6 +117,7 @@ namespace WarmupScpSelector.Tests
                 ScpReplacementCooldownIsSharedAndResettable,
                 ScpReplacementTextIsBilingualAndMarkupSafe,
                 AuthoredSchematicWithNegativeObjectIdsKeepsItsHierarchy,
+                AuthoredCoinsFollowTheAuthoredExhibitLabels,
             };
 
             int failed = 0;
@@ -2216,6 +2217,98 @@ namespace WarmupScpSelector.Tests
                 {
                     throw new Exception("Child block collapsed to the station origin.");
                 }
+            }
+            finally
+            {
+                try
+                {
+                    File.Delete(path);
+                }
+                catch (IOException)
+                {
+                    // A leftover temp file must never fail the suite.
+                }
+            }
+        }
+
+        /// <summary>
+        /// A selection coin has to end up in front of the exhibit it drafts, and with an authored station
+        /// the exhibits are wherever the author left them - NOT on the slot grid the live config happens to
+        /// compute. PedestalSpacing 3.7 -> 4.0 drops the back rank from six stands to four, which pushed
+        /// three coins metres away from the SCP they select while every label stayed put.
+        /// </summary>
+        private static void AuthoredCoinsFollowTheAuthoredExhibitLabels()
+        {
+            const string json = @"{
+              ""RootObjectId"": -1644,
+              ""Blocks"": [
+                { ""Name"": ""TextToy"", ""ObjectId"": -5000, ""ParentId"": -1644, ""BlockType"": 8,
+                  ""Position"": { ""x"": -9.25, ""y"": 3.6, ""z"": -43.5 },
+                  ""Rotation"": { ""x"": 0, ""y"": 0, ""z"": 0 }, ""Scale"": { ""x"": 0.2, ""y"": 0.2, ""z"": 0.2 },
+                  ""Properties"": { ""Text"": ""<align=center><b>SCP-049</b></align>"" } },
+                { ""Name"": ""TextToy"", ""ObjectId"": -5104, ""ParentId"": -1644, ""BlockType"": 8,
+                  ""Position"": { ""x"": 4.2, ""y"": 3.6, ""z"": -39.75 },
+                  ""Rotation"": { ""x"": 0, ""y"": 0, ""z"": 0 }, ""Scale"": { ""x"": 0.2, ""y"": 0.2, ""z"": 0.2 },
+                  ""Properties"": { ""Text"": ""<b>\u6536\u5BB9\u7269 3114</b>"" } },
+                { ""Name"": ""TextToy"", ""ObjectId"": -4846, ""ParentId"": -1644, ""BlockType"": 8,
+                  ""Position"": { ""x"": 0, ""y"": 2.6, ""z"": -45.64 },
+                  ""Rotation"": { ""x"": 0, ""y"": 0, ""z"": 0 }, ""Scale"": { ""x"": 0.45, ""y"": 0.45, ""z"": 0.45 },
+                  ""Properties"": { ""Text"": ""<align=center>welcome to the station, enjoy your stay and have fun</align>"" } },
+                { ""Name"": ""TextToy"", ""ObjectId"": -2672, ""ParentId"": -1644, ""BlockType"": 8,
+                  ""Position"": { ""x"": -10.55, ""y"": 3.9, ""z"": 0 },
+                  ""Rotation"": { ""x"": 0, ""y"": 0, ""z"": 0 }, ""Scale"": { ""x"": 0.18, ""y"": 0.18, ""z"": 0.18 },
+                  ""Properties"": { ""Text"": ""<b>SCP-939</b>"" } }
+              ]
+            }";
+
+            string path = Path.Combine(Path.GetTempPath(), "warmup_gallery_anchors_" + Guid.NewGuid().ToString("N") + ".json");
+            try
+            {
+                File.WriteAllText(path, json);
+                StationAsset? asset = StationAsset.TryLoad(path);
+                if (asset == null)
+                {
+                    throw new Exception("The anchor schematic failed to load.");
+                }
+
+                WarmupHallLayout hall = new WarmupHallLayout(new Vector3(10f, 1000f, -20f));
+                ScpOption[] options =
+                {
+                    new ScpOption(RoleTypeId.Scp049, "SCP-049", string.Empty),
+                    new ScpOption(RoleTypeId.Scp3114, "SCP-3114", string.Empty),
+                    new ScpOption(RoleTypeId.Scp096, "SCP-096", string.Empty),
+                    new ScpOption(RoleTypeId.Scp939, "SCP-939", string.Empty),
+                };
+
+                IReadOnlyList<Vector3?> anchors = AuthoredGalleryAnchors.Resolve(asset, hall, options);
+                AssertEqual(4, anchors.Count, "one anchor slot per option");
+
+                // Matched by its label, in front of the authored stand rather than on the computed grid.
+                AssertEqual(true, anchors[0].HasValue, "SCP-049 is matched by its authored label");
+                AssertVectorNear(hall.CoinAnchor(-9.25f, -43.5f), anchors[0]!.Value, 0.001f,
+                    "the SCP-049 coin sits in front of the authored SCP-049 exhibit");
+
+                // A translated label still carries the number, which is what the role code matches on.
+                AssertEqual(true, anchors[1].HasValue, "a translated label still matches on the SCP number");
+                AssertVectorNear(hall.CoinAnchor(4.2f, -39.75f), anchors[1]!.Value, 0.001f,
+                    "the SCP-3114 coin follows its own exhibit");
+
+                // Nothing in the gallery names SCP-096, so that coin falls back to the computed slot.
+                AssertEqual(false, anchors[2].HasValue, "an unmatched option keeps the generated slot");
+
+                // The label for SCP-939 hangs in the hub, not the gallery: signage elsewhere in the station
+                // must never be read as an exhibit.
+                AssertEqual(false, anchors[3].HasValue, "signage outside the gallery is not an exhibit label");
+
+                // Prose is not a label: the welcome banner sits in the gallery and must stay unmatched.
+                IReadOnlyList<Vector3?> banner = AuthoredGalleryAnchors.Resolve(
+                    asset, hall, new[] { new ScpOption(RoleTypeId.Scp173, "welcome", string.Empty) });
+                AssertEqual(false, banner[0].HasValue, "the welcome banner is not an exhibit label");
+
+                // The anchor must not move when the slot grid does - that independence is the whole point.
+                IReadOnlyList<GalleryDisplaySlot> wide = hall.BuildDisplaySlots(4, 4f, 1.9f);
+                AssertEqual(true, (wide[0].CoinPosition - anchors[0]!.Value).magnitude > 1f,
+                    "the authored anchor is not the computed slot");
             }
             finally
             {

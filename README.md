@@ -196,6 +196,10 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   them while TAB is held. Outside the bay only the original centered SCP panel is shown.
 - `PedestalSpacing` — spacing of the gallery's back rank of stands (default `3.7`). Wider spacing fits fewer
   stands in the back rank and pushes the remainder onto the side walls; the gallery holds ten in total.
+  With an **authored station** the stands come from the schematic, so this setting no longer decides where
+  they are: each coin is anchored to the exhibit whose label names that SCP, and only an exhibit the plugin
+  cannot match by label falls back to this grid. Keep the `SCP-xxx` labels in the schematic and the coins
+  follow the models wherever you move them.
 - `SurfaceClearance` and `RoomOrigin` — where the station floats. The origin is the hub's deck centre.
 
 ### Handing the room to someone else
@@ -254,7 +258,7 @@ python tests/models/test_scp_173_model.py                        # geometry cont
 ### Tests
 
 - **Headless logic** (`dotnet build tests/WarmupScpSelector.Tests`, then run `WarmupScpSelector.Tests.exe`):
-  `81/81`. Covers SCP replacement policy/state/text, bot lifecycle and tactical contracts, lethal reset
+  `86/86`. Covers SCP replacement policy/state/text, bot lifecycle and tactical contracts, lethal reset
   state, MER transforms, deterministic sliding motion, one-credit sphere relocation, bilingual Aim text,
   HSM cache behaviour, and — new with the station — compartment tiling, **wall-panel sealing** (every
   compartment face is sampled on a grid and must be either solid panel or inside a hatch), gallery stand
@@ -441,7 +445,9 @@ dotnet build -c Release -p:ServerManagedPath="C:\path\to\SCPSL_Data\Managed"
 - `ScpReplacement.MaxReplacementsPerRound`、`IgnoredRoles`、`CommandCooldownSeconds`——每回合上限、
   排除职业和两个命令共用的冷却。
 - `RoomOrigin`——悬空选择房间的世界坐标（较高的 Y 可避免与正式地图冲突）。
-- `PedestalSpacing`、`ModelScale`、`SelectorCoinScale`——布局/尺寸。
+- `PedestalSpacing`、`ModelScale`、`SelectorCoinScale`——布局/尺寸。使用**自定义站点图纸**时展台来自图纸，
+  该间距不再决定展台位置：每枚硬币会锚定到标签写着该 SCP 的展品上，只有无法按标签匹配的展品才回退到生成的
+  网格。保留图纸中的 `SCP-xxx` 标签，硬币就会跟着模型走。
 - `SelectorItem`——作为选择硬币的物品（默认 `Coin`）。
 - `RoleSwapDelaySeconds`——回合开始后多久执行交换（等待原版职业稳定）。
 - `MusicEnabled`、`MusicFilePath`——可选大厅音乐。`MusicFilePath` 需要指向预转换的 `48000 Hz`
@@ -502,7 +508,7 @@ ProjectMER，文件会写入其 `Schematics/<name>/<name>.json`（可直接 `mp 
 
 ### 测试
 
-- C# 纯逻辑与运行时邻接测试：`81/81` 通过（新增舱室拼接、墙体密封、展厅站位、训练舱三道和跑酷路线契约）。
+- C# 纯逻辑与运行时邻接测试：`86/86` 通过（新增舱室拼接、墙体密封、展厅站位、训练舱三道、跑酷路线契约，以及自定义图纸的展品硬币锚点）。
 - 实机假人验证：`ptest run warmup standard`（`.tests/Playtest` 共享 harness）。`warmup-pulse-line` 用射线
   扫描竖井发现落点，再驱动三个真实假人：冲刺+跳跃必须全程通过，仅行走+跳跃必须在收尾停下，完全不跳必须
   第一跳就失败。2026-08-28 实测：22 个落点、爬升 7.07 m、跳跃+冲刺 21/21 通过。
