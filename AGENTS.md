@@ -103,7 +103,9 @@
   counter lighting, signage); the bay's deck/walls/overhead belong to the station shell.
 - `Activities/Parkour/ParkourActivityLane.cs` is the default-off **Pulse Line**, now in the station's own
   9 m x 53.5 m x 13.5 m **parkour shaft** north of the hub. It no longer depends on the Aim range at all.
-  One shared 20 Hz loop handles occupancy, 0.6 s start hold, authoritative three-second countdown, ordered
+  One shared 20 Hz loop handles occupancy, a 0.15 s start hold, an optional countdown (0 by default, so
+  the clock starts under the player's feet the moment they step on the plate - the teleport that pins
+  them to the plate only runs when a countdown is actually configured), ordered
   swept-segment gates, timer/HSM updates, fall recovery, finish/PB, and the reusable reset coin.
 - **The route is generated, not hand-placed** (`ParkourLayout` + `ParkourJumpModel`). `ParkourJumpModel` is
   the closed form of the native arc (`y = J*t - g*t^2/2`, gravity 19.6 from `FpcGravityController`), caught on

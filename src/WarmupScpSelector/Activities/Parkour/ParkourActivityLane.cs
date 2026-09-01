@@ -213,14 +213,27 @@ namespace WarmupScpSelector.Activities.Parkour
                 }
                 else if (run.TryBeginCountdown(now, Config.StartHoldSeconds, Config.CountdownSeconds))
                 {
-                    player.Position = layout.StartPlate.RecoveryPosition;
+                    // Snap to the plate only when a countdown will hold them there anyway. Without one
+                    // the player is already running, and the clock should start under their feet.
+                    if (Config.CountdownSeconds > 0f)
+                    {
+                        player.Position = layout.StartPlate.RecoveryPosition;
+                    }
+
                     session.PreviousPosition = player.Position;
                 }
             }
             else if (run.Phase == ParkourPhase.Countdown)
             {
-                player.Position = layout.StartPlate.RecoveryPosition;
-                session.PreviousPosition = player.Position;
+                // Holding the player on the plate is what a countdown IS - so only do it while one is
+                // actually configured. At the default of zero the run starts on the same tick it arms,
+                // and pinning them here first would rip a metre off a player already moving.
+                if (Config.CountdownSeconds > 0f)
+                {
+                    player.Position = layout.StartPlate.RecoveryPosition;
+                    session.PreviousPosition = player.Position;
+                }
+
                 if (run.TryStartRun(now))
                 {
                     run.RecoveryGraceEndsAt = now + 0.45d;

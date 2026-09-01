@@ -1802,8 +1802,19 @@ namespace WarmupScpSelector.Tests
             ParkourActivityConfig config = new ActivityConfig().Parkour;
             AssertEqual(false, config.Enabled, "parkour default off");
             AssertEqual(20f, config.SchedulerRateHz, "parkour shared tick default");
-            AssertEqual(0.6f, config.StartHoldSeconds, "parkour start hold");
-            AssertEqual(3f, config.CountdownSeconds, "parkour countdown");
+            // The run starts when the player steps on the plate: the hold only shrugs off a single tick
+            // of contact, and there is no countdown holding them still before the clock runs.
+            AssertEqual(0.15f, config.StartHoldSeconds, "parkour start hold");
+            AssertEqual(0f, config.CountdownSeconds, "parkour countdown");
+
+            ParkourRunState instant = new ParkourRunState("instant", 1);
+            instant.BeginArming(100d);
+            AssertEqual(false, instant.TryBeginCountdown(100.10d, config.StartHoldSeconds, config.CountdownSeconds),
+                "a single tick of contact does not start a run");
+            AssertEqual(true, instant.TryBeginCountdown(100.16d, config.StartHoldSeconds, config.CountdownSeconds),
+                "standing on the plate starts the run");
+            AssertEqual(true, instant.TryStartRun(100.16d),
+                "with no countdown the clock starts on the same tick, not three seconds later");
         }
 
         private static void ParkourRunRequiresOrderedGatesAndFreezesFinishTime()

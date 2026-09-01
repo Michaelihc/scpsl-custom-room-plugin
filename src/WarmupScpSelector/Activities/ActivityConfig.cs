@@ -27,11 +27,11 @@ namespace WarmupScpSelector.Activities
         [Description("Parkour occupancy, gate, recovery, and HUD updates per second.")]
         public float SchedulerRateHz { get; set; } = 20f;
 
-        [Description("Seconds a player must remain on the start plate before the countdown begins.")]
-        public float StartHoldSeconds { get; set; } = 0.6f;
+        [Description("Seconds a player must remain on the start plate before the run begins. Kept just long enough to ignore a single tick of contact, so stepping onto the plate starts the run rather than arming it.")]
+        public float StartHoldSeconds { get; set; } = 0.15f;
 
-        [Description("Quiet countdown duration before the authoritative timer starts.")]
-        public float CountdownSeconds { get; set; } = 3f;
+        [Description("Quiet countdown before the authoritative timer starts. Default 0: the run starts the moment you step on the plate. Raise it to hold players still for a ready-set-go instead.")]
+        public float CountdownSeconds { get; set; } = 0f;
 
         [Description("Seconds after recovery during which gates and another recovery are ignored.")]
         public float RecoveryGraceSeconds { get; set; } = 0.35f;
