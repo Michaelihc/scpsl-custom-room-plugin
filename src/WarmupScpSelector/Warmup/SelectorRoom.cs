@@ -155,6 +155,8 @@ public sealed class SelectorRoom
             // The parkour shaft DOES come from the asset; the Pulse Line reads its gates off those pads.
             shell.BuildZone(hall.AimBay);
             shell.BuildHatchesFor(hall.AimBay);
+            // The Aim Bay's doorway sign stands inside the skipped volume, so the asset never supplies it.
+            shell.BuildHatchSign(hall.AimBay);
 
             // Only the gameplay-bound pieces are still spawned by code, so coins keep their
             // serial-to-role binding - but at the AUTHORED exhibits' anchors, not at a slot grid the

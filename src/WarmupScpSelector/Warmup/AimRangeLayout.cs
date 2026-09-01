@@ -100,7 +100,18 @@ namespace WarmupScpSelector.Warmup
         /// <summary>How far downrange of the bay entrance the shooting counter sits.</summary>
         public const float ShootingCounterDepth = 3.5f;
 
-        public const float AttachmentWorkstationWallInset = 0.22f;
+        /// <summary>How far in from the bay's side wall a workstation stands, so its body clears the bulkhead.</summary>
+        public const float AttachmentWorkstationWallInset = 0.9f;
+
+        /// <summary>
+        /// Workstations sit BEHIND the shooting line, on the shooter's side of the counter.
+        ///
+        /// The counter is a solid barrier the full width of the bay bar 0.3 m at each end, so anything
+        /// downrange of it can be seen and never reached: the pair used to stand 4 m downrange and a
+        /// player could only look at them. This keeps them in the 3.5 m entrance apron, clear of the
+        /// counter, the doorway, and every lane's furniture.
+        /// </summary>
+        private const float AttachmentWorkstationDownrange = -1.7f;
 
         // Lane boundaries across Z. Lane 3 is the widest because the sphere cloud needs the most clear width.
         private const float LaneOneToTwoZ = -3.1f;
@@ -152,15 +163,16 @@ namespace WarmupScpSelector.Warmup
                 new AimShelfAnchor(5, Range(7.6f, pickupY, 0f), DownrangeFacing),
             };
 
-            // Two native attachment workstations against the long side walls, facing into the bay.
+            // Two native attachment workstations against the long side walls, facing into the bay, in the
+            // entrance apron where a shooter can actually walk up to them.
             float workstationLateral = ShellWidth / 2f - AttachmentWorkstationWallInset;
             AttachmentWorkstationAnchors = new[]
             {
                 new AimWorkstationAnchor(
-                    Range(-workstationLateral, 0f, 4f),
+                    Range(-workstationLateral, 0f, AttachmentWorkstationDownrange),
                     MerWorldTransformComposer.QuaternionFromEuler(Vector3.zero)),
                 new AimWorkstationAnchor(
-                    Range(workstationLateral, 0f, 4f),
+                    Range(workstationLateral, 0f, AttachmentWorkstationDownrange),
                     MerWorldTransformComposer.QuaternionFromEuler(new Vector3(0f, 180f, 0f))),
             };
 

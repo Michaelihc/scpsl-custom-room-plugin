@@ -29,12 +29,22 @@
 - `Warmup/StationShellBuilder.cs` — spawns that geometry: deck, overhead, bulkheads with ribs, hatch
   frames, amber threshold striping, teal wayfinding strips, bilingual hatch signage, deck lighting.
   Z-fighting rule for anything added here: two surfaces flicker when they face the SAME way at the same
-  depth, so an abutting pair is fine and a shared plane is not. The three that were real: a hatch gate
-  built to exactly fill its opening landed on the frame's own planes (now inset by `GateInset`), the
-  panel above a hatch shared its underside with the shorter neighbour's overhead (now dipped by
-  `WarmupHallLayout.AboveHatchDip` into the lintel, which is thicker than the wall), and the aim
-  backstop plate was sunk into the far bulkhead (now proud of it). Faces at deck level y=0 are buried in
-  the 0.4 m deck slab and are not worth chasing.
+  depth, so an abutting pair is fine and a shared plane is not - and SAME-COLOUR pairs flicker just as
+  visibly as contrasting ones, which is what made the deck seams the worst offender in the room. Five
+  real ones, all now fixed: a hatch gate built to exactly fill its opening landed on the frame's own
+  planes (inset by `GateInset`); the panel above a hatch shared its underside with the shorter
+  neighbour's overhead (dipped by `WarmupHallLayout.AboveHatchDip` into the lintel, which is thicker
+  than the wall); the aim backstop plate was sunk into the far bulkhead (now proud of it); the two teal
+  guide strips overlapped by a metre at the connector mouth (now abutting); and `DeckOverlap` put two
+  slabs' top faces on one plane across the full width of EVERY doorway, with the same band on the
+  station's underside - compartments now sit 2 mm apart in Y under a two-colouring
+  (`WarmupHallLayout.DeckOffset`), which keeps the overlap that stops a player falling through a seam.
+  Faces at deck level y=0 are buried inside the 0.4 m slab and are not worth chasing. Verify with a
+  coplanar scan over a live export, and include 90-degree-rotated boxes: they are still axis aligned,
+  and a scan that drops them misses most of an authored file.
+  Hatch signage is per compartment (`BuildHatchSign`), each on a framed dark backplate because cyan on a
+  white bulkhead has almost no contrast. The authored path must call it for the Aim Bay: that sign
+  stands inside the code-owned volume, so an asset never carries it.
 - `Warmup/StationPalette.cs` — the one **orbital-station** theme (cold graphite structure, near-white deck
   lighting, brand teal/cyan for wayfinding, amber for caution, gold for brand text). Two rules: lights stay
   near-white (a tinted lamp washes out the muted SCP model primitives) and saturation is a signal, never
@@ -126,7 +136,9 @@
   `Warmup/AimRangeWorld.cs` keeps all range collision in explicit AdminToy boxes and adds only furniture; the bay's
   deck, bulkheads, overhead, and general lighting come from the station shell. The old weapon-rack visual and all
   shelf/cradle collision are no longer spawned; `AimRangeLayout` places six persistent guns on the shooting counter
-  and two symmetric native attachment workstations against the side walls.
+  and two symmetric native attachment workstations. Those stand in the entrance apron BEHIND the shooting
+  line: the counter is a solid barrier bar 0.3 m at each end, so their old position 4 m downrange could be
+  seen and never reached.
   Interacting with a dispenser cancels native pickup and grants a separately owned inventory copy, leaving the displayed gun.
   The counter spans `ShellWidth - 0.6 m` across the bay, and three intensity-24/range-16 point lights sit over the
   firing line, with ordinary non-HDR light colors. The branded logo keeps its HDR albedo boost and shares a gallery

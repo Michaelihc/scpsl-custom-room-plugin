@@ -502,7 +502,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 23.5,
-        "y": -0.2000122,
+        "y": -0.202012,
         "z": 0.0
       },
       "Rotation": {
@@ -529,7 +529,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 23.5,
-        "y": 0.0199890137,
+        "y": 0.017989,
         "z": 0.0
       },
       "Rotation": {
@@ -877,7 +877,7 @@
       "ParentId": -1644,
       "Position": {
         "x": -16.5,
-        "y": -0.2000122,
+        "y": -0.202012,
         "z": 0.0
       },
       "Rotation": {
@@ -904,7 +904,7 @@
       "ParentId": -1644,
       "Position": {
         "x": -16.5,
-        "y": 0.0199890137,
+        "y": 0.017989,
         "z": 0.0
       },
       "Rotation": {
@@ -1078,7 +1078,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 0.0,
-        "y": -0.2000122,
+        "y": -0.202012,
         "z": -21.5
       },
       "Rotation": {
@@ -1105,7 +1105,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 0.0,
-        "y": 0.0199890137,
+        "y": 0.017989,
         "z": -21.5
       },
       "Rotation": {
@@ -1756,7 +1756,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 0.0,
-        "y": -0.2000122,
+        "y": -0.202012,
         "z": 44.25
       },
       "Rotation": {
@@ -1783,7 +1783,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 0.0,
-        "y": 0.0199890137,
+        "y": 0.017989,
         "z": 44.25
       },
       "Rotation": {
@@ -2191,7 +2191,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 11.0,
-        "y": 2.5,
+        "y": 2.43,
         "z": -9.43
       },
       "Rotation": {
@@ -2201,7 +2201,7 @@
       },
       "Scale": {
         "x": 0.38,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.14
       },
       "BlockType": 1,
@@ -2218,7 +2218,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 11.0,
-        "y": 2.5,
+        "y": 2.43,
         "z": 9.43
       },
       "Rotation": {
@@ -2228,7 +2228,7 @@
       },
       "Scale": {
         "x": 0.38,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.14
       },
       "BlockType": 1,
@@ -2299,7 +2299,7 @@
       "ParentId": -1644,
       "Position": {
         "x": -11.0,
-        "y": 2.5,
+        "y": 2.43,
         "z": -9.43
       },
       "Rotation": {
@@ -2309,7 +2309,7 @@
       },
       "Scale": {
         "x": 0.38,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.14
       },
       "BlockType": 1,
@@ -2326,7 +2326,7 @@
       "ParentId": -1644,
       "Position": {
         "x": -11.0,
-        "y": 2.5,
+        "y": 2.43,
         "z": 9.43
       },
       "Rotation": {
@@ -2336,7 +2336,7 @@
       },
       "Scale": {
         "x": 0.38,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.14
       },
       "BlockType": 1,
@@ -2407,7 +2407,7 @@
       "ParentId": -1644,
       "Position": {
         "x": -4.43,
-        "y": 2.5,
+        "y": 2.43,
         "z": -17.5
       },
       "Rotation": {
@@ -2417,7 +2417,7 @@
       },
       "Scale": {
         "x": 0.14,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.38
       },
       "BlockType": 1,
@@ -2434,7 +2434,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 4.43,
-        "y": 2.5,
+        "y": 2.43,
         "z": -17.5
       },
       "Rotation": {
@@ -2444,7 +2444,7 @@
       },
       "Scale": {
         "x": 0.14,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.38
       },
       "BlockType": 1,
@@ -2515,7 +2515,7 @@
       "ParentId": -1644,
       "Position": {
         "x": -4.43,
-        "y": 2.5,
+        "y": 2.43,
         "z": -25.5
       },
       "Rotation": {
@@ -2525,7 +2525,7 @@
       },
       "Scale": {
         "x": 0.14,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.38
       },
       "BlockType": 1,
@@ -2542,7 +2542,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 4.43,
-        "y": 2.5,
+        "y": 2.43,
         "z": -25.5
       },
       "Rotation": {
@@ -2552,7 +2552,7 @@
       },
       "Scale": {
         "x": 0.14,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.38
       },
       "BlockType": 1,
@@ -2623,7 +2623,7 @@
       "ParentId": -1644,
       "Position": {
         "x": -4.43,
-        "y": 2.5,
+        "y": 2.43,
         "z": 17.5
       },
       "Rotation": {
@@ -2633,7 +2633,7 @@
       },
       "Scale": {
         "x": 0.14,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.38
       },
       "BlockType": 1,
@@ -2650,7 +2650,7 @@
       "ParentId": -1644,
       "Position": {
         "x": 4.43,
-        "y": 2.5,
+        "y": 2.43,
         "z": 17.5
       },
       "Rotation": {
@@ -2660,7 +2660,7 @@
       },
       "Scale": {
         "x": 0.14,
-        "y": 5.0,
+        "y": 4.86,
         "z": 0.38
       },
       "BlockType": 1,
@@ -2732,7 +2732,7 @@
       "Position": {
         "x": 0.0,
         "y": 0.0400085449,
-        "z": -35.0
+        "z": -35.5
       },
       "Rotation": {
         "x": 0.0,
@@ -2742,7 +2742,7 @@
       "Scale": {
         "x": 0.35,
         "y": 0.03,
-        "z": 21.0
+        "z": 20.0
       },
       "BlockType": 1,
       "Properties": {
@@ -28672,114 +28672,6 @@
       }
     },
     {
-      "Name": "PrimitiveObjectToy (20)",
-      "ObjectId": -12214,
-      "ParentId": -1644,
-      "Position": {
-        "x": -13.203,
-        "y": 0.22,
-        "z": -4.88499975
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.221877456,
-        "y": 0.04,
-        "z": 0.5985696
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "E8ECEFFF",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "PrimitiveObjectToy (21)",
-      "ObjectId": -12224,
-      "ParentId": -1644,
-      "Position": {
-        "x": -13.203,
-        "y": 1.01,
-        "z": -4.88499975
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.221877456,
-        "y": 0.04,
-        "z": 0.5985696
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "E8ECEFFF",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "PrimitiveObjectToy (22)",
-      "ObjectId": -12234,
-      "ParentId": -1644,
-      "Position": {
-        "x": -13.203,
-        "y": 0.62,
-        "z": -4.58499956
-      },
-      "Rotation": {
-        "x": 270.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.221877456,
-        "y": 0.04,
-        "z": 0.5985696
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "E8ECEFFF",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "PrimitiveObjectToy (23)",
-      "ObjectId": -12244,
-      "ParentId": -1644,
-      "Position": {
-        "x": -13.203,
-        "y": 0.62,
-        "z": -5.30799961
-      },
-      "Rotation": {
-        "x": 270.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.221877456,
-        "y": 0.04,
-        "z": 0.5985696
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "E8ECEFFF",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
       "Name": "Sphere (3)",
       "ObjectId": -12268,
       "ParentId": -1644,
@@ -29553,6 +29445,168 @@
         "PrimitiveType": 3,
         "Color": "F9FBFDFF",
         "PrimitiveFlags": 3,
+        "Static": false
+      }
+    },
+    {
+      "Name": "PrimitiveObjectToy",
+      "ObjectId": -990001,
+      "ParentId": -1644,
+      "Position": {
+        "x": 0.0,
+        "y": 3.9,
+        "z": 17.215
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.5,
+        "y": 1.3,
+        "z": 0.04
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "8D9AA7FF",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "PrimitiveObjectToy",
+      "ObjectId": -990002,
+      "ParentId": -1644,
+      "Position": {
+        "x": 0.0,
+        "y": 3.9,
+        "z": 17.17
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.2,
+        "y": 1.05,
+        "z": 0.04
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "12161FFF",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "PrimitiveObjectToy",
+      "ObjectId": -990003,
+      "ParentId": -1644,
+      "Position": {
+        "x": 0.0,
+        "y": 3.9,
+        "z": -17.215
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.5,
+        "y": 1.3,
+        "z": 0.04
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "8D9AA7FF",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "PrimitiveObjectToy",
+      "ObjectId": -990004,
+      "ParentId": -1644,
+      "Position": {
+        "x": 0.0,
+        "y": 3.9,
+        "z": -17.17
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.2,
+        "y": 1.05,
+        "z": 0.04
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "12161FFF",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "PrimitiveObjectToy",
+      "ObjectId": -990005,
+      "ParentId": -1644,
+      "Position": {
+        "x": -10.715,
+        "y": 3.9,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.04,
+        "y": 1.3,
+        "z": 3.5
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "8D9AA7FF",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "PrimitiveObjectToy",
+      "ObjectId": -990006,
+      "ParentId": -1644,
+      "Position": {
+        "x": -10.67,
+        "y": 3.9,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.04,
+        "y": 1.05,
+        "z": 3.2
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "12161FFF",
+        "PrimitiveFlags": 2,
         "Static": false
       }
     }

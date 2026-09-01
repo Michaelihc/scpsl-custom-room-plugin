@@ -28,6 +28,16 @@ internal sealed class StationShellBuilder
     private const float RibY = 2.55f;
     private const float FrameThickness = 0.14f;
 
+    // Hatch signage backplate. The panel hangs clear of the bulkhead behind it and the frame clear of the
+    // panel, so no two of the three share a plane.
+    private const float SignPlateThickness = 0.04f;
+    private const float SignPanelDepth = 0.12f;
+    private const float SignFrameGap = 0.045f;
+    private const float SignPanelWidth = 3.2f;
+    private const float SignPanelHeight = 1.05f;
+    private const float SignFrameWidth = 3.5f;
+    private const float SignFrameHeight = 1.3f;
+
     /// <summary>Deck slabs overlap their neighbours slightly so tiled compartments never show a seam.</summary>
     private const float DeckOverlap = 0.06f;
 
@@ -98,11 +108,16 @@ internal sealed class StationShellBuilder
     {
         float width = zone.Width + DeckOverlap * 2f;
         float depth = zone.Depth + DeckOverlap * 2f;
-        AddBox(_layout.World(zone.CenterX, -DeckThickness / 2f, zone.CenterZ),
+
+        // The overlap keeps neighbouring slabs from opening a crack; the offset keeps the two slabs it
+        // creates off each other's plane. See WarmupHallLayout.DeckStagger.
+        float y = WarmupHallLayout.DeckOffset(zone);
+        AddBox(_layout.World(zone.CenterX, y - DeckThickness / 2f, zone.CenterZ),
             new Vector3(width, DeckThickness, depth), StationPalette.Deck, collidable: true);
 
-        // A slightly lighter inset plate reads as deck panelling and gives the floor a visible edge.
-        AddBox(_layout.World(zone.CenterX, SeamProud, zone.CenterZ),
+        // A slightly lighter inset plate reads as deck panelling and gives the floor a visible edge. It
+        // rides with its own slab so the two never part company.
+        AddBox(_layout.World(zone.CenterX, y + SeamProud, zone.CenterZ),
             new Vector3(zone.Width - 0.8f, 0.04f, zone.Depth - 0.8f), StationPalette.DeckPanel, collidable: false);
     }
 
@@ -146,15 +161,18 @@ internal sealed class StationShellBuilder
         float center = (hatch.From + hatch.To) / 2f;
         float span = hatch.To - hatch.From;
 
-        // Jambs either side plus a lintel, all inside the clear opening so they never block movement.
+        // Jambs either side plus a lintel, all inside the clear opening so they never block movement. The
+        // jambs stop UNDER the lintel rather than running past it: full height put their top faces on the
+        // lintel's plane and their sides on its ends, which flickered in the top corners of every doorway.
+        float jambHeight = hatch.Height - FrameThickness;
         foreach (float edge in new[] { hatch.From + FrameThickness / 2f, hatch.To - FrameThickness / 2f })
         {
             Vector3 position = hatch.InConstantXWall
-                ? _layout.World(hatch.Plane, hatch.Height / 2f, edge)
-                : _layout.World(edge, hatch.Height / 2f, hatch.Plane);
+                ? _layout.World(hatch.Plane, jambHeight / 2f, edge)
+                : _layout.World(edge, jambHeight / 2f, hatch.Plane);
             Vector3 size = hatch.InConstantXWall
-                ? new Vector3(WallThickness + 0.08f, hatch.Height, FrameThickness)
-                : new Vector3(FrameThickness, hatch.Height, WallThickness + 0.08f);
+                ? new Vector3(WallThickness + 0.08f, jambHeight, FrameThickness)
+                : new Vector3(FrameThickness, jambHeight, WallThickness + 0.08f);
             AddBox(position, size, StationPalette.Frame, collidable: false);
         }
 
@@ -184,31 +202,95 @@ internal sealed class StationShellBuilder
     /// </summary>
     private void BuildWayfinding()
     {
-        AddGuideStrip(_layout.World(0f, SeamProud + 0.02f, -35f), new Vector3(0.35f, 0.03f, 21f));
+        // These two meet at the connector mouth (z = -25.5) and must ABUT there. Overlapping them left a
+        // metre of strip with two coplanar top faces, which flickers all the more for being a saturated
+        // colour on a white deck.
+        AddGuideStrip(_layout.World(0f, SeamProud + 0.02f, -35.5f), new Vector3(0.35f, 0.03f, 20f));
         AddGuideStrip(_layout.World(0f, SeamProud + 0.02f, -8f), new Vector3(0.35f, 0.03f, 35f));
         AddGuideStrip(_layout.World(17f, SeamProud + 0.02f, 0f), new Vector3(24f, 0.03f, 0.35f));
         AddGuideStrip(_layout.World(-16f, SeamProud + 0.02f, 0f), new Vector3(10f, 0.03f, 0.35f));
         AddGuideStrip(_layout.World(0f, SeamProud + 0.02f, 30f), new Vector3(0.35f, 0.03f, 24f));
 
-        // Each sign is read by someone in the hub walking TOWARD that compartment, so its facing comes
-        // from that approach direction. An earlier boolean flag got all four backwards and rendered the
-        // signage mirrored.
-        AddHatchSign(_layout.World(0f, 3.9f, WarmupHallLayout.HubHalfDepth - 0.45f), _layout.ParkourShaft, Vector3.forward);
-        AddHatchSign(_layout.World(0f, 3.9f, -WarmupHallLayout.HubHalfDepth + 0.45f), _layout.Gallery, Vector3.back);
-        AddHatchSign(_layout.World(WarmupHallLayout.HubHalfWidth - 0.45f, 3.9f, 0f), _layout.AimBay, Vector3.right);
-        AddHatchSign(_layout.World(-WarmupHallLayout.HubHalfWidth + 0.45f, 3.9f, 0f), _layout.ObservationDeck, Vector3.left);
+        foreach (StationZone destination in _layout.Zones)
+        {
+            BuildHatchSign(destination);
+        }
     }
 
     private void AddGuideStrip(Vector3 center, Vector3 size) =>
         AddBox(center, size, StationPalette.Guide, collidable: false);
 
-    private void AddHatchSign(Vector3 position, StationZone destination, Vector3 approachDirection)
+    /// <summary>
+    /// The signed doorway into one compartment: a framed dark plate with the destination's name on it.
+    ///
+    /// Exposed per compartment because an authored station supplies its own signage for every
+    /// compartment EXCEPT the code-owned Aim Bay - whose sign sits inside the skipped volume, so without
+    /// this the one doorway a player is meant to be drawn to was the only unlabelled one.
+    ///
+    /// Each sign is read by someone in the hub walking TOWARD that compartment, so its facing comes from
+    /// that approach direction. An earlier boolean flag got all four backwards and rendered the signage
+    /// mirrored.
+    /// </summary>
+    public void BuildHatchSign(StationZone destination)
     {
+        if (!TryHatchSignAnchor(destination, out Vector3 position, out Vector3 approach))
+        {
+            return; // the hub itself has no doorway of its own to sign
+        }
+
+        // Cyan on a white bulkhead has almost no contrast; the plate is what makes the sign read from
+        // across the hub, and it reuses the gallery's frame-behind-panel treatment.
+        AddBox(position + approach * (SignPanelDepth + SignFrameGap), SignPlateSize(approach, SignFrameWidth, SignFrameHeight),
+            StationPalette.Frame, collidable: false);
+        AddBox(position + approach * SignPanelDepth, SignPlateSize(approach, SignPanelWidth, SignPanelHeight),
+            StationPalette.DisplayPanel, collidable: false);
+
         string text = _chinese
             ? $"<color=#1B87C9>{destination.SignCn}</color>"
             : $"<color=#1B87C9>{destination.SignEn}</color>";
-        AddLabel(position, text, WarmupHallLayout.FacingViewer(approachDirection), 420f);
+        AddLabel(position, text, WarmupHallLayout.FacingViewer(approach), 420f);
     }
+
+    /// <summary>Where a compartment's sign hangs, and which way someone reading it is walking.</summary>
+    private bool TryHatchSignAnchor(StationZone destination, out Vector3 position, out Vector3 approach)
+    {
+        const float y = 3.9f;
+        const float inset = 0.45f;
+        if (destination == _layout.ParkourShaft)
+        {
+            position = _layout.World(0f, y, WarmupHallLayout.HubHalfDepth - inset);
+            approach = Vector3.forward;
+        }
+        else if (destination == _layout.Gallery)
+        {
+            position = _layout.World(0f, y, -WarmupHallLayout.HubHalfDepth + inset);
+            approach = Vector3.back;
+        }
+        else if (destination == _layout.AimBay)
+        {
+            position = _layout.World(WarmupHallLayout.HubHalfWidth - inset, y, 0f);
+            approach = Vector3.right;
+        }
+        else if (destination == _layout.ObservationDeck)
+        {
+            position = _layout.World(-WarmupHallLayout.HubHalfWidth + inset, y, 0f);
+            approach = Vector3.left;
+        }
+        else
+        {
+            position = Vector3.zero;
+            approach = Vector3.zero;
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>A flat plate facing back down the approach: thin on that axis, sized on the other two.</summary>
+    private static Vector3 SignPlateSize(Vector3 approach, float width, float height) =>
+        Mathf.Abs(approach.x) > 0.5f
+            ? new Vector3(SignPlateThickness, height, width)
+            : new Vector3(width, height, SignPlateThickness);
 
     // ---- Lighting ----------------------------------------------------------------------------
 

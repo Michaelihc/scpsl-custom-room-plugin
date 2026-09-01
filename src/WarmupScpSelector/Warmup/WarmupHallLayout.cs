@@ -193,6 +193,17 @@ public sealed class WarmupHallLayout
     /// <summary>How far the panel above a hatch reaches below the clear height, to break coplanarity.</summary>
     public const float AboveHatchDip = 0.02f;
 
+    /// <summary>
+    /// Vertical offset applied to every compartment in the second half of the deck's two-colouring.
+    ///
+    /// Deck slabs overlap their neighbours so tiled compartments cannot open a crack a player falls
+    /// through, and that overlap put two slabs' top faces on exactly the same plane in the width of every
+    /// doorway - a flickering band underfoot on the way into each compartment, and a matching one on the
+    /// station's underside. Neighbouring compartments therefore sit 2 mm apart in Y: far below anything a
+    /// player can see or trip on, far enough that the depth buffer resolves them from across the station.
+    /// </summary>
+    public const float DeckStagger = 0.002f;
+
     // ---- Gallery display grid ----------------------------------------------------------------
     /// <summary>Back rank of stands, facing arriving players.</summary>
     public const float BackRankZ = -43.5f;
@@ -256,6 +267,20 @@ public sealed class WarmupHallLayout
     public StationZone ParkourShaft { get; }
 
     public IReadOnlyList<StationZone> Zones => _zones;
+
+    /// <summary>
+    /// This compartment's deck offset in the two-colouring described on <see cref="DeckStagger"/>. The
+    /// hub and the gallery hold the reference plane; everything they touch drops by one step. The station
+    /// is a tree of compartments (hub at the centre, gallery behind the connector), so two colours are
+    /// always enough - no two neighbours share a plane.
+    /// </summary>
+    public static float DeckOffset(StationZone zone) => zone?.Id switch
+    {
+        "hub" => 0f,
+        "gallery" => 0f,
+        null => 0f,
+        _ => -DeckStagger,
+    };
 
     public IReadOnlyList<StationOpening> Openings => _openings;
 

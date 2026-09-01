@@ -59,7 +59,9 @@ namespace WarmupScpSelector.Warmup
 
                 // Full-height lane dividers, starting just downrange of the counter so the firing line stays open.
                 float dividerStart = 0.6f;
-                float dividerLength = downrangeLength - dividerStart;
+                // Stop short of the backstop facing: running into it put the divider tops on the plate's
+                // own top plane at the far end of the range.
+                float dividerLength = downrangeLength - dividerStart - 0.75f;
                 float dividerCenter = dividerStart + dividerLength / 2f;
                 foreach (float lateral in new[] { layout.DividerOneZ, layout.DividerTwoZ })
                 {
@@ -187,8 +189,8 @@ namespace WarmupScpSelector.Warmup
 
         private void BuildSignage(AimRangeLayout layout, bool chinese)
         {
-            AddLabel(layout.Range(0f, 3.9f, -2.6f),
-                chinese ? "瞄准训练舱" : "AIM BAY", 420f);
+            // No bay header here: the doorway two metres back already carries the compartment's name on
+            // its backplate, the same as every other compartment. Only the lane labels are the range's own.
             AddLabel(layout.Range(layout.LaneOneCenter, 3.4f, 1.4f),
                 chinese ? "1 实战机器人" : "1  LIVE BOTS", 300f);
             AddLabel(layout.Range(layout.LaneTwoCenter, 3.4f, 1.4f),
