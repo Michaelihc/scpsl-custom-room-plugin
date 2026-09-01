@@ -26,7 +26,10 @@ import json
 import math
 import sys
 
-MIN_AREA = 0.05          # m^2 of overlap worth reporting
+# m^2 of overlap worth reporting. Small: the pair that survived four passes was 0.019 m^2 - eight grey
+# pilasters set flush into a white parapet, sharing its top plane over a 7 cm strip each. A hand-sized
+# patch of grey on white at eye level is very visible; do not raise this to tidy the output.
+MIN_AREA = 0.01
 # Metres. NOT "exactly coplanar": the depth buffer's error across a 100 m station is millimetres, so
 # two faces 2 mm apart still fight when you look at them from the far side of the room or from outside.
 # Parting them by a hair and re-scanning at a hair's tolerance is how a "clean" scan kept shipping
