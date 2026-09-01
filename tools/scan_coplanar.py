@@ -27,7 +27,11 @@ import math
 import sys
 
 MIN_AREA = 0.05          # m^2 of overlap worth reporting
-PLANE_EPS = 0.0015       # metres; closer than this counts as "the same plane"
+# Metres. NOT "exactly coplanar": the depth buffer's error across a 100 m station is millimetres, so
+# two faces 2 mm apart still fight when you look at them from the far side of the room or from outside.
+# Parting them by a hair and re-scanning at a hair's tolerance is how a "clean" scan kept shipping
+# visible flicker. Anything inside a centimetre needs real clearance.
+PLANE_EPS = 0.01
 CUBE = 3                 # UnityEngine.PrimitiveType.Cube
 VISIBLE = 2              # AdminToys.PrimitiveFlags.Visible
 

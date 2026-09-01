@@ -37,8 +37,14 @@ internal sealed class StationShellBuilder
     /// which reads in game as a small grey cube embedded in the wall. Lifting ONE of the two families
     /// (the constant-X walls) parts them; the extra 2 mm is buried inside the overhead, so it opens no
     /// gap the way lowering the other family would.
+    ///
+    /// TWO CENTIMETRES, not two millimetres. The depth buffer's error at the far end of a 100 m station
+    /// is on the order of millimetres, so a hairline offset still fights from across the room even
+    /// though it is no longer exactly coplanar - which is how a scan that only looked for exact
+    /// coplanarity kept passing while the flicker was still there in game. The overhead slab is 0.3 m
+    /// thick, so 2 cm still vanishes inside it.
     /// </summary>
-    private const float WallTopLift = 0.002f;
+    private const float WallTopLift = 0.02f;
 
     // Hatch signage backplate. The panel hangs clear of the bulkhead behind it and the frame clear of the
     // panel, so no two of the three share a plane.
@@ -50,8 +56,17 @@ internal sealed class StationShellBuilder
     private const float SignFrameWidth = 3.5f;
     private const float SignFrameHeight = 1.3f;
 
-    /// <summary>Deck slabs overlap their neighbours slightly so tiled compartments never show a seam.</summary>
-    private const float DeckOverlap = 0.06f;
+    /// <summary>
+    /// Deck slabs ABUT their neighbours exactly - they must not overlap.
+    ///
+    /// This used to be 0.06 m of overlap "so tiled compartments never show a seam", and it bought a far
+    /// worse artifact than the seam it was avoiding: two slabs' top faces on one plane across the width
+    /// of every doorway, plus the same band on the station's underside. Staggering them in Y instead only
+    /// moved the problem, because every piece of code-built furniture is placed on y = 0 and would then
+    /// float above its own floor. The overhead slabs have always abutted with no overlap and no seam;
+    /// the deck does the same.
+    /// </summary>
+    private const float DeckOverlap = 0f;
 
     private const float LightSpacing = 11f;
     private const float LightIntensity = 24f;
@@ -121,15 +136,11 @@ internal sealed class StationShellBuilder
         float width = zone.Width + DeckOverlap * 2f;
         float depth = zone.Depth + DeckOverlap * 2f;
 
-        // The overlap keeps neighbouring slabs from opening a crack; the offset keeps the two slabs it
-        // creates off each other's plane. See WarmupHallLayout.DeckStagger.
-        float y = WarmupHallLayout.DeckOffset(zone);
-        AddBox(_layout.World(zone.CenterX, y - DeckThickness / 2f, zone.CenterZ),
+        AddBox(_layout.World(zone.CenterX, -DeckThickness / 2f, zone.CenterZ),
             new Vector3(width, DeckThickness, depth), StationPalette.Deck, collidable: true);
 
-        // A slightly lighter inset plate reads as deck panelling and gives the floor a visible edge. It
-        // rides with its own slab so the two never part company.
-        AddBox(_layout.World(zone.CenterX, y + SeamProud, zone.CenterZ),
+        // A slightly lighter inset plate reads as deck panelling and gives the floor a visible edge.
+        AddBox(_layout.World(zone.CenterX, SeamProud, zone.CenterZ),
             new Vector3(zone.Width - 0.8f, 0.04f, zone.Depth - 0.8f), StationPalette.DeckPanel, collidable: false);
     }
 
@@ -179,8 +190,13 @@ internal sealed class StationShellBuilder
         // Jambs either side plus a lintel, all inside the clear opening so they never block movement. The
         // jambs stop UNDER the lintel rather than running past it: full height put their top faces on the
         // lintel's plane and their sides on its ends, which flickered in the top corners of every doorway.
+        // Inset by half a wall so the jamb stands in the clear opening. Sitting at the opening's very
+        // edge put it INSIDE the perpendicular compartment wall, with its outer face 1 cm off that
+        // wall's own face over most of a square metre - grey against white, and 1 cm is still inside the
+        // depth buffer's error from across the station. This is the flicker that survived three passes.
+        float jambInset = WallThickness / 2f + FrameThickness / 2f;
         float jambHeight = hatch.Height - FrameThickness;
-        foreach (float edge in new[] { hatch.From + FrameThickness / 2f, hatch.To - FrameThickness / 2f })
+        foreach (float edge in new[] { hatch.From + jambInset, hatch.To - jambInset })
         {
             Vector3 position = hatch.InConstantXWall
                 ? _layout.World(hatch.Plane, jambHeight / 2f, edge)
@@ -197,9 +213,10 @@ internal sealed class StationShellBuilder
         Vector3 lintelPosition = hatch.InConstantXWall
             ? _layout.World(hatch.Plane, lintelMidY, center)
             : _layout.World(center, lintelMidY, hatch.Plane);
+        float lintelSpan = span - WallThickness;
         Vector3 lintelSize = hatch.InConstantXWall
-            ? new Vector3(WallThickness + 0.08f, FrameThickness, span)
-            : new Vector3(span, FrameThickness, WallThickness + 0.08f);
+            ? new Vector3(WallThickness + 0.08f, FrameThickness, lintelSpan)
+            : new Vector3(lintelSpan, FrameThickness, WallThickness + 0.08f);
         AddBox(lintelPosition, lintelSize, StationPalette.Frame, collidable: false);
 
         // Amber threshold striping on the deck, the way a real airlock sill is painted.
@@ -208,7 +225,7 @@ internal sealed class StationShellBuilder
             : _layout.World(center, SeamProud + 0.01f, hatch.Plane);
         // Short of the jambs at both ends: run to the full opening and the sill's ends land on the jambs'
         // outer faces.
-        float sillSpan = span - FrameThickness;
+        float sillSpan = span - WallThickness - FrameThickness * 2f;
         Vector3 sillSize = hatch.InConstantXWall
             ? new Vector3(0.5f, 0.03f, sillSpan)
             : new Vector3(sillSpan, 0.03f, 0.5f);

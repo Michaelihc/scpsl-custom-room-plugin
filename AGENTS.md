@@ -37,9 +37,18 @@
   than the wall); the aim backstop plate was sunk into the far bulkhead (now proud of it); the two teal
   guide strips overlapped by a metre at the connector mouth (now abutting); and `DeckOverlap` put two
   slabs' top faces on one plane across the full width of EVERY doorway, with the same band on the
-  station's underside - compartments now sit 2 mm apart in Y under a two-colouring
-  (`WarmupHallLayout.DeckOffset`), which keeps the overlap that stops a player falling through a seam.
-  The last family was the WALL CORNERS: faces are boxes centred on their own plane, so two perpendicular
+  station's underside. `DeckOverlap` is now 0 - slabs abut, as the overhead slabs always have. Do not
+  "fix" that by staggering the compartments in Y instead: every piece of code-built furniture is placed
+  on y = 0, so a staggered floor leaves the aim bay's counter and the parkour pads floating above it.
+  **A hairline is not a fix.** The depth buffer's error at station range is millimetres, so two faces
+  2 mm apart still fight from across the room even though they are no longer coplanar - and a scan whose
+  tolerance is 1.5 mm then reports the room clean while the flicker is still there in game. Scan at a
+  ONE CENTIMETRE tolerance and give every pair real clearance (2 cm where geometry can hide it). The one
+  that survived three passes this way was grey-on-white and a square metre in size: hatch jambs sat at
+  the very edge of their opening, which put them INSIDE the perpendicular compartment wall with their
+  outer face 1 cm off that wall's face. Jambs now inset by half a wall so they stand in the clear
+  opening, with the lintel and sill spanning between them.
+  The WALL CORNERS: faces are boxes centred on their own plane, so two perpendicular
   walls cross in a 0.3 x 0.3 column and both tops land on the ceiling plane - a 15 cm square at the top
   of every corner, which a player reports as "a small grey cube embedded in the wall". Constant-X walls
   now reach `WallTopLift` (2 mm) higher, which parts them inside the overhead rather than opening the
