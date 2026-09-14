@@ -1,36 +1,36 @@
 {
   "source_sha256": "d823cc990f784f5fccda5f33852815829a571234b4b4e1bcbcb67f5b32db428b",
   "before": 1090,
-  "after": 1051,
+  "after": 1073,
   "unchanged_protected_blocks": 658,
   "scp_primitives": {
     "049": {
       "before": 12,
-      "after": 12
+      "after": 14
     },
     "079": {
       "before": 7,
-      "after": 7
+      "after": 11
     },
     "096": {
       "before": 14,
-      "after": 14
+      "after": 17
     },
     "106": {
       "before": 11,
-      "after": 11
+      "after": 16
     },
     "173": {
       "before": 11,
-      "after": 11
+      "after": 13
     },
     "939": {
       "before": 13,
-      "after": 13
+      "after": 17
     },
     "3114": {
       "before": 18,
-      "after": 18
+      "after": 20
     }
   },
   "removed_brand_blocks": 218,

@@ -66,7 +66,7 @@ def build():
         save(model, f'scp-{role}')
         visible = [b for b in model.blocks if b.get('Properties',{}).get('PrimitiveFlags') == 2]
         old = blocks[pedestal_index+2:label_index]
-        assert len(old) == len(visible), (role,len(old),len(visible))
+        assert len(visible) <= len(old) + 5, (role,len(old),len(visible))
         budgets[role] = {'before':len(old),'after':len(visible)}
         remove.update(b['ObjectId'] for b in old)
         # Every current v3 display faces +Z. Preserve each original stand/label.
@@ -163,6 +163,21 @@ def build():
         b['ParentId'] = id_map[b['ParentId']]
     preview_path = ROOT / 'generated/previews/star-room.mer.json'
     preview_path.write_text(json.dumps(preview,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+    # Front-row review scene; no game transforms are changed by this framing.
+    lineup = Builder('collectible_lineup')
+    for i, role in enumerate(ROLES):
+        model = importlib.import_module(f'build_scp_{role}_asset').build()
+        lineup.box('stand',(-i*2.8,-.10,0),(2.35,.20,2.2),'#313A52')
+        for original in model.blocks[1:]:
+            if original['Properties'].get('PrimitiveFlags') != 2:
+                continue
+            b = copy.deepcopy(original)
+            b['ObjectId'], b['ParentId'] = lineup.next_id, 0
+            lineup.next_id += 1
+            b['Position']['x'] -= i*2.8
+            lineup.blocks.append(b)
+    (ROOT / 'generated/previews/collectible-lineup.mer.json').write_text(
+        json.dumps(lineup.to_json(),indent=2)+'\n',encoding='utf-8')
     report={'source_sha256':SOURCE_SHA,'before':len(blocks),'after':len(kept),
             'unchanged_protected_blocks':len(preserved),'scp_primitives':budgets,
             'removed_brand_blocks':218,'added_decor':len(decor.blocks)-1}

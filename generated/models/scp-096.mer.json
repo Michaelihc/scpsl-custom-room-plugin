@@ -32,52 +32,52 @@
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": -0.18,
-        "y": 0.06,
-        "z": 0.12
+        "x": -0.19,
+        "y": 0.065,
+        "z": 0.1
       },
       "Rotation": {
         "x": 0.0,
-        "y": 0.0,
+        "y": -8,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.22,
-        "y": 0.12,
-        "z": 0.36
+        "x": 0.2,
+        "y": 0.13,
+        "z": 0.34
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#B8AE9C",
+        "Color": "#A79586",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "leg_0002",
+      "Name": "shin_0002",
       "ObjectId": 3,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": -0.18,
-        "y": 0.84,
-        "z": 0.0
+        "x": -0.215,
+        "y": 0.655,
+        "z": 0.055
       },
       "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
+        "x": -85.31639,
+        "y": -35.53768,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.15,
-        "y": 1.52,
-        "z": 0.16
+        "x": 0.115,
+        "y": 0.115,
+        "z": 1.05352
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#E6DDCE",
+        "Color": "#E8DCC4",
         "PrimitiveFlags": 2,
         "Static": false
       }
@@ -88,52 +88,52 @@
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.18,
-        "y": 0.06,
-        "z": 0.12
+        "x": 0.19,
+        "y": 0.065,
+        "z": 0.1
       },
       "Rotation": {
         "x": 0.0,
-        "y": 0.0,
+        "y": 8,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.22,
-        "y": 0.12,
-        "z": 0.36
+        "x": 0.2,
+        "y": 0.13,
+        "z": 0.34
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#B8AE9C",
+        "Color": "#A79586",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "leg_0004",
+      "Name": "shin_0004",
       "ObjectId": 5,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.18,
-        "y": 0.84,
-        "z": 0.0
+        "x": 0.215,
+        "y": 0.655,
+        "z": 0.055
       },
       "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
+        "x": -85.31639,
+        "y": 35.53768,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.15,
-        "y": 1.52,
-        "z": 0.16
+        "x": 0.115,
+        "y": 0.115,
+        "z": 1.05352
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#E6DDCE",
+        "Color": "#E8DCC4",
         "PrimitiveFlags": 2,
         "Static": false
       }
@@ -145,23 +145,23 @@
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 1.57,
-        "z": 0.02
+        "y": 1.21,
+        "z": -0.035
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 10,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.44,
-        "y": 0.28,
-        "z": 0.3
+        "x": 0.41,
+        "y": 0.22,
+        "z": 0.29
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 0,
-        "Color": "#B8AE9C",
+        "PrimitiveType": 3,
+        "Color": "#A79586",
         "PrimitiveFlags": 2,
         "Static": false
       }
@@ -173,23 +173,23 @@
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 2.08,
-        "z": 0.02
+        "y": 1.68,
+        "z": 0.035
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 12,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.48,
-        "y": 1.02,
-        "z": 0.36
+        "x": 0.4,
+        "y": 0.89,
+        "z": 0.32
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 0,
-        "Color": "#E6DDCE",
+        "Color": "#E8DCC4",
         "PrimitiveFlags": 2,
         "Static": false
       }
@@ -201,226 +201,310 @@
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 2.55,
-        "z": 0.03
+        "y": 2.04,
+        "z": 0.12
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 9,
         "y": 0.0,
-        "z": 0.0
+        "z": -6
       },
       "Scale": {
-        "x": 0.78,
-        "y": 0.28,
-        "z": 0.36
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 0,
-        "Color": "#B8AE9C",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "arm_0008",
-      "ObjectId": 9,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": -0.43,
-        "y": 1.5,
-        "z": 0.11
-      },
-      "Rotation": {
-        "x": 4,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.15,
-        "y": 2.03,
-        "z": 0.18
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 0,
-        "Color": "#E6DDCE",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "hand_0009",
-      "ObjectId": 10,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": -0.43,
-        "y": 0.40499999999999997,
-        "z": 0.125
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.14,
-        "y": 0.33,
-        "z": 0.19
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#B8AE9C",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "arm_0010",
-      "ObjectId": 11,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": 0.43,
-        "y": 1.5,
-        "z": 0.11
-      },
-      "Rotation": {
-        "x": 4,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.15,
-        "y": 2.03,
-        "z": 0.18
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 0,
-        "Color": "#E6DDCE",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "hand_0011",
-      "ObjectId": 12,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": 0.43,
-        "y": 0.40499999999999997,
-        "z": 0.125
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.14,
-        "y": 0.33,
-        "z": 0.19
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#B8AE9C",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "neck_0012",
-      "ObjectId": 13,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": 0.0,
-        "y": 2.7,
-        "z": 0.01
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.13,
-        "y": 0.18,
-        "z": 0.13
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#B8AE9C",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "head_0013",
-      "ObjectId": 14,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": 0.0,
-        "y": 2.84,
-        "z": 0.02
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.3,
-        "y": 0.32,
+        "x": 0.74,
+        "y": 0.15,
         "z": 0.3
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 0,
-        "Color": "#E6DDCE",
+        "PrimitiveType": 3,
+        "Color": "#A79586",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "mouth_0014",
-      "ObjectId": 15,
+      "Name": "head_0008",
+      "ObjectId": 9,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 2.775,
-        "z": 0.165
+        "y": 2.33,
+        "z": 0.2
       },
       "Rotation": {
+        "x": 10,
+        "y": 0.0,
+        "z": -5
+      },
+      "Scale": {
+        "x": 0.34,
+        "y": 0.45,
+        "z": 0.32
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#E8DCC4",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "mouth_0009",
+      "ObjectId": 10,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
         "x": 0.0,
+        "y": 2.23,
+        "z": 0.378
+      },
+      "Rotation": {
+        "x": 10,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.19,
-        "y": 0.2,
-        "z": 0.1
+        "x": 0.17,
+        "y": 0.21,
+        "z": 0.045
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 0,
-        "Color": "#2A211C",
+        "PrimitiveType": 3,
+        "Color": "#493B42",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "upper_arm_0010",
+      "ObjectId": 11,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.405,
+        "y": 1.755,
+        "z": 0.22
+      },
+      "Rotation": {
+        "x": 66.31791,
+        "y": -36.8699,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.105,
+        "y": 0.105,
+        "z": 0.62241
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#E8DCC4",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "forearm_0011",
+      "ObjectId": 12,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.375,
+        "y": 1.82,
+        "z": 0.39
+      },
+      "Rotation": {
+        "x": -70.17297,
+        "y": 56.30993,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.095,
+        "y": 0.095,
+        "z": 0.74411
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#E8DCC4",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "hand_0012",
+      "ObjectId": 13,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.27,
+        "y": 2.24,
+        "z": 0.43
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 12
+      },
+      "Scale": {
+        "x": 0.11,
+        "y": 0.3,
+        "z": 0.12
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#A79586",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "eye_hollow_0013",
+      "ObjectId": 14,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.1,
+        "y": 2.43,
+        "z": 0.372
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -5
+      },
+      "Scale": {
+        "x": 0.07,
+        "y": 0.045,
+        "z": 0.032
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#7A6668",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "upper_arm_0014",
+      "ObjectId": 15,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.405,
+        "y": 1.755,
+        "z": 0.22
+      },
+      "Rotation": {
+        "x": 66.31791,
+        "y": 36.8699,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.105,
+        "y": 0.105,
+        "z": 0.62241
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#E8DCC4",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "forearm_0015",
+      "ObjectId": 16,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.375,
+        "y": 1.82,
+        "z": 0.39
+      },
+      "Rotation": {
+        "x": -70.17297,
+        "y": -56.30993,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.095,
+        "y": 0.095,
+        "z": 0.74411
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#E8DCC4",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "hand_0016",
+      "ObjectId": 17,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.27,
+        "y": 2.24,
+        "z": 0.43
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -12
+      },
+      "Scale": {
+        "x": 0.11,
+        "y": 0.3,
+        "z": 0.12
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#A79586",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "eye_hollow_0017",
+      "ObjectId": 18,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.1,
+        "y": 2.43,
+        "z": 0.372
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": -5
+      },
+      "Scale": {
+        "x": 0.07,
+        "y": 0.045,
+        "z": 0.032
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#7A6668",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
       "Name": "marker_pivot",
-      "ObjectId": 16,
+      "ObjectId": 19,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
@@ -448,13 +532,13 @@
     },
     {
       "Name": "marker_head",
-      "ObjectId": 17,
+      "ObjectId": 20,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 2.84,
-        "z": 0.02
+        "y": 2.33,
+        "z": 0.2
       },
       "Rotation": {
         "x": 0.0,
