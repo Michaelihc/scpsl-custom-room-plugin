@@ -7,20 +7,30 @@ and a starfield ceiling surround coral/violet/orange wall ribbons. A ringed suns
 disc replaces the old logo and welcome/name panel; the separate old technical-name
 sign is also removed. The observation deck gains a ceiling constellation.
 
-All seven SCP displays use an angular collectible style with enlarged identifying
-features and deliberate poses: 049 **14**, 079 **11**, 096 **17**, 106 **16**,
-173 **13**, 939 **17**, 3114 **20** primitives. Each adds only 2–5 primitives to
-the original exhibit. The plague mask/hat, CRT, distressed gaunt figure, reaching
-old man, painted concrete totem, eyeless red hunter and exposed skeleton remain
-recognizable. [Inspect the lineup](../../previews/collectible-lineup.png). Exhibit stands and SCP label positions remain fixed, preserving the
-label-based selection-coin anchors. Embedded SCP assets use the same builders.
+The seven SCP displays now follow the current official SCP:SL Wiki model renders,
+using natural proportions and simplified primitive silhouettes. Counts: 049 **15**,
+079 **13**, 096 **20**, 106 **21**, 173 **18**, 939 **27**, 3114 **28**.
+See the [reference images and feature decisions](model-references.md),
+[lineup](../../previews/scpsl-lineup.png), [173 side view](../../previews/scpsl-173.png)
+and [939 side view](../../previews/scpsl-939.png).
+
+049 has a hood and long robe; 079 has the white CRT X; 096 has a gaunt rib cage and
+long hanging arms; 106 has exposed rotten skin and a cropped black vest; 173 uses
+Matthew's asymmetric concrete lobes; 939 uses the current upright 939-168 body,
+head spines and claws; 3114 uses adult skull, rib-cage and pelvis proportions.
+These are small primitive approximations, not imported game meshes or textures.
+The embedded assets and authored room share the same final model recipes.
+
+Exhibit stands and label X/Z coordinates remain fixed. Only the 173 and 939 labels
+are raised to clear their revised silhouettes, preserving the horizontal selection
+coin anchors used by `Import/AuthoredGalleryAnchors.cs`.
 
 The separate creature's complete hierarchy, transforms and materials are unchanged.
 The aim volume and complete parkour shaft, including entry signs, are unchanged.
 The generator verifies exact equality for **658 protected blocks**. New decor has
 visibility only and adds no collision. Existing shell collision is retained.
 Lighting outside the protected areas is capped at 2.5 to retain the gradient colors.
-Total: **1,073 blocks**, down from **1,090**. See [preservation report](preservation.json).
+Total: **1,107 blocks**, compared with **1,090** in the original. See [preservation report](preservation.json).
 
 For installation, copy this folder to the plugin's `Schematics` directory and set
 `authored_station_asset: warmup_station_stars` in the target port's configuration.
@@ -50,17 +60,21 @@ No server configuration or deployed files were changed.
 橙色—珊瑚红—紫色渐变墙带。带环的落日星球替代旧 Logo 和欢迎／名称面板，
 旧技术署名文字也已移除。观景舱新增天花板星座。
 
-七个 SCP 展品改为棱角分明的收藏玩偶风格，强化标志性特征并重新设计姿态。
-图元数量：049 为 **14**、079 为 **11**、096 为 **17**、106 为 **16**、
-173 为 **13**、939 为 **17**、3114 为 **20**，各比原展品仅增加 2–5 个图元。
-鸟嘴面具、CRT、捂脸瘦长人形、伸手老者、彩绘水泥像、无眼红色猎兽和骨架仍清晰可辨。
-展台与 SCP 标签坐标保留，因此基于标签定位的选择硬币锚点保持一致。
-内嵌 SCP 模型使用同一套生成器。
+七个 SCP 展品改为参考当前 SCP:SL 官方 Wiki 模型渲染图的简化图元造型。
+图元数量：049 为 **15**、079 为 **13**、096 为 **20**、106 为 **21**、
+173 为 **18**、939 为 **27**、3114 为 **28**。模型使用自然比例与主要轮廓，
+不是导入的原游戏网格或贴图；来源与造型依据见[参考说明](model-references.md)。
+
+049 改为兜帽长袍，079 使用白色 X 屏幕，096 恢复瘦削胸廓与下垂长臂，106 使用
+腐朽皮肤和敞胸短背心，173 使用 Matthew 的不对称混凝土团块，939 使用现行直立
+939-168 的头部尖刺与利爪，3114 使用成人颅骨、胸廓和骨盆比例。
+展台与标签的 X/Z 坐标保持不变；仅抬高 173、939 标签以避开模型，选择硬币的水平
+锚点不变。内嵌模型与房间图纸使用同一套最终生成配方。
 
 独立生物雕塑的完整层级、变换与材质均保留。瞄准区和完整跑酷竖井（含入口标志）
 保持不变；生成器逐项验证 **658 个受保护方块**完全一致。新增装饰没有碰撞，
 原房间碰撞保留。改造区域的灯光强度上限为 2.5，避免冲淡渐变色。
-总方块数从 **1,090** 降为 **1,073**。
+总方块数为 **1,107**，原房间为 **1,090**。
 
 安装时将本文件夹复制到插件的 `Schematics` 目录，并在目标端口配置中设置
 `authored_station_asset: warmup_station_stars`。功能靶场仍由代码生成，活动开关不会改变。
@@ -73,5 +87,5 @@ No server configuration or deployed files were changed.
 Preview regeneration (from the metarepo root):
 
 ```powershell
-dotnet .tools/mer-render/csharp/bin/Release/net10.0/MerRender.dll warmup-scp-selector/generated/previews/collectible-lineup.mer.json -o warmup-scp-selector/generated/previews/collectible-lineup.png --eye -8.4,4,20 --look -8.4,1.2,0 --ortho 7 --size 2100x700 --exposure 1.8 --language en
+dotnet .tools/mer-render/csharp/bin/Release/net10.0/MerRender.dll warmup-scp-selector/generated/previews/scpsl-lineup.mer.json -o warmup-scp-selector/generated/previews/scpsl-lineup.png --eye -8.4,4,20 --look -8.4,1.2,0 --ortho 7 --size 2100x700 --exposure 1.8 --language en
 ```

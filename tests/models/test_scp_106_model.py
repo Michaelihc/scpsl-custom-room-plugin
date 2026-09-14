@@ -1,5 +1,5 @@
 """SCP-106 geometry, identity and budget contract."""
-from collectible_contract import run
+from scpsl_model_contract import run
 
 if __name__ == '__main__':
     run('106')

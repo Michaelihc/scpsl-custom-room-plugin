@@ -13,6 +13,7 @@ import random
 from pathlib import Path
 
 from scp_builder import Builder, save
+from star_gallery_models import BUDGETS
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'generated/schematics/warmup_station_v3/warmup_station_v3.json'
@@ -58,6 +59,7 @@ def build():
     remove.add(-12170)
     new_models = []
     budgets = {}
+    label_heights = {}
     for role in ROLES:
         label_index = next(i for i,b in enumerate(blocks) if f'<b>SCP-{role}</b>' in b['Properties'].get('Text',''))
         pedestal_index = max(i for i in range(label_index) if blocks[i]['Scale'] == {'x':1.9,'y':.28,'z':1.5})
@@ -66,8 +68,20 @@ def build():
         save(model, f'scp-{role}')
         visible = [b for b in model.blocks if b.get('Properties',{}).get('PrimitiveFlags') == 2]
         old = blocks[pedestal_index+2:label_index]
-        assert len(visible) <= len(old) + 5, (role,len(old),len(visible))
+        assert len(visible) <= BUDGETS[role], (role,len(old),len(visible))
         budgets[role] = {'before':len(old),'after':len(visible)}
+        # Taller current-game 939/173 silhouettes need label clearance. Preserve X/Z,
+        # which AuthoredGalleryAnchors uses for their selection coins.
+        top = 0.0
+        for part in visible:
+            rx,rz=(math.radians(part['Rotation'][axis]) for axis in ('x','z'))
+            sx,sy,sz=(part['Scale'][axis]/2 for axis in 'xyz')
+            if part['Properties']['PrimitiveType'] == 2:
+                sy *= 2
+            extent=abs(math.cos(rx)*math.sin(rz))*sx+abs(math.cos(rx)*math.cos(rz))*sy+abs(math.sin(rx))*sz
+            top=max(top,part['Position']['y']+extent)
+        label=blocks[label_index]
+        label_heights[label['ObjectId']]=max(label['Position']['y'],round(top+.58,4))
         remove.update(b['ObjectId'] for b in old)
         # Every current v3 display faces +Z. Preserve each original stand/label.
         assert abs(pedestal['Rotation']['y']) < .001
@@ -87,6 +101,8 @@ def build():
             assert not protected(original)
             continue
         b = copy.deepcopy(original)
+        if b['ObjectId'] in label_heights:
+            b['Position']['y'] = label_heights[b['ObjectId']]
         if not protected(b):
             props = b['Properties']
             if b['BlockType'] == 2:
@@ -164,7 +180,7 @@ def build():
     preview_path = ROOT / 'generated/previews/star-room.mer.json'
     preview_path.write_text(json.dumps(preview,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
     # Front-row review scene; no game transforms are changed by this framing.
-    lineup = Builder('collectible_lineup')
+    lineup = Builder('scpsl_lineup')
     for i, role in enumerate(ROLES):
         model = importlib.import_module(f'build_scp_{role}_asset').build()
         lineup.box('stand',(-i*2.8,-.10,0),(2.35,.20,2.2),'#313A52')
@@ -176,7 +192,7 @@ def build():
             lineup.next_id += 1
             b['Position']['x'] -= i*2.8
             lineup.blocks.append(b)
-    (ROOT / 'generated/previews/collectible-lineup.mer.json').write_text(
+    (ROOT / 'generated/previews/scpsl-lineup.mer.json').write_text(
         json.dumps(lineup.to_json(),indent=2)+'\n',encoding='utf-8')
     report={'source_sha256':SOURCE_SHA,'before':len(blocks),'after':len(kept),
             'unchanged_protected_blocks':len(preserved),'scp_primitives':budgets,

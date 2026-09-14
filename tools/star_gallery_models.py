@@ -1,135 +1,162 @@
-"""Angular collectible SCP figures; all recipes are final, game-ready primitives.
+"""Small primitive studies of the current SCP:SL Wiki renders.
 
-Deliberately enlarged identifying features, offset stances, ivory/charcoal surfaces
-and restrained warm accents. No inherited mannequin geometry or post-hoc reshaping.
-All models face +Z and their visible bases meet y=0. Creature sculpture is separate.
+See generated/schematics/warmup_station_stars/model-references.md for exact images.
+Anatomical proportions and major silhouette features take priority over tiny detail.
++Z faces the aisle. This module never includes the separate observation creature.
 """
 from scp_builder import Builder
 
+BUDGETS = {'049':18,'079':14,'096':22,'106':22,'173':22,'939':28,'3114':28}
+
 
 def build(role):
-    b = Builder(f'scp{role}_root')
+    b=Builder(f'scp{role}_root')
     def box(n,p,s,c,r=(0,0,0)): b.box(n,p,s,c,r)
     def oval(n,p,s,c,r=(0,0,0)): b.add(n,p,r,s,c,0)
-    def bone(n,a,z,w,c): b.seg(n,a,z,w,c)
-    ivory, shade, ink = '#E8DCC4', '#A79586', '#242638'
-    if role == '049':
-        # Tailored trapezoid read: faceted skirt, broad collar, tilted large mask.
-        b.cylinder('robe_skirt',(0,.40,0),(.86,.40,.65),'#282B42',rot=(0,22.5,0))
-        box('robe_body',(0,1.05,-.02),(.55,.93,.43),'#363B53',(-5,0,0))
-        box('collar',(0,1.48,.015),(.83,.23,.49),'#171D30',(0,0,-5))
-        box('mask_head',(.025,1.89,.06),(.50,.55,.46),ivory,(0,0,-8))
-        oval('beak',(.02,1.73,.49),(.19,.65,.20),ivory,(-62,0,0))
+    def limb(n,a,z,w,c,depth=None):
+        b.seg(n,a,z,w,c,thick=depth or w,overrun=w*1.1)
+        b.blocks[-1]['Properties']['PrimitiveType']=0
+    def bone(n,a,z,w,c): b.seg(n,a,z,w,c,overrun=.025)
+    skin,shadow,dark='#C8C3C1','#969093','#262326'
+    if role=='049':
+        # RenderSCP-049: hood/cowl, shoulder cape, long black split robe, bare mask.
         for s in (-1,1):
-            box('lens',(.15*s,1.94,.305),(.12,.13,.048),ink,(0,0,-8))
-        b.cylinder('hat_brim',(.025,2.16,.02),(.94,.035,.78),'#151A2A',rot=(0,0,-8))
-        box('hat_crown',(.057,2.31,.01),(.51,.27,.42),'#282B42',(0,0,-8))
-        bone('sleeve_left',(-.35,1.43,0),(-.48,.93,.15),.22,'#363B53')
-        bone('sleeve_right',(.35,1.43,0),(.43,1.12,.36),.22,'#363B53')
-        box('glove_left',(-.48,.88,.18),(.18,.20,.20),'#171D30',(8,0,0))
-        box('glove_right',(.43,1.08,.39),(.18,.19,.22),'#171D30',(-25,0,0))
-        box('clasp',(0,1.39,.263),(.13,.13,.035),'#C89C59',(0,0,45))
-        head=(.025,1.89,.06)
-    elif role == '079':
-        # Compact beige CRT; chunky pixel expression is geometry, not a texture.
-        box('base',(0,.12,0),(1.10,.24,.70),'#9A8B80')
-        box('monitor',(0,.69,-.03),(1.04,.92,.65),'#D6C6AC')
-        box('monitor_rear',(0,.70,-.33),(.78,.69,.28),'#9A8B80',(0,0,0))
-        box('bezel',(0,.73,.307),(.89,.69,.052),ink)
-        box('screen',(0,.75,.342),(.75,.53,.04),'#345851')
+            oval('boot',(.18*s,.095,.12),(.25,.19,.40),'#1D2021')
+            oval('robe_panel',(.16*s,.86,0),(.51,1.50,.55),'#343838',r=(0,0,s*2))
+        oval('torso',(0,1.54,-.015),(.62,.67,.49),'#343838')
+        oval('cape',(0,1.84,-.025),(.93,.32,.61),'#292D2E')
+        oval('hood',(0,2.15,-.035),(.57,.70,.52),'#202425')
+        oval('mask_head',(0,2.21,.188),(.36,.41,.24),'#A9AAA1')
+        oval('beak',(0,2.02,.375),(.21,.52,.23),'#A9AAA1',(-49,0,0))
         for s in (-1,1):
-            box('pixel_eye',(.17*s,.82,.368),(.15,.055,.023),'#CBE6AD')
-        box('pixel_mouth',(0,.64,.369),(.30,.04,.025),'#CBE6AD')
-        box('keyboard',(0,.20,.51),(.96,.12,.40),'#D6C6AC',(12,0,0))
-        box('keys',(0,.275,.50),(.76,.025,.24),'#69646A',(12,0,0))
-        box('led',(.40,.44,.35),(.048,.047,.033),'#E38D55')
-        head=(0,.75,.38)
-    elif role == '096':
-        # Knobby knees, sloping shoulders and hands drawn up beside the face.
+            oval('eye',(.115*s,2.27,.309),(.09,.055,.045),'#202325',r=(0,0,s*9))
+            limb('sleeve',(.36*s,1.81,.015),(.43*s,.96,.095),.23,'#343838')
+            oval('glove',(.43*s,.83,.12),(.16,.30,.15),'#222526',r=(-8,0,s*6))
+        head=(0,2.21,.188)
+    elif role=='079':
+        # RenderSCP-079: beige CRT and keyboard, black screen with the white X.
+        box('base',(0,.10,-.04),(1.03,.20,.61),'#4C5046')
+        box('monitor',(0,.75,-.09),(1.10,.91,.69),'#A69C7F')
+        box('bezel',(0,.75,.276),(.97,.78,.055),'#5D5B4E')
+        box('screen',(-.045,.78,.312),(.77,.62,.04),'#101517')
+        for angle in (-42,42):
+            box('screen_x',(-.045,.78,.342),(.085,.57,.024),'#DEE1D9',(0,0,angle))
+        box('keyboard',(0,.225,.47),(1.18,.20,.50),'#B0A58C',(11,0,0))
+        box('keys',(0,.329,.48),(.98,.025,.31),'#5D5B4E',(11,0,0))
+        box('spacebar',(.02,.329,.642),(.46,.04,.04),'#B0A58C',(11,0,0))
+        oval('knob',(.445,.47,.319),(.055,.055,.041),'#262A28')
+        box('power',(.455,.405,.326),(.031,.025,.027),'#C58342')
+        box('drive',(-.64,.115,.25),(.30,.21,.43),'#A69C7F')
+        box('drive_slot',(-.64,.135,.467),(.22,.018,.02),'#30362F')
+        head=(-.045,.78,.342)
+    elif role=='096':
+        # 096rerender: small bald head, exposed rib mass, long arms below the knees.
         for s in (-1,1):
-            box('foot',(.19*s,.065,.10),(.20,.13,.34),shade,(0,s*8,0))
-            bone('shin',(.19*s,.13,.02),(.24*s,1.18,.09),.115,ivory)
-        box('hips',(0,1.21,-.035),(.41,.22,.29),shade,(10,0,0))
-        oval('torso',(0,1.68,.035),(.40,.89,.32),ivory,(12,0,0))
-        box('shoulders',(0,2.04,.12),(.74,.15,.30),shade,(9,0,-6))
-        box('head',(0,2.33,.20),(.34,.45,.32),ivory,(10,0,-5))
-        box('mouth',(0,2.23,.378),(.17,.21,.045),'#493B42',(10,0,0))
+            oval('foot',(.145*s,.065,.10),(.17,.13,.29),shadow)
+            limb('shin',(.145*s,.13,0),(.12*s,.68,.065),.10,skin)
+            limb('thigh',(.12*s,.68,.065),(.15*s,1.37,-.02),.14,skin)
+        oval('hips',(0,1.38,-.02),(.39,.31,.27),shadow)
+        oval('abdomen',(0,1.64,-.015),(.30,.50,.27),skin)
+        oval('ribcage',(0,1.99,.02),(.59,.65,.36),skin,(10,0,0))
+        oval('neck',(0,2.26,.065),(.26,.40,.28),shadow,(-22,0,0))
+        oval('head',(0,2.43,.20),(.31,.47,.32),skin,(12,0,0))
+        oval('mouth',(0,2.295,.351),(.15,.16,.05),'#554347',(12,0,0))
         for s in (-1,1):
-            bone('upper_arm',(.33*s,2.04,.12),(.48*s,1.47,.32),.105,ivory)
-            bone('forearm',(.48*s,1.47,.32),(.27*s,2.17,.46),.095,ivory)
-            box('hand',(.27*s,2.24,.43),(.11,.30,.12),shade,(0,0,-s*12))
-            box('eye_hollow',(.10*s,2.43,.372),(.07,.045,.032),'#7A6668',(0,0,-5))
-        head=(0,2.33,.20)
-    elif role == '106':
-        # A crooked charcoal coat and one reaching hand emerge from a tar pool.
-        oval('tar_shadow',(0,.035,.08),(1.12,.07,.91),'#191B2C')
+            oval('eye_hollow',(.087*s,2.47,.355),(.10,.072,.045),'#71676D')
+            limb('upper_arm',(.28*s,2.16,.015),(.47*s,1.43,.02),.135,skin)
+            limb('forearm',(.47*s,1.43,.02),(.41*s,.70,.18),.115,skin)
+            oval('hand',(.41*s,.57,.23),(.16,.29,.16),shadow,(-17,0,s*12))
+        head=(0,2.43,.20)
+    elif role=='106':
+        # Scp10613: rotten bald skin, exposed abdomen, cropped black shoulder vest.
+        rot,rotlight,cloth='#514C43','#726B5D','#202320'
         for s in (-1,1):
-            box('foot',(.18*s,.115,.13),(.24,.17,.35),'#353344',(0,s*10,0))
-            bone('leg',(.18*s,.16,.04),(.14*s,.73,-.06),.18,'#484455')
-        box('hips',(0,.71,-.04),(.49,.29,.35),'#353344',(0,0,-7))
-        box('torso',(0,1.07,.045),(.52,.60,.37),'#59505A',(16,0,-7))
-        box('back_hunch',(-.04,1.37,-.07),(.65,.31,.43),'#353344',(12,0,-7))
-        box('head',(.04,1.41,.29),(.40,.41,.36),'#8A7976',(5,0,-9))
+            oval('foot',(.145*s,.06,.085),(.18,.12,.30),rot)
+            limb('shin',(.145*s,.12,0),(.16*s,.47,-.055),.135,rot)
+            limb('thigh',(.16*s,.47,-.055),(.12*s,.89,-.06),.18,rot)
+        oval('hips',(0,.88,-.065),(.39,.30,.29),rot)
+        oval('abdomen',(0,1.095,-.04),(.31,.38,.27),rotlight)
+        oval('chest',(0,1.34,-.03),(.52,.42,.32),rot)
         for s in (-1,1):
-            box('eye',(.04+.10*s,1.48,.49),(.085,.07,.035),ink,(0,0,-9))
-        box('grin',(.04,1.34,.493),(.21,.048,.035),'#C2B49D',(0,0,-9))
-        bone('arm_left',(-.29,1.28,.01),(-.43,.66,.20),.17,'#59505A')
-        bone('arm_right',(.27,1.25,.02),(.36,1.10,.55),.18,'#59505A')
-        box('hand_left',(-.43,.62,.22),(.17,.23,.16),'#8A7976')
-        box('hand_right',(.36,1.08,.65),(.18,.15,.27),'#8A7976',(-12,0,0))
-        head=(.04,1.41,.29)
-    elif role == '173':
-        # Brutalist concrete totem: heavy angular head, short supports, painted face.
+            box('vest',(.19*s,1.385,.04),(.19,.33,.29),cloth,(12,0,s*10))
+            limb('upper_arm',(.285*s,1.42,-.03),(.36*s,1.04,.08),.15,rot)
+            limb('forearm',(.36*s,1.04,.08),(.33*s,.73,.26),.12,rotlight)
+            oval('hand',(.33*s,.665,.30),(.14,.22,.14),rot,(-24,0,0))
+        oval('head',(0,1.67,.15),(.27,.39,.29),rotlight,(10,0,0))
         for s in (-1,1):
-            box('foot',(.19*s,.21,0),(.25,.42,.34),'#9B8B78',(0,s*8,0))
-        box('torso',(0,.73,0),(.62,.76,.46),'#C2AF92',(0,0,-6))
-        box('shoulders',(0,1.05,.01),(.73,.27,.51),'#D9C7A9',(0,0,-6))
-        box('head',(.035,1.48,.015),(.70,.72,.53),'#D9C7A9',(0,0,-6))
+            oval('eye',(.071*s,1.699,.286),(.056,.048,.035),'#B0AB8B')
+        oval('grin',(0,1.565,.29),(.17,.063,.04),'#BBB393')
+        head=(0,1.67,.15)
+    elif role=='173':
+        # RenderSCP-173 (Matthew): asymmetric fused concrete masses and pointed legs.
+        concrete,wear,red,green='#A08E69','#B2A17F','#794947','#577C43'
+        oval('leg_left',(-.25,.39,.02),(.40,.80,.40),'#6B5946',(0,0,-9))
+        oval('leg_right',(.22,.41,-.04),(.39,.84,.41),'#78664F',(0,0,8))
+        oval('body',(0,.97,-.015),(.92,1.08,.63),concrete,(0,0,-9))
+        oval('side_lobe',(-.35,1.43,-.09),(.61,.77,.56),concrete,(0,0,-21))
+        oval('main_lobe',(.18,1.69,.01),(.73,.79,.65),wear,(0,0,15))
+        oval('chest_lobe',(.01,1.26,.32),(.53,.58,.35),wear,(0,0,-13))
+        limb('arm_hook',(-.43,1.05,.02),(-.55,.75,.19),.26,concrete)
+        limb('thorn',(.30,1.17,0),(.79,1.01,.16),.15,concrete)
+        limb('thorn',(.27,.98,.015),(.70,.74,.18),.12,wear)
+        # Three markings on the main and chest lobes, matching their green/red read.
+        for name,x,y,z,scale in [('main',.18,1.70,.327,1),('chest',.01,1.26,.497,.72)]:
+            oval(name+'_scar',(x,y,z),(.10*scale,.48*scale,.045),red,(0,0,11))
+            oval(name+'_cross',(x,y-.01,z+.01),(.45*scale,.095*scale,.04),red,(0,0,-12))
+            for s in (-1,1):
+                oval(name+'_green',(x+s*.17*scale,y+.13*scale,z-.01),(.13*scale,.14*scale,.065),green,(0,0,s*16))
+        oval('side_green',(-.56,1.46,.11),(.13,.20,.10),green,(0,-24,-15))
+        head=(.18,1.69,.01)
+    elif role=='939':
+        # SCP-939tooth: current humanoid 939-168, no tail or legacy dog body.
+        flesh,shade,crest='#813F37','#582F2C','#AA4C3B'
         for s in (-1,1):
-            bone('arm',(.36*s,1.04,.04),(.41*s,.75,.35),.19,'#9B8B78')
-        box('face',(.035,1.47,.294),(.43,.40,.045),'#9D4B42',(0,0,-6))
+            oval('foot',(.23*s,.06,.10),(.22,.12,.37),shade)
+            limb('shin',(.23*s,.12,0),(.34*s,.61,-.13),.17,flesh)
+            limb('thigh',(.34*s,.61,-.13),(.19*s,1.13,-.06),.25,flesh)
+        oval('hips',(0,1.09,-.07),(.54,.36,.39),flesh)
+        oval('abdomen',(0,1.34,-.07),(.41,.43,.32),shade)
+        oval('chest',(0,1.64,-.02),(.76,.61,.46),flesh,(-12,0,0))
+        oval('head',(0,1.84,.29),(.49,.38,.55),flesh,(-14,0,0))
+        oval('maw',(0,1.77,.544),(.35,.24,.09),'#241B1B')
+        oval('muzzle',(0,1.91,.53),( .37,.14,.21),'#A5896E')
+        oval('lower_jaw',(0,1.63,.48),(.34,.13,.29),shade,(-8,0,0))
+        for x in (-.12,.12):
+            oval('fang_row',(x,1.765,.589),(.047,.23,.06),'#D85B31',(0,0,-x*65))
+        for x,y,z in [(-.10,2.12,.02),(.10,2.10,-.06)]:
+            oval('head_spine',(x,y,z),(.045,.55,.075),crest,(-24,0,-15))
+        for sign in (-1,1):
+            limb('upper_arm',(.35*sign,1.70,.01),(.47*sign,1.24,.01),.19,flesh)
+            limb('forearm',(.47*sign,1.24,.01),(.48*sign,.88,.21),.14,flesh)
+            oval('claw_hand',(.48*sign,.77,.27),(.19,.30,.15),shade,(-25,0,sign*12))
+            for offset in (-.055,.055):
+                oval('finger_claw',(.48*sign+offset,.61,.37),(.055,.26,.055),shade,(-30,0,sign*10))
+        head=(0,1.84,.29)
+    elif role=='3114':
+        # SCP-3114_V2: normal rounded skull, narrow limbs, open rib cage and pelvis.
+        bonecol,old,ink='#BCAD92','#8F7868','#242326'
         for s in (-1,1):
-            box('eye',(.035+.12*s,1.57,.324),(.095,.085,.035),'#26382F',(0,0,-6))
-        box('mouth',(.035,1.37,.324),(.21,.045,.036),'#512D31',(0,0,-6))
-        box('paint_slash',(-.18,1.73,.289),(.055,.21,.042),'#9D4B42',(0,0,-18))
-        box('stain',(.11,.62,.241),(.12,.31,.035),'#867C64',(0,0,-12))
-        head=(.035,1.48,.015)
-    elif role == '939':
-        # Eyeless wedge head; crouched, jointed limbs replace the old four stumps.
-        oval('body',(0,.59,-.16),(.69,.63,1.39),'#8B343D')
-        box('spine',(0,.84,-.22),(.31,.16,1.27),'#B25151',(6,0,0))
-        for s in (-1,1):
-            for z,knee in ((.35,.56),(-.69,-.85)):
-                bone('upper_leg',(.25*s,.63,z),(.43*s,.34,knee),.19,'#8B343D')
-                bone('lower_leg',(.43*s,.34,knee),(.43*s,.075,knee+.20),.15,'#532A37')
-        box('head',(0,.75,.78),(.61,.42,.73),'#B25151',(-12,0,0))
-        box('upper_jaw',(0,.86,1.14),(.56,.19,.52),'#B25151',(-12,0,0))
-        box('maw',(0,.64,1.17),(.47,.30,.34),'#302333')
-        box('lower_jaw',(0,.46,1.14),(.52,.16,.51),'#532A37',(8,0,0))
-        box('teeth_top',(0,.738,1.383),(.42,.09,.06),'#E8DCC4',(-12,0,0))
-        box('teeth_bottom',(0,.545,1.383),(.40,.075,.06),'#E8DCC4',(8,0,0))
-        oval('tail',(0,.40,-1.12),(.22,.22,.88),'#8B343D',(-18,0,0))
-        head=(0,.75,.78)
-    elif role == '3114':
-        # Angular oversized skull and a jaunty rib cage: a little anatomical puppet.
-        for s in (-1,1):
-            box('foot',(.14*s,.055,.12),(.17,.11,.30),shade,(0,s*8,0))
-            bone('leg',(.14*s,.11,0),(.12*s,1.01,-.02),.075,ivory)
-        box('pelvis',(0,1.05,0),(.37,.22,.22),shade,(0,0,-7))
-        bone('spine',(0,1.05,-.05),(.045,1.77,-.04),.065,shade)
-        for i,w in enumerate((.37,.46,.56)):
-            box('rib',(.015,1.29+i*.16,.045),(w,.065,.14),ivory,(0,0,-7))
-        box('skull',(.035,2.02,.015),(.46,.46,.36),ivory,(0,0,-7))
-        box('jaw',(.05,1.80,.08),(.29,.15,.25),shade,(0,0,-7))
-        for s in (-1,1):
-            box('eye_socket',(.035+.115*s,2.08,.205),(.13,.13,.045),ink,(0,0,-7))
-            bone('upper_arm',(.29*s,1.65,0),(.38*s,1.32,.03),.07,ivory)
-            bone('forearm',(.38*s,1.32,.03),(.32*s,1.02,.20),.065,ivory)
-            box('hand',(.32*s,1.00,.23),(.10,.17,.085),shade,(-20,0,0))
-        box('nose',(.035,1.94,.211),(.065,.065,.038),ink,(0,0,38))
-        head=(.035,2.02,.015)
-    else:
-        raise ValueError(role)
+            oval('foot',(.12*s,.045,.10),(.14,.09,.27),old)
+            bone('shin',(.12*s,.09,0),(.13*s,.64,-.015),.06,bonecol)
+            bone('thigh',(.13*s,.64,-.015),(.12*s,1.19,0),.075,bonecol)
+            oval('pelvis_wing',(.13*s,1.23,-.01),(.20,.26,.15),old,(0,0,s*28))
+        bone('pelvis_bridge',(-.13,1.17,.025),(.13,1.17,.025),.065,old)
+        bone('spine',(0,1.21,-.075),(0,1.99,-.07),.06,old)
+        for i,width in enumerate((.17,.22,.25)):
+            for sign in (-1,1):
+                bone('rib',(0,1.48+i*.14,.115),(width*sign,1.53+i*.14,-.03),.048,bonecol)
+        bone('sternum',(0,1.48,.12),(0,1.84,.12),.065,bonecol)
+        oval('skull',(0,2.12,0),(.29,.37,.28),bonecol)
+        oval('jaw',(0,1.965,.04),(.20,.14,.19),old)
+        for sign in (-1,1):
+            oval('eye_socket',(.075*sign,2.13,.13),(.10,.10,.046),ink)
+            bone('upper_arm',(.27*sign,1.80,0),(.30*sign,1.46,-.01),.062,bonecol)
+            bone('forearm',(.30*sign,1.46,-.01),(.34*sign,1.10,.10),.051,bonecol)
+            oval('hand',(.34*sign,1.04,.13),(.09,.18,.075),old,(-15,0,0))
+        oval('nose',(0,2.035,.14),(.04,.055,.03),ink)
+        head=(0,2.12,0)
+    else: raise ValueError(role)
     b.marker('marker_pivot',(0,0,0))
     b.marker('marker_screen' if role=='079' else 'marker_head',head)
+    assert b.visible_count()<=BUDGETS[role],(role,b.visible_count())
     return b
