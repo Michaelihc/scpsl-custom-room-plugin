@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""SCP-096 "The Shy Guy": a LOW-POLY tall, gaunt, pale humanoid.
+"""SCP-096 gallery asset: y-up, floor at zero, facing +Z.
 
-Authored y-up, base at y=0, facing +Z. The read is intentionally simple from a few meters away:
-a tall ashen humanoid with a narrow but real torso, long hanging arms that reach below the knees,
-small head, and one dark gaping mouth/face accent. Feet are the only floor contact; every stacked
-part overlaps or offsets by at least a few centimeters so no visible faces are coplanar. 14 visible
-primitives, all boxes, to keep the PMER icon cheap and predictable.
+Base component recipe below; star_gallery_models.remodel owns the final rounded
+silhouette and pose revision without adding primitives. Both embedded models and
+the authored star station consume this build() result.
 """
 from __future__ import annotations
 
@@ -49,7 +47,8 @@ def build() -> Builder:
 
     b.marker("marker_pivot", (0, 0, 0))
     b.marker("marker_head", (0, 2.84, 0.02))
-    return b
+    from star_gallery_models import remodel
+    return remodel(b, "096")
 
 
 if __name__ == "__main__":

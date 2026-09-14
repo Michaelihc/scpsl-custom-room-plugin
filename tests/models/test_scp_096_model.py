@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scp_model_contract import FLAGS_VISIBLE, load, validate  # noqa: E402
+from scp_model_contract import FLAGS_VISIBLE, _world_aabb, load, validate  # noqa: E402
 
 PRIM_CUBE = 3
 FACE = "#2A211C"
@@ -25,16 +25,7 @@ def named(blocks: list[dict], prefix: str) -> list[dict]:
 
 
 def aabb(block: dict) -> tuple[float, float, float, float, float, float]:
-    pos = block["Position"]
-    scale = block["Scale"]
-    return (
-        pos["x"] - scale["x"] / 2.0,
-        pos["y"] - scale["y"] / 2.0,
-        pos["z"] - scale["z"] / 2.0,
-        pos["x"] + scale["x"] / 2.0,
-        pos["y"] + scale["y"] / 2.0,
-        pos["z"] + scale["z"] / 2.0,
-    )
+    return _world_aabb(block)
 
 
 def validate_shape() -> list[str]:
@@ -48,8 +39,8 @@ def validate_shape() -> list[str]:
             issues.append(message)
 
     for block in blocks:
-        check(block["Properties"].get("PrimitiveType") == PRIM_CUBE,
-              f"{block['Name']} should be a cube primitive for the simple PMER icon")
+        check(block["Properties"].get("PrimitiveType") in (0, PRIM_CUBE),
+              f"{block['Name']} must use supported sphere/cube gallery geometry")
 
     min_x = min(bounds[0] for bounds in boxes.values())
     min_y = min(bounds[1] for bounds in boxes.values())

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""SCP-173: generic low-poly concrete humanoid statue with a rust-red painted face.
+"""SCP-173 gallery asset: y-up, floor at zero, facing +Z.
 
-Authored y-up, feet on y=0, facing +Z. Cubes only. This is intentionally a simple ProjectMER icon:
-blocky legs, body, arms, shoulders, head, and a red face accent. It keeps the common tan-gray
-concrete / red-paint read without copying any specific sculpture.
+Base component recipe below; star_gallery_models.remodel owns the final rounded
+silhouette and pose revision without adding primitives. Both embedded models and
+the authored star station consume this build() result.
 """
 from __future__ import annotations
 
@@ -46,7 +46,8 @@ def build() -> Builder:
 
     b.marker("marker_pivot", (0, 0, 0))
     b.marker("marker_head", (0, 1.74, 0))
-    return b
+    from star_gallery_models import remodel
+    return remodel(b, "173")
 
 
 if __name__ == "__main__":

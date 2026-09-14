@@ -52,12 +52,12 @@ if __name__ == "__main__":
     visible = visible_blocks(doc)
 
     for block in visible:
-        require(issues, block["Properties"].get("PrimitiveType") == PRIM_CUBE,
-                f"{block['Name']} should be a cube for the blocky icon silhouette")
+        require(issues, block["Properties"].get("PrimitiveType") in (0, PRIM_CUBE),
+                f"{block['Name']} must use supported sphere/cube gallery geometry")
         rot = block["Rotation"]
         if block["Name"].startswith(("left_arm_", "right_arm_")):
-            require(issues, abs(rot["x"] - 90.0) < EPS and abs(rot["y"]) < EPS and abs(rot["z"]) < EPS,
-                    f"{block['Name']} should be rotated 90 degrees forward around X")
+            require(issues, 70 <= rot["x"] <= 90 and abs(rot["y"]) < EPS and abs(rot["z"]) < EPS,
+                    f"{block['Name']} should reach forward with a slight downward tilt")
         else:
             require(issues, all(abs(rot[axis]) < EPS for axis in ("x", "y", "z")),
                     f"{block['Name']} should be axis-aligned")

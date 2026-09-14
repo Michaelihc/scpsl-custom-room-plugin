@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""SCP-079 "The Old AI": a LOW-POLY retro beige computer terminal.
+"""SCP-079 gallery asset: y-up, floor at zero, facing +Z.
 
-Authored y-up, base at y=0, facing +Z. Cubes/cylinders/spheres only. A simple, chunky read:
-a beige monitor box with a dark bezel and a glowing green screen, sitting on a beige base.
-A single small red LED sells "powered-on old computer". Deliberately few, big blocks so it
-reads from a few meters away. Stacked blocks OVERLAP / offset by >= 0.03m so no two faces are
-ever coplanar (kills the z-fighting flicker).
+Base component recipe below; star_gallery_models.remodel owns the final rounded
+silhouette and pose revision without adding primitives. Both embedded models and
+the authored star station consume this build() result.
 """
 from __future__ import annotations
 
@@ -55,7 +53,8 @@ def build() -> Builder:
 
     b.marker("marker_pivot", (0, 0, 0))
     b.marker("marker_screen", (0, SCR_Y, 0.53))
-    return b
+    from star_gallery_models import remodel
+    return remodel(b, "079")
 
 
 if __name__ == "__main__":

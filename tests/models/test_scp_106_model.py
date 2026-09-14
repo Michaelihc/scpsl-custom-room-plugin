@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scp_model_contract import FLAGS_VISIBLE, load, validate  # noqa: E402
+from scp_model_contract import FLAGS_VISIBLE, _world_aabb, load, validate  # noqa: E402
 
 CUBE = 3
 
@@ -22,17 +22,7 @@ def _by_prefix(blocks: list[dict], prefix: str) -> list[dict]:
 
 
 def _box_aabb(block: dict) -> tuple[float, float, float, float, float, float]:
-    pos = block["Position"]
-    scale = block["Scale"]
-    hx, hy, hz = scale["x"] / 2, scale["y"] / 2, scale["z"] / 2
-    return (
-        pos["x"] - hx,
-        pos["y"] - hy,
-        pos["z"] - hz,
-        pos["x"] + hx,
-        pos["y"] + hy,
-        pos["z"] + hz,
-    )
+    return _world_aabb(block)
 
 
 def _luma(color: str) -> float:
@@ -66,8 +56,8 @@ def main() -> int:
     doc = load("scp-106")
     visible = _visible_blocks(doc)
 
-    if any(block["Properties"].get("PrimitiveType") != CUBE for block in visible):
-        issues.append("SCP-106 should stay box-only for predictable ProjectMER icon extents")
+    if any(block["Properties"].get("PrimitiveType") not in (0, CUBE) for block in visible):
+        issues.append("SCP-106 must use supported sphere/cube gallery geometry")
 
     aabbs = {block["Name"]: _box_aabb(block) for block in visible}
     min_y = min(aabb[1] for aabb in aabbs.values())

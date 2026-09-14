@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""SCP-049 "The Plague Doctor": LOW-POLY warmup icon model.
+"""SCP-049 gallery asset: y-up, floor at zero, facing +Z.
 
-A simple robed figure: dark charcoal robe, pale bird-mask head, long forward/down beak, black eye
-lenses, and a wide-brim hat. Authored y-up, visible base at y=0, facing +Z. Cubes/spheres/cylinders
-only.
-
-Few, bigger blocks: the hat + beak + robe silhouette is enough to read as the Plague Doctor from a
-few meters away. Stacked parts intentionally overlap without sharing a plane, avoiding coplanar
-z-fighting faces. Target <= ~14 visible primitives.
+Base component recipe below; star_gallery_models.remodel owns the final rounded
+silhouette and pose revision without adding primitives. Both embedded models and
+the authored star station consume this build() result.
 """
 from __future__ import annotations
 
@@ -57,7 +53,8 @@ def build() -> Builder:
 
     b.marker("marker_pivot", (0, 0, 0))
     b.marker("marker_head", (0, head_y, 0))  # head_y kept in sync with mask_head above
-    return b
+    from star_gallery_models import remodel
+    return remodel(b, "049")
 
 
 if __name__ == "__main__":

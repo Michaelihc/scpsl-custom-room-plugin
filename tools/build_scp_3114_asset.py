@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""SCP-3114 "The Rattler": a low-poly upright human skeleton.
+"""SCP-3114 gallery asset: y-up, floor at zero, facing +Z.
 
-Authored y-up, base at y=0, facing +Z. Cubes/spheres/cylinders only. The icon reads from a few meters
-as a skull with dark eye sockets, three separated rib bars over a spine, a pelvis, thin limbs, hands,
-and forward-facing feet.
+Base component recipe below; star_gallery_models.remodel owns the final rounded
+silhouette and pose revision without adding primitives. Both embedded models and
+the authored star station consume this build() result.
 """
 from __future__ import annotations
 
@@ -48,7 +48,8 @@ def build() -> Builder:
 
     b.marker("marker_pivot", (0, 0, 0))
     b.marker("marker_head", (0, 2.18, 0))
-    return b
+    from star_gallery_models import remodel
+    return remodel(b, "3114")
 
 
 if __name__ == "__main__":

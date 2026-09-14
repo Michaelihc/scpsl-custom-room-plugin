@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""SCP-939 "With Many Voices": a LOW-POLY eyeless quadruped predator.
+"""SCP-939 gallery asset: y-up, floor at zero, facing +Z.
 
-Authored y-up, base at y=0, FACING +Z (the runtime rotates it toward the player). Cubes/spheres/
-cylinders only. Deliberately few, big blocks: a long, low body on FOUR short legs, a thick head
-with a big GAPING toothy maw (white teeth), and a tapering tail. NO eyes anywhere - the silhouette
-reads as a low, long, four-legged toothy beast from a few meters away.
-
-Anti-z-fight rule: stacked/abutting blocks OVERLAP or are offset by >= 0.03m so no two faces are
-ever exactly coplanar.
+Base component recipe below; star_gallery_models.remodel owns the final rounded
+silhouette and pose revision without adding primitives. Both embedded models and
+the authored star station consume this build() result.
 """
 from __future__ import annotations
 
@@ -58,7 +54,8 @@ def build() -> Builder:
 
     b.marker("marker_pivot", (0, 0, 0))
     b.marker("marker_head", (0, 0.78, 1.2))
-    return b
+    from star_gallery_models import remodel
+    return remodel(b, "939")
 
 
 if __name__ == "__main__":

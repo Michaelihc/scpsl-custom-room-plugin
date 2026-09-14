@@ -155,12 +155,12 @@
       },
       "Scale": {
         "x": 0.44,
-        "y": 0.2,
+        "y": 0.28,
         "z": 0.3
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#B8AE9C",
         "PrimitiveFlags": 2,
         "Static": false
@@ -183,12 +183,12 @@
       },
       "Scale": {
         "x": 0.48,
-        "y": 0.9,
-        "z": 0.34
+        "y": 1.02,
+        "z": 0.36
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#E6DDCE",
         "PrimitiveFlags": 2,
         "Static": false
@@ -210,13 +210,13 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.76,
-        "y": 0.2,
-        "z": 0.38
+        "x": 0.78,
+        "y": 0.28,
+        "z": 0.36
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#B8AE9C",
         "PrimitiveFlags": 2,
         "Static": false
@@ -233,18 +233,18 @@
         "z": 0.11
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 4,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.14,
-        "y": 1.94,
-        "z": 0.16
+        "x": 0.15,
+        "y": 2.03,
+        "z": 0.18
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#E6DDCE",
         "PrimitiveFlags": 2,
         "Static": false
@@ -257,8 +257,8 @@
       "AnimatorName": "",
       "Position": {
         "x": -0.43,
-        "y": 0.43,
-        "z": 0.16
+        "y": 0.40499999999999997,
+        "z": 0.125
       },
       "Rotation": {
         "x": 0.0,
@@ -266,9 +266,9 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.17,
-        "y": 0.25,
-        "z": 0.18
+        "x": 0.14,
+        "y": 0.33,
+        "z": 0.19
       },
       "BlockType": 1,
       "Properties": {
@@ -289,18 +289,18 @@
         "z": 0.11
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 4,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.14,
-        "y": 1.94,
-        "z": 0.16
+        "x": 0.15,
+        "y": 2.03,
+        "z": 0.18
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#E6DDCE",
         "PrimitiveFlags": 2,
         "Static": false
@@ -313,8 +313,8 @@
       "AnimatorName": "",
       "Position": {
         "x": 0.43,
-        "y": 0.43,
-        "z": 0.16
+        "y": 0.40499999999999997,
+        "z": 0.125
       },
       "Rotation": {
         "x": 0.0,
@@ -322,9 +322,9 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.17,
-        "y": 0.25,
-        "z": 0.18
+        "x": 0.14,
+        "y": 0.33,
+        "z": 0.19
       },
       "BlockType": 1,
       "Properties": {
@@ -379,12 +379,12 @@
       },
       "Scale": {
         "x": 0.3,
-        "y": 0.3,
+        "y": 0.32,
         "z": 0.3
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#E6DDCE",
         "PrimitiveFlags": 2,
         "Static": false
@@ -397,8 +397,8 @@
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 2.76,
-        "z": 0.2
+        "y": 2.775,
+        "z": 0.165
       },
       "Rotation": {
         "x": 0.0,
@@ -406,13 +406,13 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.2,
-        "y": 0.17,
-        "z": 0.08
+        "x": 0.19,
+        "y": 0.2,
+        "z": 0.1
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#2A211C",
         "PrimitiveFlags": 2,
         "Static": false

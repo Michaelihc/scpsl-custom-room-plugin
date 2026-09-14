@@ -42,13 +42,13 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.66,
-        "y": 0.58,
-        "z": 1.7
+        "x": 0.78,
+        "y": 0.7,
+        "z": 1.78
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#6E1F1F",
         "PrimitiveFlags": 2,
         "Static": false
@@ -70,13 +70,13 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.5,
-        "y": 0.16,
-        "z": 1.5
+        "x": 0.54,
+        "y": 0.25,
+        "z": 1.49
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#3A1414",
         "PrimitiveFlags": 2,
         "Static": false
@@ -93,14 +93,14 @@
         "z": 0.55
       },
       "Rotation": {
-        "x": 0.0,
+        "x": -16,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.22,
-        "y": 0.5,
-        "z": 0.26
+        "x": 0.23,
+        "y": 0.43,
+        "z": 0.28
       },
       "BlockType": 1,
       "Properties": {
@@ -121,14 +121,14 @@
         "z": -0.75
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 19,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.22,
-        "y": 0.5,
-        "z": 0.26
+        "x": 0.26,
+        "y": 0.43,
+        "z": 0.27
       },
       "BlockType": 1,
       "Properties": {
@@ -149,14 +149,14 @@
         "z": 0.55
       },
       "Rotation": {
-        "x": 0.0,
+        "x": -16,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.22,
-        "y": 0.5,
-        "z": 0.26
+        "x": 0.23,
+        "y": 0.43,
+        "z": 0.28
       },
       "BlockType": 1,
       "Properties": {
@@ -177,14 +177,14 @@
         "z": -0.75
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 19,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.22,
-        "y": 0.5,
-        "z": 0.26
+        "x": 0.26,
+        "y": 0.43,
+        "z": 0.27
       },
       "BlockType": 1,
       "Properties": {
@@ -210,13 +210,13 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.62,
-        "y": 0.46,
-        "z": 0.62
+        "x": 0.64,
+        "y": 0.49,
+        "z": 0.76
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#6E1F1F",
         "PrimitiveFlags": 2,
         "Static": false
@@ -233,14 +233,14 @@
         "z": 1.5
       },
       "Rotation": {
-        "x": 0.0,
+        "x": -9,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.56,
+        "x": 0.53,
         "y": 0.2,
-        "z": 0.46
+        "z": 0.54
       },
       "BlockType": 1,
       "Properties": {
@@ -261,14 +261,14 @@
         "z": 1.46
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 12,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.54,
-        "y": 0.18,
-        "z": 0.42
+        "x": 0.5,
+        "y": 0.17,
+        "z": 0.52
       },
       "BlockType": 1,
       "Properties": {
@@ -378,13 +378,13 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.26,
-        "y": 0.26,
-        "z": 0.7782
+        "x": 0.24,
+        "y": 0.24,
+        "z": 0.95
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
+        "PrimitiveType": 0,
         "Color": "#6E1F1F",
         "PrimitiveFlags": 2,
         "Static": false

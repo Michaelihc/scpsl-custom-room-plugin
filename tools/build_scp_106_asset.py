@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""SCP-106 "The Old Man": a LOW-POLY dark, hunched humanoid icon.
+"""SCP-106 gallery asset: y-up, floor at zero, facing +Z.
 
-Authored y-up, base at y=0, facing +Z. The read is intentionally simple from a few meters away:
-legs sinking into a tar/shadow base, a compact torso, a higher dark hunch, a low forward head with
-sunken eye sockets, and two long hanging arms. The body is visible dark slate rather than pure black;
-only the tar and eye recesses are near-black accents. All blocks overlap or have clear gaps, so no
-visible faces are coplanar/z-fighting. 11 visible primitives.
+Base component recipe below; star_gallery_models.remodel owns the final rounded
+silhouette and pose revision without adding primitives. Both embedded models and
+the authored star station consume this build() result.
 """
 from __future__ import annotations
 
@@ -52,7 +50,8 @@ def build() -> Builder:
 
     b.marker("marker_pivot", (0, 0, 0))
     b.marker("marker_head", (0, 1.39, 0.48))
-    return b
+    from star_gallery_models import remodel
+    return remodel(b, "106")
 
 
 if __name__ == "__main__":
