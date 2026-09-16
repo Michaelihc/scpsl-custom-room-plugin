@@ -178,6 +178,8 @@ def build():
     for light in lights:
         light['Properties']['Intensity'] *= light_gain
         light['Properties']['Range'] *= light_gain
+        if light['ObjectId'] in (-2222, -2238):
+            light['Properties']['Intensity'] = 24.0
     # The dark gallery needs local fill in front of the exhibits, rather than
     # relying only on four dim ceiling lights. These are final runtime values;
     # do not apply the baseline multiplier to them a second time.
@@ -189,7 +191,7 @@ def build():
             fill['ObjectId'], fill['ParentId'] = next_id, root
             fill['Name'] = f'gallery_fill_{len(gallery_fills) + 1}'
             fill['Position'] = {'x': x, 'y': 3.2, 'z': z}
-            fill['Properties']['Intensity'] = 24.0
+            fill['Properties']['Intensity'] = 48.0 if z == -41.5 else 24.0
             fill['Properties']['Range'] = 18.0
             next_id += 1
             gallery_fills.append(fill)

@@ -1641,7 +1641,7 @@
       "Properties": {
         "LightType": 2,
         "Color": "F5F8FCFF",
-        "Intensity": 4.330127018922193,
+        "Intensity": 24.0,
         "Range": 31.17691453623979,
         "Shape": 0,
         "SpotAngle": 30.0,
@@ -1707,7 +1707,7 @@
       "Properties": {
         "LightType": 2,
         "Color": "F5F8FCFF",
-        "Intensity": 4.330127018922193,
+        "Intensity": 24.0,
         "Range": 31.17691453623979,
         "Shape": 0,
         "SpotAngle": 30.0,
@@ -30409,7 +30409,7 @@
       "Properties": {
         "LightType": 2,
         "Color": "F5F8FCFF",
-        "Intensity": 24.0,
+        "Intensity": 48.0,
         "Range": 18.0,
         "Shape": 0,
         "SpotAngle": 30.0,
@@ -30442,7 +30442,7 @@
       "Properties": {
         "LightType": 2,
         "Color": "F5F8FCFF",
-        "Intensity": 24.0,
+        "Intensity": 48.0,
         "Range": 18.0,
         "Shape": 0,
         "SpotAngle": 30.0,
@@ -30475,7 +30475,7 @@
       "Properties": {
         "LightType": 2,
         "Color": "F5F8FCFF",
-        "Intensity": 24.0,
+        "Intensity": 48.0,
         "Range": 18.0,
         "Shape": 0,
         "SpotAngle": 30.0,
