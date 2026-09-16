@@ -38,7 +38,7 @@ namespace WarmupScpSelector.Text
                     ? (chinese ? "保持站立" : "HOLD POSITION")
                     : (chinese ? "踏上青色起点板" : "STEP ON THE CYAN START");
                 return $"<align=center><size=76%><color=#8B95A6>{title}</color></size>\n" +
-                    $"<size=150%><b><color=#4FCBFF>{action}</color></b></size>\n" +
+                    $"<size=150%><b><color=#B6A4E8>{action}</color></b></size>\n" +
                     "<size=78%><color=#232A37>01━━02━━03━━04━━FIN</color></size></align>";
             }
 
@@ -46,7 +46,7 @@ namespace WarmupScpSelector.Text
             {
                 int seconds = Math.Max(1, (int)Math.Ceiling(state.Countdown));
                 return $"<align=center><size=76%><color=#8B95A6>{title}</color></size>\n" +
-                    $"<size=190%><b><color=#FFD24D>{seconds}</color></b></size>\n" +
+                    $"<size=190%><b><color=#FF9228>{seconds}</color></b></size>\n" +
                     $"<size=72%><color=#E7ECF3>{(chinese ? "开始时闸门开启" : "GATE OPENS ON GO")}</color></size></align>";
             }
 
@@ -59,7 +59,7 @@ namespace WarmupScpSelector.Text
                 ? (chinese ? "完成" : "FINISH")
                 : (chinese ? $"第 {state.Sector} / 4 段" : $"SECTOR {state.Sector} / 4");
             return $"<align=center><size=72%><color=#8B95A6>{eyebrow}</color></size>\n" +
-                $"<size=180%><b><color={(state.Phase == ParkourPhase.Finished ? "#5BFF80" : "#FFD24D")}>{time}</color></b></size>\n" +
+                $"<size=180%><b><color={(state.Phase == ParkourPhase.Finished ? "#EB6355" : "#FF9228")}>{time}</color></b></size>\n" +
                 $"<size=80%>{spine}</size>\n" +
                 $"<size=72%><color=#8B95A6>{pb}　│　{state.PassedGates}/{state.TotalGates}</color></size></align>";
         }
@@ -90,11 +90,11 @@ namespace WarmupScpSelector.Text
         {
             switch (kind)
             {
-                case "go": return $"<align=center><size=118%><b><color=#4FCBFF>{(chinese ? "开始" : "GO")}</color></b></size></align>";
-                case "split": return $"<align=center><size=96%><b><color=#4FCBFF>{(chinese ? "分段" : "SPLIT")}</color></b></size></align>";
-                case "recover": return $"<align=center><size=92%><b><color=#FFD24D>{(chinese ? "恢复" : "RECOVER")}</color></b></size></align>";
-                case "best": return $"<align=center><size=108%><b><color=#5BFF80>{(chinese ? "新的最佳" : "NEW BEST")}</color></b></size></align>";
-                case "finish": return $"<align=center><size=108%><b><color=#5BFF80>{(chinese ? "完成" : "FINISH")}</color></b></size></align>";
+                case "go": return $"<align=center><size=118%><b><color=#B6A4E8>{(chinese ? "开始" : "GO")}</color></b></size></align>";
+                case "split": return $"<align=center><size=96%><b><color=#B6A4E8>{(chinese ? "分段" : "SPLIT")}</color></b></size></align>";
+                case "recover": return $"<align=center><size=92%><b><color=#FF9228>{(chinese ? "恢复" : "RECOVER")}</color></b></size></align>";
+                case "best": return $"<align=center><size=108%><b><color=#EB6355>{(chinese ? "新的最佳" : "NEW BEST")}</color></b></size></align>";
+                case "finish": return $"<align=center><size=108%><b><color=#EB6355>{(chinese ? "完成" : "FINISH")}</color></b></size></align>";
                 default: return string.Empty;
             }
         }
@@ -109,7 +109,7 @@ namespace WarmupScpSelector.Text
                     builder.Append("<color=#5B6270>━━</color>");
                 }
 
-                string color = finished || i < sector ? "#5BFF80" : i == sector ? "#4FCBFF" : "#232A37";
+                string color = finished || i < sector ? "#EB6355" : i == sector ? "#B6A4E8" : "#232A37";
                 string value = i.ToString("00", CultureInfo.InvariantCulture);
                 builder.Append(i == sector && !finished
                     ? $"<b><color={color}>[{value}]</color></b>"
@@ -117,7 +117,7 @@ namespace WarmupScpSelector.Text
             }
 
             builder.Append("<color=#5B6270>━━</color>");
-            builder.Append(finished ? "<color=#5BFF80>FIN</color>" : "<color=#232A37>FIN</color>");
+            builder.Append(finished ? "<color=#EB6355>FIN</color>" : "<color=#232A37>FIN</color>");
             return builder.ToString();
         }
     }

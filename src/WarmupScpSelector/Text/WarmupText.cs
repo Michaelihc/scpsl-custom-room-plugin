@@ -26,14 +26,14 @@ namespace WarmupScpSelector.Text
     /// </summary>
     public static class WarmupText
     {
-        // 莺歌傲然 brand palette (hex with leading '#'); alpha is appended where a tag needs RGBA. Matches the
-        // room theme and the server identity: cyan accent + gold + brand green, with red retired to the
-        // urgent-countdown state only. The title uses one calm brand blue; each selected chip uses one
-        // position-derived color on both brackets so the option row sweeps green→blue from left to right.
-        private const string Accent = "#4FCBFF";       // brand blue: title + current pick
-        private const string Gold = "#FFD24D";         // countdown while there is still time / headings
+        // Sunset community palette (hex with leading '#'); alpha is appended where a tag needs RGBA. Matches the
+        // room theme and the server identity: lavender accent + sunset orange + coral, with red retired to the
+        // urgent-countdown state only. The title uses one calm lavender; each selected chip uses one
+        // position-derived color on both brackets so the option row sweeps orange→coral→lavender from left to right.
+        private const string Accent = "#B6A4E8";       // lavender: title + current pick
+        private const string Gold = "#FF9228";         // countdown while there is still time / headings
         private const string Urgent = "#FF5555";       // countdown in the final few seconds (the only red left)
-        private const string Ready = "#5BFF80";        // round about to start (brand green)
+        private const string Ready = "#EB6355";        // round about to start (coral)
         private const string White = "#E7ECF3";
         private const string Muted = "#8B95A6";        // labels
         private const string Dim = "#5B6270";          // secondary / unselected
@@ -45,7 +45,7 @@ namespace WarmupScpSelector.Text
         // evenly across the same sweep, so the framing remains position-based rather than role-hardcoded.
         private static readonly string[] OptionGradient =
         {
-            "#6BFF6B", "#66F684", "#62EE9C", "#5DE5B5", "#58DCCE", "#54D4E6", Accent,
+            "#FF9228", "#FF7A46", "#EB6355", "#D87983", "#C28BA8", "#BA98CC", Accent,
         };
 
         public static string SelectionName(RoleTypeId? selectedRole, bool useChineseLocalization)
@@ -221,7 +221,7 @@ namespace WarmupScpSelector.Text
                 if (selectedRole.HasValue && selectedRole.Value == option.Role)
                 {
                     // Bracket-framed chip for the live pick (re-frames the instant a coin is grabbed). Both
-                    // brackets use this option's position on the green→blue sweep, making each role distinct
+                    // brackets use this option's position on the orange→coral→lavender sweep, making each role distinct
                     // without coloring every title letter. Avoid TMP <mark>: its highlight rectangle spans the
                     // whole text-block height, not just the glyph, which painted a giant vertical bar down the screen.
                     string frameColor = OptionColor(index, options.Count);

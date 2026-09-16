@@ -543,7 +543,7 @@ namespace WarmupScpSelector.Tests
             string hint = WarmupText.BuildWarmupStatusHint(12, 3, 50, SampleOptions, RoleTypeId.Scp173, counts, false);
 
             // Branded title: one blue span for "SCP", followed by the gold localized suffix.
-            AssertContains(hint, "<color=#4FCBFF>SCP</color><color=#FFD24D> SELECTION</color>", "single-color title");
+            AssertContains(hint, "<color=#B6A4E8>SCP</color><color=#FF9228> SELECTION</color>", "single-color title");
             AssertContains(hint, "Starts in ", "countdown label");
             AssertContains(hint, ">12<", "countdown seconds");
             AssertContains(hint, "Players ", "players label");
@@ -553,7 +553,7 @@ namespace WarmupScpSelector.Tests
             AssertContains(hint, "173", "chip code");
             AssertContains(
                 hint,
-                "<color=#4FCBFF>[</color><color=#E7ECF3>173</color><color=#4FCBFF>]</color>",
+                "<color=#B6A4E8>[</color><color=#E7ECF3>173</color><color=#B6A4E8>]</color>",
                 "selected chip position-color framing");
             AssertContains(hint, ">5</color>", "selection count value");
             AssertContains(hint, "> picks</color>", "selection count unit");
@@ -582,7 +582,7 @@ namespace WarmupScpSelector.Tests
             string counting = WarmupText.BuildWarmupStatusHint(8, 4, 50, SampleOptions, RoleTypeId.Scp079, counts, true);
 
             // Branded title: one blue span for "SCP", followed by the gold localized suffix.
-            AssertContains(waiting, "<color=#4FCBFF>SCP</color><color=#FFD24D> 选择</color>", "single-color title cn");
+            AssertContains(waiting, "<color=#B6A4E8>SCP</color><color=#FF9228> 选择</color>", "single-color title cn");
             AssertContains(waiting, "等待玩家", "waiting state");
             AssertContains(waiting, "玩家 ", "players label");
             AssertContains(waiting, "尚未选择", "no selection");
@@ -593,7 +593,7 @@ namespace WarmupScpSelector.Tests
             AssertContains(counting, "SCP-079", "selected name");
             AssertContains(
                 counting,
-                "<color=#5DE5B5>[</color><color=#E7ECF3>079</color><color=#5DE5B5>]</color>",
+                "<color=#D87983>[</color><color=#E7ECF3>079</color><color=#D87983>]</color>",
                 "selected chip position-color framing cn");
             AssertContains(counting, ">2</color>", "selection count value cn");
             AssertContains(counting, "> 人</color>", "selection count unit cn");
@@ -615,7 +615,7 @@ namespace WarmupScpSelector.Tests
             };
             string[] expectedColors =
             {
-                "#6BFF6B", "#66F684", "#62EE9C", "#5DE5B5", "#58DCCE", "#54D4E6", "#4FCBFF",
+                "#FF9228", "#FF7A46", "#EB6355", "#D87983", "#C28BA8", "#BA98CC", "#B6A4E8",
             };
             string[] expectedCodes = { "049", "079", "096", "106", "173", "939", "3114" };
 
