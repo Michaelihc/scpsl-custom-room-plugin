@@ -26,10 +26,14 @@ are raised to clear their revised silhouettes, preserving the horizontal selecti
 coin anchors used by `Import/AuthoredGalleryAnchors.cs`.
 
 The separate creature's complete hierarchy, transforms and materials are unchanged.
-The aim volume and complete parkour shaft, including entry signs, are unchanged.
-The generator verifies exact equality for **658 protected blocks**. New decor has
+The aim volume and complete parkour shaft geometry, including entry signs, are unchanged.
+The generator verifies equality for **658 protected blocks** before applying the light adjustment. New decor has
 visibility only and adds no collision. Existing shell collision is retained.
-Lighting outside the protected areas is capped at 2.5 to retain the gradient colors.
+Every light's intensity and range are multiplied by **sqrt(3), approximately 1.732**
+relative to the initial star room. The two setting multipliers have a product of 3;
+this is not a measurement of perceived brightness. Gallery/hub/observation lights
+change from intensity 2.5 to 4.330 and range 18 to 31.177. Code-owned Aim lights use
+the same gain. Light colors, positions, room materials and geometry stay unchanged.
 Total: **1,107 blocks**, compared with **1,090** in the original. See [preservation report](preservation.json).
 
 For installation, copy this folder to the plugin's `Schematics` directory and set
@@ -52,7 +56,8 @@ with the C# D3D11 renderer. Its preview-only JSON remaps negative IDs because th
 renderer rejects them; the installable asset retains original opaque IDs.
 The renderer omits TextToys, shadows and bloom and approximates game lighting.
 Native client appearance and gameplay have not been playtested for this revision.
-No server configuration or deployed files were changed.
+The initial room is deployed on Rain Yun; the brighter revision uses a separately
+named `warmup_station_stars_bright` asset there to preserve rollback to the initial room.
 
 ## 中文
 
@@ -72,8 +77,9 @@ No server configuration or deployed files were changed.
 锚点不变。内嵌模型与房间图纸使用同一套最终生成配方。
 
 独立生物雕塑的完整层级、变换与材质均保留。瞄准区和完整跑酷竖井（含入口标志）
-保持不变；生成器逐项验证 **658 个受保护方块**完全一致。新增装饰没有碰撞，
-原房间碰撞保留。改造区域的灯光强度上限为 2.5，避免冲淡渐变色。
+几何保持不变；生成器在调整灯光前逐项验证 **658 个受保护方块**完全一致。新增装饰没有碰撞，
+原房间碰撞保留。所有灯光的强度和范围分别乘以 **√3（约 1.732）**，两项倍率相乘为 3。
+这不是对实际观感亮度的测量；灯光颜色、位置、房间材质与几何保持不变，代码生成的靶场灯光使用相同倍率。
 总方块数为 **1,107**，原房间为 **1,090**。
 
 安装时将本文件夹复制到插件的 `Schematics` 目录，并在目标端口配置中设置

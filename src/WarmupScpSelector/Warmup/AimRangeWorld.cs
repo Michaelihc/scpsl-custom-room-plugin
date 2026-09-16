@@ -22,8 +22,9 @@ namespace WarmupScpSelector.Warmup
     {
         private const float CounterThickness = 0.4f;
         private const float DividerThickness = 0.25f;
-        private const float CounterLightIntensity = 24f;
-        private const float CounterLightRange = 16f;
+        // Match the authored station: sqrt(3) per setting, combined gain 3.
+        private const float CounterLightIntensity = 24f * 1.7320508f;
+        private const float CounterLightRange = 16f * 1.7320508f;
 
         private readonly List<AdminToy> _toys = new List<AdminToy>();
         private readonly List<GameObject> _structures = new List<GameObject>();

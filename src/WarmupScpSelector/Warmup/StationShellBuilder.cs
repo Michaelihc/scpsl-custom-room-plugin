@@ -69,8 +69,9 @@ internal sealed class StationShellBuilder
     private const float DeckOverlap = 0f;
 
     private const float LightSpacing = 11f;
-    private const float LightIntensity = 24f;
-    private const float LightRange = 18f;
+    // sqrt(3) on each setting gives a combined multiplier of 3, not 9.
+    private const float LightIntensity = 24f * 1.7320508f;
+    private const float LightRange = 18f * 1.7320508f;
 
     private readonly WarmupHallLayout _layout;
     private readonly List<AdminToy> _sink;

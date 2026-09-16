@@ -171,6 +171,13 @@ def build():
     final = {b['ObjectId']:b for b in kept}
     preserved = [b for b in blocks if protected(b)]
     assert all(final[b['ObjectId']] == b for b in preserved)
+    # Brighten every authored light once from the immutable baseline. Geometry,
+    # colors and light positions stay intact; sqrt(3) * sqrt(3) = 3 overall.
+    light_gain = math.sqrt(3)
+    lights = [b for b in kept if b['BlockType'] == 2]
+    for light in lights:
+        light['Properties']['Intensity'] *= light_gain
+        light['Properties']['Range'] *= light_gain
     assert len(final) == len(kept)
     assert all(b['ParentId']==root or b['ParentId'] in final for b in kept)
     assert not any('860705092' in b['Properties'].get('Text','') or 'DE.XIZHI' in b['Properties'].get('Text','') for b in kept)
@@ -202,7 +209,9 @@ def build():
     (ROOT / 'generated/previews/scpsl-lineup.mer.json').write_text(
         json.dumps(lineup.to_json(),indent=2)+'\n',encoding='utf-8')
     report={'source_sha256':SOURCE_SHA,'before':len(blocks),'after':len(kept),
-            'unchanged_protected_blocks':len(preserved),'scp_primitives':budgets,
+            'protected_blocks_unchanged_except_lighting':len(preserved),'scp_primitives':budgets,
+            'light_intensity_multiplier':light_gain,'light_range_multiplier':light_gain,
+            'brightened_lights':len(lights),
             'removed_brand_blocks':218,'added_decor':len(decor.blocks)-1}
     OUTPUT.with_name('preservation.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report,indent=2))
