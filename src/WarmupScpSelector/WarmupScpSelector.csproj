@@ -29,7 +29,7 @@
   <!-- Each authored SCP model ships inside the DLL. WithCulture=false + LogicalName avoids the MSBuild
        "mer = culture code" trap that would otherwise route *.mer.json into a satellite resources.dll. -->
   <ItemGroup>
-    <EmbeddedResource Include="..\..\generated\models\*.mer.json">
+    <EmbeddedResource Include="..\..\generated\models\*.mer.json" Exclude="..\..\generated\models\yingge-aoran-logo-opt.mer.json">
       <WithCulture>false</WithCulture>
       <LogicalName>WarmupScpSelector.%(Filename)%(Extension)</LogicalName>
       <Link>generated\models\%(Filename)%(Extension)</Link>

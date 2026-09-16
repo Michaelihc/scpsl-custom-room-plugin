@@ -35,7 +35,7 @@ public sealed class Config
     public string Language { get; set; } = "cn";
 
     [Description("Meters to float the warmup station above the surface zone. SCP:SL collision/physics misbehave at extreme coords, so the room is anchored just above the static surface (no map gen there) at sane coordinates where its floor is actually walkable. Enough to clear surface structures.")]
-    public float SurfaceClearance { get; set; } = 20f;
+    public float SurfaceClearance { get; set; } = 30f;
 
     [Description("Fallback world-space origin (station deck centre) used only if the surface zone cannot be found (it normally always can). Avoid extreme coordinates.")]
     public Vector3 RoomOrigin { get; set; } = new(0f, 1015f, 0f);

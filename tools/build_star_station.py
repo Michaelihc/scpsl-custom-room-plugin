@@ -128,6 +128,13 @@ def build():
             x,y=3.15*math.cos(t),.68*math.sin(t)
             return (x,cy+y+.20*x,-45.58)
         decor.seg('orbit',point(a),point(b),.038,'#F4BA91')
+    # Use the same emblem when an authored room is unavailable, so falling back
+    # to the generated gallery cannot restore the retired community logo.
+    emblem = copy.deepcopy(decor)
+    for block in emblem.blocks[1:]:
+        block['Position']['y'] = round(block['Position']['y'] - cy, 5)
+        block['Position']['z'] = round(block['Position']['z'] + 45.68, 5)
+    save(emblem, 'xinghe-sunset')
     # Vertical sunset ribbons make the gradient part of the architecture.
     for side in (-1,1):
         for i in range(12):

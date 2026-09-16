@@ -674,6 +674,8 @@ namespace WarmupScpSelector.Activities.AimRange
                 }
 
                 slot.Player.SetRole(_botRole, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+                // Native role initialization grants this independently of RoleSpawnFlags.
+                slot.Player.DisableEffect<CustomPlayerEffects.SpawnProtected>();
                 slot.InitializeStage = InitializeStage.AwaitRole;
                 slot.StageReadyAt = now + 0.2d;
                 return;
@@ -693,6 +695,7 @@ namespace WarmupScpSelector.Activities.AimRange
                 }
 
                 slot.Player.ClearInventory();
+                slot.Player.DisableEffect<CustomPlayerEffects.SpawnProtected>();
                 slot.Player.MaxHealth = _botHealth;
                 slot.Player.Health = _botHealth;
                 Vector3 startPosition = WorldPathPoint(slot.Path.Segments[0].From);

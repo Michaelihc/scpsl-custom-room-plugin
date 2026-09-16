@@ -10,6 +10,14 @@ round it can also refill a healthy SCP slot whose player disconnects.
 
 Two optional activity compartments open off the station's hub: an **Aim Bay** and a **parkour shaft**.
 
+The latest authored room is `warmup_station_stars` (installation: [star station](generated/schematics/warmup_station_stars/README.md)). Its sunset emblem also replaces the generated fallback gallery's old logo; fallback welcome text uses 星河梦影 and QQ 1109846287.
+
+最新图纸为 `warmup_station_stars`（[安装说明](generated/schematics/warmup_station_stars/README.md)）。生成式备用展厅同样使用落日星球图案，欢迎文字为星河梦影，QQ 群为 1109846287。
+
+Aim Bay bots have native spawn protection removed on every spawn/respawn, so they can take damage immediately. This applies only to owned range bots. Native evidence: `.references/Decompiled/DedicatedServer/Assembly-CSharp/CustomPlayerEffects/SpawnProtected.cs`, `OnRoleChanged` / `TryGiveProtection` (local dedicated-server decompile).
+
+瞄准区机器人每次生成／重生时都会移除原生出生保护，可立即受到伤害；仅影响本插件拥有的靶场机器人。原生行为依据见上方源码路径。
+
 > Renamed from the old "scpsl-custom-room-plugin" / `ScpslCustomRoomPlugin`. It never built custom
 > rooms in the SCP-002 sense — it is a warmup SCP draft — so the name was changed to match what it does.
 
@@ -19,6 +27,9 @@ Two optional activity compartments open off the station's hub: an **Aim Bay** an
 
 Players spawn in the SCP gallery, looking down the aisle at the exhibits. Everything else is optional
 and reached on foot.
+
+The station defaults to 30 metres above Surface to clear the native collision box in front of SCP-939.
+Existing installations should set `surface_clearance: 30`; this moves the entire station together.
 
 ```
                                       +Z
@@ -339,6 +350,8 @@ SCP 名额交换给选择它的玩家。
 ### 空间站
 
 玩家出生在 SCP 展厅，正对展品通道。其余舱室都是可选的，需要步行前往。
+
+空间站默认位于地表上方 30 米，避开 SCP-939 前方的原生碰撞箱。现有配置应设置 `surface_clearance: 30`，空间站将整体上移。
 
 ```
                                       +Z

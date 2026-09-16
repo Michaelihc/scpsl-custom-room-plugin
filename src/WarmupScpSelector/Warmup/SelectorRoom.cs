@@ -24,21 +24,20 @@ public sealed class SelectorRoom
 {
     private const int MaxOptions = 16;
     private const float StandWidthCap = 1.9f;
-    private const float LogoScale = 0.39f;
-    private const float LogoHdrBoost = 4.5f;
-    private const float LogoHdrAlpha = 0.65f;
+    private const float LogoScale = 1f;
+    private const float LogoHdrBoost = 1f;
+    private const float LogoHdrAlpha = 1f;
 
     /// <summary>
-    /// The logo's resolved bounds are 6.419467 x 7.950564; centring around this authored-space point makes
-    /// its visual bounds land exactly on the requested wall anchor.
+    /// The embedded sunset emblem is centered at the origin, matching the authored star station.
     /// </summary>
-    private static readonly Vector3 LogoAssetCenter = new(-0.003987f, 0.291070f, -0.08f);
+    private static readonly Vector3 LogoAssetCenter = Vector3.zero;
 
     /// <summary>Back-wall world text below the logo. Language-independent brand copy; GB2312-safe, no emoji.</summary>
     private const string BannerMarkup =
         "<align=center><size=135%><b>" +
-        "<color=#6BFF6B>莺</color><color=#2DFFBE>歌</color><color=#3CE2E7>傲</color><color=#4FCBFF>然</color>" +
-        "</b></size>\n<size=46%><color=#FFE08A>祝你玩得愉快　·　欢迎加入 QQ 群 860705092</color></size></align>";
+        "<color=#FF9228>星</color><color=#EB6355>河</color><color=#AD4B62>梦</color><color=#8983BC>影</color>" +
+        "</b></size>\n<size=46%><color=#FFC4A3>祝你玩得愉快　·　欢迎加入 QQ 群 1109846287</color></size></align>";
 
     private static readonly Dictionary<RoleTypeId, string> BuiltInModels = new()
     {
@@ -601,7 +600,7 @@ public sealed class SelectorRoom
     /// </summary>
     private void SpawnLogo(Vector3 centerWorld, float scale)
     {
-        List<MerPrimitive> primitives = MerModelLoader.LoadEmbedded("yingge-aoran-logo-opt.mer.json");
+        List<MerPrimitive> primitives = MerModelLoader.LoadEmbedded("xinghe-sunset.mer.json");
         Dictionary<int, PrimitiveObjectToy> parents = new();
 
         // The emblem is authored front-on toward -Z like the labels, so it needs the same turn. Without
@@ -733,7 +732,8 @@ public sealed class SelectorRoom
             Room? surface = Room.Get(FacilityZone.Surface).FirstOrDefault();
             if (surface != null)
             {
-                return surface.Position + new Vector3(0f, Sanitize(Config.SurfaceClearance, 5f, 80f, 20f), 0f);
+                // +30 m clears the native Surface collision box crossing the SCP-939 approach at +20 m.
+                return surface.Position + new Vector3(0f, Sanitize(Config.SurfaceClearance, 5f, 80f, 30f), 0f);
             }
 
             Logger.Warn("[WarmupScpSelector] Surface zone not found; using fallback RoomOrigin.");

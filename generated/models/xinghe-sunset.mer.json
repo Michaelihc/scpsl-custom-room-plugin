@@ -1,0 +1,1934 @@
+{
+  "RootObjectId": 0,
+  "Blocks": [
+    {
+      "Name": "stars_decor",
+      "ObjectId": 0,
+      "ParentId": -1,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1,
+        "y": 1,
+        "z": 1
+      },
+      "BlockType": 0,
+      "Properties": {
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0001",
+      "ObjectId": 2,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -1.59844,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.81853,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#405779",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0002",
+      "ObjectId": 3,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -1.49531,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.39505,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#46577A",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0003",
+      "ObjectId": 4,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -1.39219,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.77123,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#4C567C",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0004",
+      "ObjectId": 5,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -1.28906,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.05992,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#52567D",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0005",
+      "ObjectId": 6,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -1.18594,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.29439,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#59567F",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0006",
+      "ObjectId": 7,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -1.08281,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.48999,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#5F5580",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0007",
+      "ObjectId": 8,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.97969,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.65534,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#655582",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0008",
+      "ObjectId": 9,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.87656,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.79581,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#6E5682",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0009",
+      "ObjectId": 10,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.77344,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.91499,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#785781",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0010",
+      "ObjectId": 11,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.67031,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.01541,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#825881",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0011",
+      "ObjectId": 12,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.56719,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.0989,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#8C5981",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0012",
+      "ObjectId": 13,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.46406,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.16679,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#965A80",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0013",
+      "ObjectId": 14,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.36094,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.22008,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#A05B80",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0014",
+      "ObjectId": 15,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.25781,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.25947,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#A95C7E",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0015",
+      "ObjectId": 16,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.15469,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.28547,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#B25D7B",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0016",
+      "ObjectId": 17,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": -0.05156,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.29839,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#BB5E77",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0017",
+      "ObjectId": 18,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.05156,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.29839,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#C55F74",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0018",
+      "ObjectId": 19,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.15469,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.28547,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#CE6070",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0019",
+      "ObjectId": 20,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.25781,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.25947,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#D7616D",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0020",
+      "ObjectId": 21,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.36094,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.22008,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#DE6469",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0021",
+      "ObjectId": 22,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.46406,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.16679,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#E26965",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0022",
+      "ObjectId": 23,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.56719,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.0989,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#E66E61",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0023",
+      "ObjectId": 24,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.67031,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 3.01541,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#EB735C",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0024",
+      "ObjectId": 25,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.77344,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.91499,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#EF7858",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0025",
+      "ObjectId": 26,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.87656,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.79581,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F47D53",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0026",
+      "ObjectId": 27,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.97969,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.65534,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F7824F",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0027",
+      "ObjectId": 28,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.08281,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.48999,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F9884B",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0028",
+      "ObjectId": 29,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.18594,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.29439,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#FA8D47",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0029",
+      "ObjectId": 30,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.28906,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 2.05992,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#FB9343",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0030",
+      "ObjectId": 31,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.39219,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.77123,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#FC983F",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0031",
+      "ObjectId": 32,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.49531,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.39505,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#FE9E3B",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sunset_disc_0032",
+      "ObjectId": 33,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.59844,
+        "z": 0.0
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.81853,
+        "y": 0.10512,
+        "z": 0.055
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#FFA337",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0033",
+      "ObjectId": 34,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 3.12607,
+        "y": 0.68425,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -66.20127,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.11859
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0034",
+      "ObjectId": 35,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 3.03109,
+        "y": 0.78154,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -31.20115,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.16614
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0035",
+      "ObjectId": 36,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 2.84401,
+        "y": 0.85509,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -14.73195,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.23994
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0036",
+      "ObjectId": 37,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 2.57051,
+        "y": 0.90265,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -6.18096,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.31678
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0037",
+      "ObjectId": 38,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 2.21891,
+        "y": 0.92278,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -0.90938,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.38831
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0038",
+      "ObjectId": 39,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 1.79989,
+        "y": 0.91488,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 2.79634,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.45032
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0039",
+      "ObjectId": 40,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 1.32618,
+        "y": 0.87918,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 5.67297,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.50009
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0040",
+      "ObjectId": 41,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.81218,
+        "y": 0.81677,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 8.09079,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.5357
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0041",
+      "ObjectId": 42,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.2735,
+        "y": 0.72953,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 10.26576,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.55589
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0042",
+      "ObjectId": 43,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.2735,
+        "y": 0.62014,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 12.34655,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.55994
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0043",
+      "ObjectId": 44,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.81218,
+        "y": 0.49189,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 14.45839,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.54772
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0044",
+      "ObjectId": 45,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -1.32618,
+        "y": 0.34871,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 16.7341,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.51964
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0045",
+      "ObjectId": 46,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -1.79989,
+        "y": 0.19493,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 19.34903,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.47671
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0046",
+      "ObjectId": 47,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -2.21891,
+        "y": 0.03522,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 22.58111,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.4205
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0047",
+      "ObjectId": 48,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -2.57051,
+        "y": -0.12555,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 26.94417,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.35329
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0048",
+      "ObjectId": 49,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -2.84401,
+        "y": -0.28251,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 33.54204,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.27841
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0049",
+      "ObjectId": 50,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -3.03109,
+        "y": -0.43089,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 45.16138,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.20155
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0050",
+      "ObjectId": 51,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -3.12607,
+        "y": -0.56617,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 69.44942,
+        "y": -90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.13633
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0051",
+      "ObjectId": 52,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -3.12607,
+        "y": -0.68425,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 66.20127,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.11859
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0052",
+      "ObjectId": 53,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -3.03109,
+        "y": -0.78154,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 31.20115,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.16614
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0053",
+      "ObjectId": 54,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -2.84401,
+        "y": -0.85509,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 14.73195,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.23994
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0054",
+      "ObjectId": 55,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -2.57051,
+        "y": -0.90265,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 6.18096,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.31678
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0055",
+      "ObjectId": 56,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -2.21891,
+        "y": -0.92278,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": 0.90938,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.38831
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0056",
+      "ObjectId": 57,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -1.79989,
+        "y": -0.91488,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -2.79634,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.45032
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0057",
+      "ObjectId": 58,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -1.32618,
+        "y": -0.87918,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -5.67297,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.50009
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0058",
+      "ObjectId": 59,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.81218,
+        "y": -0.81677,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -8.09079,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.5357
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0059",
+      "ObjectId": 60,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.2735,
+        "y": -0.72953,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -10.26576,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.55589
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0060",
+      "ObjectId": 61,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.2735,
+        "y": -0.62014,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -12.34655,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.55994
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0061",
+      "ObjectId": 62,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.81218,
+        "y": -0.49189,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -14.45839,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.54772
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0062",
+      "ObjectId": 63,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 1.32618,
+        "y": -0.34871,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -16.7341,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.51964
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0063",
+      "ObjectId": 64,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 1.79989,
+        "y": -0.19493,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -19.34903,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.47671
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0064",
+      "ObjectId": 65,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 2.21891,
+        "y": -0.03522,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -22.58111,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.4205
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0065",
+      "ObjectId": 66,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 2.57051,
+        "y": 0.12555,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -26.94417,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.35329
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0066",
+      "ObjectId": 67,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 2.84401,
+        "y": 0.28251,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -33.54204,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.27841
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0067",
+      "ObjectId": 68,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 3.03109,
+        "y": 0.43089,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -45.16138,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.20155
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "orbit_0068",
+      "ObjectId": 69,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 3.12607,
+        "y": 0.56617,
+        "z": 0.1
+      },
+      "Rotation": {
+        "x": -69.44942,
+        "y": 90.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.038,
+        "y": 0.038,
+        "z": 0.13633
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#F4BA91",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    }
+  ]
+}
