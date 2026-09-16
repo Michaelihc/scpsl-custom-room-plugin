@@ -30385,6 +30385,204 @@
         "PrimitiveFlags": 2,
         "Static": false
       }
+    },
+    {
+      "Name": "gallery_fill_1",
+      "ObjectId": 200321,
+      "ParentId": -1644,
+      "Position": {
+        "x": -7.0,
+        "y": 3.2,
+        "z": -41.5
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "BlockType": 2,
+      "Properties": {
+        "LightType": 2,
+        "Color": "F5F8FCFF",
+        "Intensity": 24.0,
+        "Range": 18.0,
+        "Shape": 0,
+        "SpotAngle": 30.0,
+        "InnerSpotAngle": 0.0,
+        "ShadowStrength": 0.0,
+        "ShadowType": 0,
+        "Static": false
+      }
+    },
+    {
+      "Name": "gallery_fill_2",
+      "ObjectId": 200322,
+      "ParentId": -1644,
+      "Position": {
+        "x": 0.0,
+        "y": 3.2,
+        "z": -41.5
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "BlockType": 2,
+      "Properties": {
+        "LightType": 2,
+        "Color": "F5F8FCFF",
+        "Intensity": 24.0,
+        "Range": 18.0,
+        "Shape": 0,
+        "SpotAngle": 30.0,
+        "InnerSpotAngle": 0.0,
+        "ShadowStrength": 0.0,
+        "ShadowType": 0,
+        "Static": false
+      }
+    },
+    {
+      "Name": "gallery_fill_3",
+      "ObjectId": 200323,
+      "ParentId": -1644,
+      "Position": {
+        "x": 7.0,
+        "y": 3.2,
+        "z": -41.5
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "BlockType": 2,
+      "Properties": {
+        "LightType": 2,
+        "Color": "F5F8FCFF",
+        "Intensity": 24.0,
+        "Range": 18.0,
+        "Shape": 0,
+        "SpotAngle": 30.0,
+        "InnerSpotAngle": 0.0,
+        "ShadowStrength": 0.0,
+        "ShadowType": 0,
+        "Static": false
+      }
+    },
+    {
+      "Name": "gallery_fill_4",
+      "ObjectId": 200324,
+      "ParentId": -1644,
+      "Position": {
+        "x": -7.0,
+        "y": 3.2,
+        "z": -30.5
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "BlockType": 2,
+      "Properties": {
+        "LightType": 2,
+        "Color": "F5F8FCFF",
+        "Intensity": 24.0,
+        "Range": 18.0,
+        "Shape": 0,
+        "SpotAngle": 30.0,
+        "InnerSpotAngle": 0.0,
+        "ShadowStrength": 0.0,
+        "ShadowType": 0,
+        "Static": false
+      }
+    },
+    {
+      "Name": "gallery_fill_5",
+      "ObjectId": 200325,
+      "ParentId": -1644,
+      "Position": {
+        "x": 0.0,
+        "y": 3.2,
+        "z": -30.5
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "BlockType": 2,
+      "Properties": {
+        "LightType": 2,
+        "Color": "F5F8FCFF",
+        "Intensity": 24.0,
+        "Range": 18.0,
+        "Shape": 0,
+        "SpotAngle": 30.0,
+        "InnerSpotAngle": 0.0,
+        "ShadowStrength": 0.0,
+        "ShadowType": 0,
+        "Static": false
+      }
+    },
+    {
+      "Name": "gallery_fill_6",
+      "ObjectId": 200326,
+      "ParentId": -1644,
+      "Position": {
+        "x": 7.0,
+        "y": 3.2,
+        "z": -30.5
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.0,
+        "y": 1.0,
+        "z": 1.0
+      },
+      "BlockType": 2,
+      "Properties": {
+        "LightType": 2,
+        "Color": "F5F8FCFF",
+        "Intensity": 24.0,
+        "Range": 18.0,
+        "Shape": 0,
+        "SpotAngle": 30.0,
+        "InnerSpotAngle": 0.0,
+        "ShadowStrength": 0.0,
+        "ShadowType": 0,
+        "Static": false
+      }
     }
   ]
 }

@@ -178,6 +178,23 @@ def build():
     for light in lights:
         light['Properties']['Intensity'] *= light_gain
         light['Properties']['Range'] *= light_gain
+    # The dark gallery needs local fill in front of the exhibits, rather than
+    # relying only on four dim ceiling lights. These are final runtime values;
+    # do not apply the baseline multiplier to them a second time.
+    gallery_template = next(b for b in lights if b['ObjectId'] == -2222)
+    gallery_fills = []
+    for z in (-41.5, -30.5):
+        for x in (-7.0, 0.0, 7.0):
+            fill = copy.deepcopy(gallery_template)
+            fill['ObjectId'], fill['ParentId'] = next_id, root
+            fill['Name'] = f'gallery_fill_{len(gallery_fills) + 1}'
+            fill['Position'] = {'x': x, 'y': 3.2, 'z': z}
+            fill['Properties']['Intensity'] = 24.0
+            fill['Properties']['Range'] = 18.0
+            next_id += 1
+            gallery_fills.append(fill)
+            kept.append(fill)
+            final[fill['ObjectId']] = fill
     assert len(final) == len(kept)
     assert all(b['ParentId']==root or b['ParentId'] in final for b in kept)
     assert not any('860705092' in b['Properties'].get('Text','') or 'DE.XIZHI' in b['Properties'].get('Text','') for b in kept)
@@ -212,6 +229,7 @@ def build():
             'protected_blocks_unchanged_except_lighting':len(preserved),'scp_primitives':budgets,
             'light_intensity_multiplier':light_gain,'light_range_multiplier':light_gain,
             'brightened_lights':len(lights),
+            'gallery_fill_lights':len(gallery_fills),
             'removed_brand_blocks':218,'added_decor':len(decor.blocks)-1}
     OUTPUT.with_name('preservation.json').write_text(json.dumps(report,indent=2)+'\n',encoding='utf-8')
     print(json.dumps(report,indent=2))

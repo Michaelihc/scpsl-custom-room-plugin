@@ -34,7 +34,11 @@ relative to the initial star room. The two setting multipliers have a product of
 this is not a measurement of perceived brightness. Gallery/hub/observation lights
 change from intensity 2.5 to 4.330 and range 18 to 31.177. Code-owned Aim lights use
 the same gain. Light colors, positions, room materials and geometry stay unchanged.
-Total: **1,107 blocks**, compared with **1,090** in the original. See [preservation report](preservation.json).
+The gallery also has six neutral-white fill lights, three in front of the displays
+and three across the entrance aisle, at height 3.2 m. Each uses intensity 24 and range
+18 m to illuminate the dark materials. These are additional final values, not scaled
+again. The original four gallery lights remain, giving ten lights in the gallery.
+Total: **1,113 blocks**, compared with **1,090** in the original. See [preservation report](preservation.json).
 
 For installation, copy this folder to the plugin's `Schematics` directory and set
 `authored_station_asset: warmup_station_stars` in the target port's configuration.
@@ -57,7 +61,7 @@ renderer rejects them; the installable asset retains original opaque IDs.
 The renderer omits TextToys, shadows and bloom and approximates game lighting.
 Native client appearance and gameplay have not been playtested for this revision.
 The initial room is deployed on Rain Yun; the brighter revision uses a separately
-named `warmup_station_stars_bright` asset there to preserve rollback to the initial room.
+named `warmup_station_stars_lit` asset there to preserve rollback to earlier rooms.
 
 ## 中文
 
@@ -80,7 +84,9 @@ named `warmup_station_stars_bright` asset there to preserve rollback to the init
 几何保持不变；生成器在调整灯光前逐项验证 **658 个受保护方块**完全一致。新增装饰没有碰撞，
 原房间碰撞保留。所有灯光的强度和范围分别乘以 **√3（约 1.732）**，两项倍率相乘为 3。
 这不是对实际观感亮度的测量；灯光颜色、位置、房间材质与几何保持不变，代码生成的靶场灯光使用相同倍率。
-总方块数为 **1,107**，原房间为 **1,090**。
+展厅另增六盏中性白色补光灯：展品前方三盏、入口通道三盏，高 3.2 米，每盏强度 24、范围 18 米。
+新增灯光使用最终数值，不再叠加倍率；保留原有四盏，展厅共十盏灯。
+总方块数为 **1,113**，原房间为 **1,090**。
 
 安装时将本文件夹复制到插件的 `Schematics` 目录，并在目标端口配置中设置
 `authored_station_asset: warmup_station_stars`。功能靶场仍由代码生成，活动开关不会改变。
