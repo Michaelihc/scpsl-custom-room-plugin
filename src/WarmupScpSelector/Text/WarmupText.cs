@@ -124,14 +124,14 @@ namespace WarmupScpSelector.Text
 
         /// <summary>
         /// Condition line for an SCP-3114 pick: vanilla only spawns SCP-3114 on holidays, so the pick is honoured
-        /// by carving one SCP-3114 out of the Class-D team once the lobby is large enough.
+        /// by giving one random picker SCP-3114 once the lobby is large enough.
         /// </summary>
         public static string Scp3114Note(int minPlayers, bool useChineseLocalization)
         {
             string threshold = Math.Max(1, minPlayers).ToString();
             return useChineseLocalization
-                ? "SCP-3114 需要 " + threshold + " 人以上 · 随机一名选择者替换一名 D 级"
-                : "SCP-3114 needs " + threshold + "+ players · one random picker replaces a Class-D";
+                ? "SCP-3114 需要 " + threshold + " 人以上 · 随机一名选择者获得"
+                : "SCP-3114 needs " + threshold + "+ players · one random picker gets it";
         }
 
         /// <summary>

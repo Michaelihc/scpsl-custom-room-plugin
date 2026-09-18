@@ -553,9 +553,7 @@ internal sealed class SelectorController
         ev.ChangeReason = RoleChangeReason.RoundStart;
         ev.SpawnFlags = RoleSpawnFlags.All;
         ev.IsAllowed = true;
-        _plugin.LogDebug(rewrittenRole == RoleTypeId.Scp3114
-            ? $"SCP-3114 carve-out: {player.UserId} takes SCP-3114 instead of vanilla {vanillaRole}."
-            : $"SCP-3114 carve-out: a Class-D slot becomes {rewrittenRole} to keep the winner's vanilla team count.");
+        _plugin.LogDebug($"SCP-3114 carve-out: {player.UserId} takes SCP-3114 instead of vanilla {vanillaRole}.");
     }
 
     // Chosen on the first human callback: by then every SCP role is final, so a 3114 picker who kept or won an
@@ -592,9 +590,9 @@ internal sealed class SelectorController
         return new Scp3114Draft<Player>(candidates[_random.Next(candidates.Count)]);
     }
 
-    // Post-spawn tail of the carve-out, needed only when the winner's non-Class-D vanilla role found no later
-    // Class-D callback to absorb it. Still inside the synchronous RoleAssigner pass, before any RoundStarted-
-    // delayed plugin (ReinforcementsSystem's Facility Manager at +2.0 s and GOC spy at +2.35 s) reads roles.
+    // Closes the carve-out once vanilla finished spawning. All role writes already happened inside the callbacks,
+    // still within the synchronous RoleAssigner pass and before any RoundStarted-delayed plugin
+    // (ReinforcementsSystem's Facility Manager at +2.0 s and GOC spy at +2.35 s) reads roles.
     private void FinishScp3114Draft()
     {
         Scp3114Draft<Player>? draft = _scp3114Draft;
@@ -607,40 +605,11 @@ internal sealed class SelectorController
             {
                 _plugin.LogDebug("SCP-3114 carve-out: no vanilla human assignment was observed.");
             }
-
-            return;
         }
-
-        if (!draft.WinnerPromoted)
+        else if (!draft.WinnerPromoted)
         {
             _plugin.LogDebug("SCP-3114 carve-out: the winner never received a vanilla human role; nothing changed.");
-            return;
         }
-
-        RoleTypeId owed = draft.TakeOwedRole();
-        if (owed == RoleTypeId.None)
-        {
-            return;
-        }
-
-        List<Player> classD = Participants()
-            .Where(player => player != null && player.IsReady && player.Role == RoleTypeId.ClassD)
-            .ToList();
-        if (classD.Count == 0)
-        {
-            Logger.Warn($"[WarmupScpSelector] SCP-3114 carve-out: no Class-D spawned, so the winner's vanilla {owed} slot stays empty.");
-            return;
-        }
-
-        Player displaced = classD[_random.Next(classD.Count)];
-        displaced.SetRole(owed, RoleChangeReason.RoundStart, RoleSpawnFlags.All);
-        if (displaced.Role != owed)
-        {
-            Logger.Warn($"[WarmupScpSelector] SCP-3114 carve-out: moving a Class-D onto {owed} was blocked; the round has one Class-D more and one {owed} fewer than vanilla.");
-            return;
-        }
-
-        _plugin.LogDebug($"SCP-3114 carve-out: {displaced.UserId} moved from Class-D onto {owed} after spawning.");
     }
 
     private void OnPlayerChangingRoleCore(PlayerChangingRoleEventArgs ev)

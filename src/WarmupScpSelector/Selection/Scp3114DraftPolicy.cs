@@ -6,9 +6,9 @@ namespace WarmupScpSelector.Selection
 {
     /// <summary>
     /// Pure rules for honouring an SCP-3114 pick when vanilla did not spawn SCP-3114 (it only does on holidays,
-    /// see <c>Scp3114Role.EnableSpawning</c>). Large lobbies carve one SCP-3114 out of the Class-D team: one
-    /// random picker becomes SCP-3114 in place of one Class-D slot, so the round has exactly one more SCP and
-    /// one fewer Class-D than vanilla assigned. Every other team count is untouched.
+    /// see <c>Scp3114Role.EnableSpawning</c>). Large lobbies hand SCP-3114 to one random picker in place of
+    /// whatever human role vanilla was about to give that picker, so the round has exactly one more SCP and one
+    /// fewer human than vanilla assigned. Nobody else's role changes.
     /// </summary>
     public static class Scp3114DraftPolicy
     {
@@ -33,11 +33,9 @@ namespace WarmupScpSelector.Selection
 
     /// <summary>
     /// Round-start state for one SCP-3114 carve-out. <c>HumanSpawner</c> assigns humans one cancellable
-    /// <c>ServerSetRole</c> at a time, in a shuffled order, and re-picks any player still holding None for later
-    /// slots; so a human callback can be rewritten in place but must never be cancelled. The winner's own
-    /// callback is rewritten to SCP-3114. If vanilla had given the winner a non-Class-D role, that role is owed
-    /// to the next Class-D callback, which keeps every other team's count intact; if no Class-D callback follows,
-    /// <see cref="TakeOwedRole"/> lets the caller move one already-spawned Class-D onto it after spawning.
+    /// <c>ServerSetRole</c> at a time and re-picks any player still holding None for later slots, so a human
+    /// callback can be rewritten in place but must never be cancelled. Only the winner's own callback is
+    /// rewritten, to SCP-3114; every other callback passes through untouched.
     /// </summary>
     public sealed class Scp3114Draft<TPlayer>
         where TPlayer : notnull
@@ -54,62 +52,21 @@ namespace WarmupScpSelector.Selection
         /// <summary>True once the winner's round-start callback was rewritten to SCP-3114.</summary>
         public bool WinnerPromoted { get; private set; }
 
-        /// <summary>The winner's displaced non-Class-D vanilla role until a Class-D callback absorbs it.</summary>
-        public RoleTypeId OwedRole { get; private set; } = RoleTypeId.None;
-
         /// <summary>
-        /// Rewrites one round-start human assignment when the carve-out needs it. Returns false (and the
-        /// unchanged role) for every callback that must pass through untouched.
+        /// Rewrites the winner's round-start human assignment to SCP-3114. Returns false (and the unchanged
+        /// role) for every other callback.
         /// </summary>
         public bool TryRewrite(TPlayer player, RoleTypeId vanillaRole, out RoleTypeId rewrittenRole)
         {
             rewrittenRole = vanillaRole;
-            if (!Scp3114DraftPolicy.IsHumanRoundRole(vanillaRole))
+            if (WinnerPromoted || !Scp3114DraftPolicy.IsHumanRoundRole(vanillaRole) || !Comparer.Equals(player, Winner))
             {
                 return false;
             }
 
-            if (!WinnerPromoted)
-            {
-                if (!Comparer.Equals(player, Winner))
-                {
-                    return false;
-                }
-
-                WinnerPromoted = true;
-                if (vanillaRole != RoleTypeId.ClassD)
-                {
-                    OwedRole = vanillaRole;
-                }
-
-                rewrittenRole = RoleTypeId.Scp3114;
-                return true;
-            }
-
-            if (OwedRole != RoleTypeId.None && vanillaRole == RoleTypeId.ClassD)
-            {
-                rewrittenRole = OwedRole;
-                OwedRole = RoleTypeId.None;
-                return true;
-            }
-
-            return false;
-        }
-
-        /// <summary>
-        /// After vanilla finished spawning: the role still owed to the Class-D team, or None. Clears it so the
-        /// post-spawn fix is applied at most once.
-        /// </summary>
-        public RoleTypeId TakeOwedRole()
-        {
-            if (!WinnerPromoted)
-            {
-                return RoleTypeId.None;
-            }
-
-            RoleTypeId owed = OwedRole;
-            OwedRole = RoleTypeId.None;
-            return owed;
+            WinnerPromoted = true;
+            rewrittenRole = RoleTypeId.Scp3114;
+            return true;
         }
     }
 }
