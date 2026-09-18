@@ -65,7 +65,8 @@ namespace WarmupScpSelector.Text
             IReadOnlyList<WarmupOption> options,
             RoleTypeId? selectedRole,
             IReadOnlyDictionary<RoleTypeId, int>? selectionCounts,
-            bool useChineseLocalization)
+            bool useChineseLocalization,
+            string? selectionNote = null)
         {
             StringBuilder sb = new StringBuilder(320);
             sb.Append("<align=center>");
@@ -97,6 +98,12 @@ namespace WarmupScpSelector.Text
                 sb.Append("<i>").Append(Colored(Dim, useChineseLocalization ? "尚未选择" : "none yet")).Append("</i>");
             }
 
+            // One-line condition under the pick when the selected SCP needs more than a coin to be honoured.
+            if (selectionNote is { Length: > 0 })
+            {
+                sb.Append("\n<size=78%>").Append(Colored(Gold, selectionNote)).Append("</size>");
+            }
+
             // Live option row: every offered SCP, with the current pick highlighted as a filled chip and a
             // small tally after any chip that has been picked.
             string chips = OptionChips(options, selectedRole, selectionCounts);
@@ -113,6 +120,18 @@ namespace WarmupScpSelector.Text
 
             sb.Append("</align>");
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Condition line for an SCP-3114 pick: vanilla only spawns SCP-3114 on holidays, so the pick is honoured
+        /// by carving one SCP-3114 out of the Class-D team once the lobby is large enough.
+        /// </summary>
+        public static string Scp3114Note(int minPlayers, bool useChineseLocalization)
+        {
+            string threshold = Math.Max(1, minPlayers).ToString();
+            return useChineseLocalization
+                ? "SCP-3114 需要 " + threshold + " 人以上 · 随机一名选择者替换一名 D 级"
+                : "SCP-3114 needs " + threshold + "+ players · one random picker replaces a Class-D";
         }
 
         /// <summary>

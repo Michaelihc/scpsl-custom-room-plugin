@@ -64,6 +64,12 @@ public sealed class Config
     [Description("Fallback-only delay used if atomic pre-spawn SCP remapping cannot be prepared. Normal round starts apply only each player's final role before it is sent.")]
     public float RoleSwapDelaySeconds { get; set; } = 1.5f;
 
+    [Description("Honour SCP-3114 picks even though vanilla only spawns SCP-3114 on holidays. When at least Scp3114MinPlayers players are counted for round-start role assignment and someone picked SCP-3114, one random picker becomes SCP-3114 in place of one Class-D slot: the round gets one more SCP and one fewer Class-D, every other team keeps its vanilla count. If vanilla did spawn SCP-3114 this round, the normal draft swap owns it instead.")]
+    public bool Scp3114DraftEnabled { get; set; } = true;
+
+    [Description("Minimum players counted for round-start role assignment before an SCP-3114 pick is honoured. Default 26, i.e. more than 25 players.")]
+    public int Scp3114MinPlayers { get; set; } = 26;
+
     [Description("Hide the vanilla 'WAITING FOR PLAYERS / ROUND START IS PAUSED' block while the selector is active.")]
     public bool HideWaitingUi { get; set; } = true;
 

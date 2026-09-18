@@ -114,6 +114,18 @@ only once that activity's world, props, and scheduler have all started successfu
     displaced vanilla holder inherits the picker's original (human) role.
   - If vanilla did **not** spawn that SCP this round, the pick is skipped. The plugin **never creates
     extra SCPs** or invents fallback roles — it only rearranges what vanilla already assigned.
+  - **SCP-3114 is the one exception.** Vanilla only spawns SCP-3114 on holidays
+    (`Scp3114Role.EnableSpawning`, local dedicated-server decompile), so its coin would otherwise be dead.
+    When at least `Scp3114MinPlayers` players (default 26, i.e. more than 25) are counted for round-start
+    role assignment and someone picked SCP-3114, one random picker becomes SCP-3114 **in place of one
+    Class-D slot**: the round has one more SCP and one fewer Class-D, and every other team keeps its
+    vanilla count. If vanilla gave that picker a non-Class-D role, a random Class-D inherits it. The
+    picker's status panel shows the player threshold while SCP-3114 is selected. If vanilla did spawn
+    SCP-3114 this round, the normal swap above owns it. `Scp3114DraftEnabled: false` turns this off.
+  - All of this happens inside the game's own role-assignment pass, before roles are sent to clients.
+    Plugins that appoint special humans after `RoundStarted` (ReinforcementsSystem's Facility Manager and
+    GOC spy run 2 s and 2.35 s later) therefore only ever see the final roles; the SCP-3114 winner is an
+    SCP by then and cannot be picked by either.
 - The station and all models **despawn when the round starts**.
 - If a main SCP disconnects during the configured early-round window while still above the configured
   health threshold, that exact role becomes available through `.volunteer <number>` (alias `.v`).
@@ -175,6 +187,8 @@ Key options:
 - `PedestalSpacing`, `ModelScale`, `SelectorCoinScale` — layout/sizing.
 - `SelectorItem` — the pickup used as the selection coin (default `Coin`).
 - `RoleSwapDelaySeconds` — delay after round start before swapping (lets vanilla roles settle).
+- `Scp3114DraftEnabled` and `Scp3114MinPlayers` — honour SCP-3114 picks by replacing one Class-D slot once the
+  lobby has at least this many players counted for role assignment (default `true`, `26`).
 - `MusicEnabled`, `MusicFilePath` — optional lobby music. `MusicFilePath` must point to preconverted
   `48000 Hz` mono raw float32 little-endian PCM (`.f32le`). Relative paths resolve under the plugin
   config folder above. Convert once offline, then the plugin loads the samples directly:
@@ -408,6 +422,15 @@ SCP 名额交换给选择它的玩家。
 - 回合开始时，插件把玩家交还给游戏进行原版职业分配，然后**交换**被选中的 SCP 名额：
   - 如果原版生成了某人选择的 SCP，则从该选择池里选一名玩家获得该名额，被替换的原 SCP 玩家获得选择者原本的（人类）职业。
   - 如果原版本回合没有生成该 SCP，则跳过该选择。插件**不会额外创建 SCP**，也不会随机生成回退职业，只会重排原版已分配的职业。
+  - **SCP-3114 是唯一的例外。** 原版只在节日生成 SCP-3114（`Scp3114Role.EnableSpawning`，本地专用服务器反编译），
+    否则它的硬币没有任何效果。当参与回合开始职业分配的玩家不少于 `Scp3114MinPlayers`（默认 26，即超过 25 人）
+    且有人选择了 SCP-3114 时，随机一名选择者会**顶替一个 D 级名额**成为 SCP-3114：本回合多一个 SCP、少一个
+    D 级，其他阵营人数与原版一致。如果原版给该选择者的是非 D 级职业，则随机一名 D 级继承该职业。选中 SCP-3114
+    时状态面板会显示人数条件。如果原版本回合自己生成了 SCP-3114，则由上面的常规交换处理。
+    `Scp3114DraftEnabled: false` 可关闭此功能。
+  - 以上全部在游戏自身的职业分配过程中完成，早于职业同步给客户端。在 `RoundStarted` 之后才任命特殊人类的插件
+    （ReinforcementsSystem 的设施主管和 GOC 间谍分别在 2 秒和 2.35 秒后执行）只会看到最终职业；此时 SCP-3114
+    获得者已是 SCP，不会被两者选中。
 - 空间站和所有模型在**回合开始时销毁**。
 - 若主要 SCP 在配置的回合早期窗口内、且生命值仍高于阈值时断线，其原职业会开放替补。玩家可输入
   `.volunteer <编号>`（别名 `.v`）参加抽选；**默认同时允许旁观者和仍存活的非 SCP 玩家参加**。
@@ -463,6 +486,8 @@ dotnet build -c Release -p:ServerManagedPath="C:\path\to\SCPSL_Data\Managed"
   网格。保留图纸中的 `SCP-xxx` 标签，硬币就会跟着模型走。
 - `SelectorItem`——作为选择硬币的物品（默认 `Coin`）。
 - `RoleSwapDelaySeconds`——回合开始后多久执行交换（等待原版职业稳定）。
+- `Scp3114DraftEnabled`、`Scp3114MinPlayers`——参与职业分配的玩家达到该人数时，用一个 D 级名额兑现 SCP-3114
+  选择（默认 `true`、`26`）。
 - `MusicEnabled`、`MusicFilePath`——可选大厅音乐。`MusicFilePath` 需要指向预转换的 `48000 Hz`
   单声道 raw float32 little-endian PCM（`.f32le`）。相对路径会从上面的插件配置目录解析。离线转换一次即可，
   插件运行时直接读取采样：

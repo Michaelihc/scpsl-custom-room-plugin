@@ -51,6 +51,12 @@ namespace WarmupScpSelector.Tests
                 AtomicDispatchHandlesJoinStormWithoutMakingDummiesSelectors,
                 VanillaScpSlotCounterMatchesRoleAssignerLoop,
                 VanillaScpSlotCounterHonoursOverflow,
+                Scp3114DraftArmsOnlyAboveThresholdWithPickers,
+                Scp3114WinnerOnClassDSlotNeedsNoOwedRole,
+                Scp3114WinnerOffClassDHandsRoleToNextClassD,
+                Scp3114OwedRoleSurvivesToPostSpawnWhenNoClassDFollows,
+                Scp3114DraftIgnoresNonRoundRolesAndUnpromotedWinner,
+                Scp3114NoteRendersOnlyWhenGiven,
                 LiveRoundRoleBeatsStaleCapturedRole,
                 CapturedRoleIsFallbackWhenLiveRoleIsSpectator,
                 TutorialRoleWithoutCaptureIsUnresolved,
@@ -491,6 +497,103 @@ namespace WarmupScpSelector.Tests
             AssertEqual(RoleTypeId.Scp106, dispatch.CallbackRole, "dummy callback role");
             AssertEqual(false, dispatch.ImmediateAssignments.Any(pair => pair.Key == "dummy-vanilla-106"),
                 "current dummy is never assigned reentrantly");
+        }
+
+        private static void Scp3114DraftArmsOnlyAboveThresholdWithPickers()
+        {
+            AssertEqual(true, Scp3114DraftPolicy.ShouldArm(true, 26, 26, 1), "26 eligible with one picker arms");
+            AssertEqual(true, Scp3114DraftPolicy.ShouldArm(true, 40, 26, 3), "larger lobby arms");
+            AssertEqual(false, Scp3114DraftPolicy.ShouldArm(true, 25, 26, 5), "25 eligible is not more than 25");
+            AssertEqual(false, Scp3114DraftPolicy.ShouldArm(true, 30, 26, 0), "no picker never arms");
+            AssertEqual(false, Scp3114DraftPolicy.ShouldArm(false, 30, 26, 2), "disabled never arms");
+            AssertEqual(true, Scp3114DraftPolicy.ShouldArm(true, 1, 0, 1), "a zero threshold still needs one player");
+
+            AssertEqual(true, Scp3114DraftPolicy.IsHumanRoundRole(RoleTypeId.ClassD), "ClassD is a human round role");
+            AssertEqual(true, Scp3114DraftPolicy.IsHumanRoundRole(RoleTypeId.FacilityGuard), "guard is a human round role");
+            foreach (RoleTypeId role in new[]
+                     {
+                         RoleTypeId.None, RoleTypeId.Spectator, RoleTypeId.Tutorial, RoleTypeId.Overwatch,
+                         RoleTypeId.Filmmaker, RoleTypeId.Destroyed, RoleTypeId.Scp173, RoleTypeId.Scp3114,
+                     })
+            {
+                AssertEqual(false, Scp3114DraftPolicy.IsHumanRoundRole(role), $"{role} is not a human round role");
+            }
+        }
+
+        private static void Scp3114WinnerOnClassDSlotNeedsNoOwedRole()
+        {
+            Scp3114Draft<string> draft = new Scp3114Draft<string>("winner");
+
+            AssertEqual(false, draft.TryRewrite("other", RoleTypeId.ClassD, out RoleTypeId untouched), "other Class-D passes before the winner");
+            AssertEqual(RoleTypeId.ClassD, untouched, "pass-through keeps the vanilla role");
+            AssertEqual(true, draft.TryRewrite("winner", RoleTypeId.ClassD, out RoleTypeId promoted), "winner's own callback is rewritten");
+            AssertEqual(RoleTypeId.Scp3114, promoted, "winner becomes SCP-3114");
+            AssertEqual(true, draft.WinnerPromoted, "winner promoted");
+            AssertEqual(RoleTypeId.None, draft.OwedRole, "a Class-D winner owes nothing");
+            AssertEqual(false, draft.TryRewrite("later", RoleTypeId.ClassD, out _), "later Class-D untouched");
+            AssertEqual(false, draft.TryRewrite("winner", RoleTypeId.Scientist, out RoleTypeId again), "winner is promoted once");
+            AssertEqual(RoleTypeId.Scientist, again, "repeat callback keeps its vanilla role");
+            AssertEqual(RoleTypeId.None, draft.TakeOwedRole(), "nothing owed after spawning");
+        }
+
+        private static void Scp3114WinnerOffClassDHandsRoleToNextClassD()
+        {
+            Scp3114Draft<string> draft = new Scp3114Draft<string>("winner");
+
+            AssertEqual(false, draft.TryRewrite("early-d", RoleTypeId.ClassD, out _), "earlier Class-D stays Class-D");
+            AssertEqual(true, draft.TryRewrite("winner", RoleTypeId.Scientist, out RoleTypeId promoted), "winner rewritten");
+            AssertEqual(RoleTypeId.Scp3114, promoted, "winner becomes SCP-3114");
+            AssertEqual(RoleTypeId.Scientist, draft.OwedRole, "the displaced Scientist slot is owed");
+            AssertEqual(false, draft.TryRewrite("guard", RoleTypeId.FacilityGuard, out RoleTypeId guard), "non-Class-D never absorbs the owed role");
+            AssertEqual(RoleTypeId.FacilityGuard, guard, "guard keeps guard");
+            AssertEqual(true, draft.TryRewrite("next-d", RoleTypeId.ClassD, out RoleTypeId absorbed), "next Class-D absorbs the owed role");
+            AssertEqual(RoleTypeId.Scientist, absorbed, "that Class-D slot becomes the Scientist");
+            AssertEqual(RoleTypeId.None, draft.OwedRole, "owed role consumed");
+            AssertEqual(false, draft.TryRewrite("last-d", RoleTypeId.ClassD, out RoleTypeId last), "only one Class-D slot is replaced");
+            AssertEqual(RoleTypeId.ClassD, last, "remaining Class-D untouched");
+            AssertEqual(RoleTypeId.None, draft.TakeOwedRole(), "nothing left for the post-spawn tail");
+        }
+
+        private static void Scp3114OwedRoleSurvivesToPostSpawnWhenNoClassDFollows()
+        {
+            Scp3114Draft<string> draft = new Scp3114Draft<string>("winner");
+
+            AssertEqual(false, draft.TryRewrite("d-1", RoleTypeId.ClassD, out _), "Class-D before the winner passes");
+            AssertEqual(false, draft.TryRewrite("d-2", RoleTypeId.ClassD, out _), "Class-D before the winner passes");
+            AssertEqual(true, draft.TryRewrite("winner", RoleTypeId.FacilityGuard, out _), "winner rewritten");
+            AssertEqual(RoleTypeId.FacilityGuard, draft.TakeOwedRole(), "post-spawn tail receives the owed guard slot");
+            AssertEqual(RoleTypeId.None, draft.TakeOwedRole(), "the tail is handed out once");
+        }
+
+        private static void Scp3114DraftIgnoresNonRoundRolesAndUnpromotedWinner()
+        {
+            Scp3114Draft<string> draft = new Scp3114Draft<string>("winner");
+
+            AssertEqual(false, draft.TryRewrite("winner", RoleTypeId.None, out RoleTypeId none), "None handoff is not a human assignment");
+            AssertEqual(RoleTypeId.None, none, "None passes through");
+            AssertEqual(false, draft.TryRewrite("winner", RoleTypeId.Scp049, out _), "an SCP callback is never rewritten");
+            AssertEqual(false, draft.TryRewrite("winner", RoleTypeId.Spectator, out _), "spectator is not a human assignment");
+            AssertEqual(false, draft.WinnerPromoted, "winner still unpromoted");
+            AssertEqual(RoleTypeId.None, draft.TakeOwedRole(), "an unpromoted winner owes nothing post-spawn");
+        }
+
+        private static void Scp3114NoteRendersOnlyWhenGiven()
+        {
+            string english = WarmupText.Scp3114Note(26, false);
+            string chinese = WarmupText.Scp3114Note(26, true);
+            AssertEqual(true, english.Contains("26+") && english.Contains("Class-D"), "English note names the threshold and the Class-D slot");
+            AssertEqual(true, chinese.Contains("26") && chinese.Contains("D 级"), "Chinese note names the threshold and the Class-D slot");
+            AssertEqual(false, chinese.Contains("players"), "Chinese note carries no English copy");
+            AssertEqual(false, english.Contains("需要"), "English note carries no Chinese copy");
+
+            string without = WarmupText.BuildWarmupStatusHint(12, 30, 50, SampleOptions, RoleTypeId.Scp3114, null, false);
+            string with = WarmupText.BuildWarmupStatusHint(12, 30, 50, SampleOptions, RoleTypeId.Scp3114, null, false, english);
+            AssertEqual(false, without.Contains(english), "no note without a condition");
+            AssertEqual(true, with.Contains(english), "note is rendered when given");
+            AssertEqual(true, with.IndexOf("SELECTED", StringComparison.Ordinal) < with.IndexOf(english, StringComparison.Ordinal), "note sits under the selection line");
+            AssertEqual(true, with.IndexOf(english, StringComparison.Ordinal) < with.IndexOf("Grab a coin", StringComparison.Ordinal), "note sits above the footer");
+            AssertMarkupSafe(with, "status hint with note");
+            AssertNoNestedSize(with, "status hint with note");
         }
 
         private static void VanillaScpSlotCounterMatchesRoleAssignerLoop()

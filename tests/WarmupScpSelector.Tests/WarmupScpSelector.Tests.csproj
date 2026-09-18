@@ -15,6 +15,7 @@
     <Compile Include="..\..\src\WarmupScpSelector\Selection\AtomicRoleDispatchPlanner.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Selection\VanillaScpSlotCounter.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Selection\VanillaRoleAssignmentResolver.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\Scp3114DraftPolicy.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\WarmupText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\AimRangeText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\ActivityGlyphs.cs" />
