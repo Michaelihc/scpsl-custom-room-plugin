@@ -1,7 +1,7 @@
 # WarmupScpSelector — Warmup Activity Suite Specification
 ### "The Seam": one instrument, four lanes
 
-> Grounded against the shipped code: `WarmupText.cs` palette constants, `HsmHintDisplayProvider` (stable-ID hints, `ForceFastUpdates=false`, ~0.1 s Fast coalescing), the `_lastStatusText` change-skip cache and `HintLoop` in `SelectorController.cs`, the `OnBeforeVanillaRoleAssignment` synchronous teardown, the `MusicFadeOutBeforeStartSeconds` countdown-threshold hook, `SelectorRoom`'s primitive/light/text pipeline with a few very bright ordinary non-HDR point lights, and `Config.Language` (single server-wide `cn`/`en` flag).
+> Grounded against the shipped code: `WarmupText.cs` palette constants, `HsmHintDisplayProvider` (stable-ID hints, `ForceFastUpdates=false`, ~0.1 s Fast coalescing), the `_lastStatusText` change-skip cache and `HintLoop` in `SelectorController.cs`, the `OnBeforeVanillaRoleAssignment` synchronous teardown, the `CountdownNow()` countdown sampling in `HintLoop`, `SelectorRoom`'s primitive/light/text pipeline with a few very bright ordinary non-HDR point lights, and `Config.Language` (single server-wide `cn`/`en` flag).
 
 ---
 
@@ -72,7 +72,7 @@ Persistent lane/danger/phase state lives in **world objects** (`PrimitiveObjectT
 
 ### 1.8 Localization + handoff timing
 
-Single server-wide `Config.Language` (`cn`/`en` → `useChineseLocalization`), per-string bilingual pairs, `　` for CJK spacing, ASCII node numbers kept in both languages, **never stacked EN+CN.** The **ROUND STARTING** card is best-effort, driven off the countdown crossing a threshold *during warmup* (as the music fade already is at `MusicFadeOutBeforeStartSeconds`) — **not** inside `OnBeforeVanillaRoleAssignment`, which clears hints and despawns synchronously. Gameplay correctness wins: never delay cleanup or role assignment to guarantee a cosmetic card.
+Single server-wide `Config.Language` (`cn`/`en` → `useChineseLocalization`), per-string bilingual pairs, `　` for CJK spacing, ASCII node numbers kept in both languages, **never stacked EN+CN.** The **ROUND STARTING** card is best-effort, driven off the countdown crossing a threshold *during warmup* (sampled by `CountdownNow()` in `HintLoop`) — **not** inside `OnBeforeVanillaRoleAssignment`, which clears hints and despawns synchronously. Gameplay correctness wins: never delay cleanup or role assignment to guarantee a cosmetic card.
 
 ### 1.9 Glyph reality gate (do once, before any lane ships)
 

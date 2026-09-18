@@ -67,39 +67,6 @@ public sealed class Config
     [Description("Hide the vanilla 'WAITING FOR PLAYERS / ROUND START IS PAUSED' block while the selector is active.")]
     public bool HideWaitingUi { get; set; } = true;
 
-    [Description("Whether to play lobby music inside the warmup selector.")]
-    public bool MusicEnabled { get; set; } = false;
-
-    [Description("Path to preconverted lobby music. Use 48000 Hz mono little-endian float32 raw PCM (.f32le). Relative paths resolve under this plugin's LabAPI config folder.")]
-    public string MusicFilePath { get; set; } = "lobby.f32le";
-
-    [Description("Speaker controller id used for lobby music. Change this if another plugin uses the same speaker controller.")]
-    public int MusicControllerId { get; set; } = 73;
-
-    [Description("Lobby music volume.")]
-    public float MusicVolume { get; set; } = 0.35f;
-
-    [Description("If true, music uses 3D falloff from a speaker in the selector room. If false, it plays as non-spatial lobby music.")]
-    public bool MusicSpatial { get; set; } = false;
-
-    [Description("Spatial music distance where falloff starts.")]
-    public float MusicMinDistance { get; set; } = 2f;
-
-    [Description("Spatial music distance where falloff reaches zero.")]
-    public float MusicMaxDistance { get; set; } = 35f;
-
-    [Description("Seconds used to fade lobby music in for each player when they enter the selector.")]
-    public float MusicFadeInSeconds { get; set; } = 2.5f;
-
-    [Description("Seconds used to fade lobby music out before round start.")]
-    public float MusicFadeOutSeconds { get; set; } = 5f;
-
-    [Description("Starts the fade-out when the native lobby countdown reaches this many seconds. Use 0 to fade only at final handoff.")]
-    public float MusicFadeOutBeforeStartSeconds { get; set; } = 5f;
-
-    [Description("Safety cap for the decoded music length in seconds.")]
-    public int MusicMaxSeconds { get; set; } = 240;
-
     [Description("SCPs offered in the gallery, in stand order (back rank first, then side walls). Each gets one model + one coin. Model is the embedded .mer.json basename; leave it blank to use this plugin's built-in model for known SCP roles.")]
     public List<ScpOption> ScpOptions { get; set; } = new()
     {

@@ -35,7 +35,6 @@ internal sealed class SelectorController
     private readonly WarmupScpSelectorPlugin _plugin;
     private readonly HsmHintDisplayProvider _hints;
     private readonly SelectorRoom _room;
-    private readonly WarmupMusicPlayer _music;
 
     // Shared warmup-activity lifecycle core. The critical StopForRoundStart teardown runs before Tutorial
     // players flip to None so range-owned hazards cannot leak into vanilla assignment.
@@ -92,7 +91,6 @@ internal sealed class SelectorController
         _plugin = plugin;
         _hints = hints;
         _room = new SelectorRoom(plugin);
-        _music = new WarmupMusicPlayer(plugin);
         _aimLane = new AimRangeActivityLane(plugin, hints, _activities, IsOwnedWarmupHuman);
         _parkourLane = new ParkourActivityLane(plugin, hints, _activities, IsOwnedWarmupHuman);
     }
@@ -141,7 +139,6 @@ internal sealed class SelectorController
             _active = true;
             PrepareActivities();
             ExportSchematicIfRequested();
-            _music.Start(_room.SpawnPosition);
 
             foreach (Player player in Participants().ToList())
             {
@@ -338,15 +335,6 @@ internal sealed class SelectorController
 
             try
             {
-                _music.FadeOutAndStop();
-            }
-            catch (Exception ex)
-            {
-                Logger.Warn($"[WarmupScpSelector] Music fade-out failed: {ex.Message}");
-            }
-
-            try
-            {
                 ClearAllHints();
             }
             catch (Exception ex)
@@ -439,7 +427,6 @@ internal sealed class SelectorController
             // Drop canonical ownership only after activity/hint cleanup, so a same-UserId reconnect starts clean.
             _participantState.Remove(key);
             _externalSelections.Remove(key);
-            _music.RemovePlayer(ev.Player);
         }
     }
 
@@ -576,7 +563,6 @@ internal sealed class SelectorController
     {
         Timing.KillCoroutines(_hintLoop);
         Timing.KillCoroutines(_maintainLoop);
-        _music.StopImmediate();
         ClearAllHints();
         RestoreWaitingUi();
         // Tear down any activity lanes (hazards/granted items/lane hints) before releasing players — same
@@ -1130,7 +1116,6 @@ internal sealed class SelectorController
             // Show the status panel immediately on entry (full countdown + "Selected: None" + how-to), so the
             // player sees it before the first HintLoop tick. Subsequent ticks just update this same HSM hint.
             ShowStatus(player);
-            _music.AddPlayer(player);
         }
         catch
         {
@@ -1405,7 +1390,6 @@ internal sealed class SelectorController
                 // differs only by their own pick (and whether the tally highlights that pick's count).
                 CountdownContext context = CountdownNow();
                 IReadOnlyDictionary<RoleTypeId, int> counts = SelectionCounts();
-                _music.UpdateCountdown(context.Timer);
                 foreach (Player player in Participants().ToList())
                 {
                     try

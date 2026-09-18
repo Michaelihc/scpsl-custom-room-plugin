@@ -175,17 +175,6 @@ Key options:
 - `PedestalSpacing`, `ModelScale`, `SelectorCoinScale` — layout/sizing.
 - `SelectorItem` — the pickup used as the selection coin (default `Coin`).
 - `RoleSwapDelaySeconds` — delay after round start before swapping (lets vanilla roles settle).
-- `MusicEnabled`, `MusicFilePath` — optional lobby music. `MusicFilePath` must point to preconverted
-  `48000 Hz` mono raw float32 little-endian PCM (`.f32le`). Relative paths resolve under the plugin
-  config folder above. Convert once offline, then the plugin loads the samples directly:
-
-```powershell
-ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
-```
-
-- `MusicFadeInSeconds` — per-player fade-in when someone enters the selector.
-- `MusicFadeOutBeforeStartSeconds`, `MusicFadeOutSeconds` — starts fading before the native countdown
-  reaches round start, with a final fallback fade during the role-assignment handoff.
 - `ScpOptions` — the SCPs offered, each with a role, label, and embedded model name.
 - `ActivitiesEnabled` and `Activities.Aim.Enabled` — both must be `true` to open the Aim Range.
 - `Activities.Parkour.Enabled` — additionally set this to `true` to open Pulse Line in the north shaft.
@@ -324,11 +313,11 @@ python tests/models/test_scp_173_model.py                        # geometry cont
 
 - The selector/activity HUD requires HintServiceMeow and uses stable HSM hint IDs. Replacement notices use
   global broadcasts plus optional client-console copies.
+- This plugin plays no lobby music of its own. Lobby music, the player music box and per-player volume
+  belong to [Global Music Player](../global-music-player/README.md), which coexists with the station.
 - Do not install the standalone SCPReplacer beside this port; both would observe the same departure and announce
   competing lotteries. ScpSwap may coexist: the replacement lottery rechecks that the SCP role is still vacant
   immediately before promotion.
-- Lobby music uses one filtered audio transmitter per player so join fade-in is per-player. Keep tracks
-  reasonably short; `MusicMaxSeconds` caps accidental huge files.
 - The isolated live harness verifies AdminToy collision, widened lane geometry, smoothed persistent-target
   replication, sphere spawning, real product-bot patrol/native retaliation ammo consumption, dummy floor behavior, and
   handoff leak cleanup. Authenticated-client pickup/fire sequencing, first-person presentation, repeated bot death/respawn,
@@ -463,17 +452,6 @@ dotnet build -c Release -p:ServerManagedPath="C:\path\to\SCPSL_Data\Managed"
   网格。保留图纸中的 `SCP-xxx` 标签，硬币就会跟着模型走。
 - `SelectorItem`——作为选择硬币的物品（默认 `Coin`）。
 - `RoleSwapDelaySeconds`——回合开始后多久执行交换（等待原版职业稳定）。
-- `MusicEnabled`、`MusicFilePath`——可选大厅音乐。`MusicFilePath` 需要指向预转换的 `48000 Hz`
-  单声道 raw float32 little-endian PCM（`.f32le`）。相对路径会从上面的插件配置目录解析。离线转换一次即可，
-  插件运行时直接读取采样：
-
-```powershell
-ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
-```
-
-- `MusicFadeInSeconds`——玩家进入选择房间时的个人淡入时长。
-- `MusicFadeOutBeforeStartSeconds`、`MusicFadeOutSeconds`——原版倒计时接近回合开始时淡出；如果倒计时直接结束，
-  职业分配交接时也会兜底淡出。
 - `ScpOptions`——可选 SCP 列表，每项包含职业、标签和嵌入模型名。
 - `ActivitiesEnabled` 与 `Activities.Aim.Enabled`——两项都必须为 `true` 才会开放训练场。
 - `Activities.Parkour.Enabled`——再将此项设为 `true`，即可在训练场最左侧原本空置的区域生成“脉冲路线”。
@@ -534,11 +512,11 @@ ProjectMER，文件会写入其 `Schematics/<name>/<name>.json`（可直接 `mp 
 ### 已知限制 / 冲突
 
 - 选择器/训练场 HUD 依赖 HintServiceMeow，并使用稳定 HSM hint ID；替补通知使用全局广播，且可选同步到客户端控制台。
+- 本插件不再自带大厅音乐。大厅音乐、玩家音乐盒和每人独立音量由
+  [Global Music Player](../global-music-player/README.zh-CN.md) 负责，可与空间站共存。
 - 不要同时安装独立版 SCPReplacer，否则两个插件会同时处理同一次断线并发出竞争抽选。ScpSwap 可以共存：
   本插件会在抽选结算前再次确认对应 SCP 职业仍为空缺。
 - `tests/WarmupRangeVerifier` 尚未适配空间站改版，其断言仍基于旧的单一大厅接缝，迁移前会失败。
-- 大厅音乐为每名玩家使用一个过滤后的音频发送器，因此加入时淡入是按玩家独立生效的。音频文件不要太长；
-  `MusicMaxSeconds` 会限制误放入的超大文件。
 - 隔离实机 harness 已验证 AdminToy 碰撞、扩宽训练道、枪架位置、平滑永久移动靶同步、球形靶生成、两名产品
   机器人真实巡逻与原生还击弹药消耗、dummy 落地和交接零泄漏清理。真实客户端的拾取/射击顺序、第一人称表现、
   机器人反复死亡重生、命中标记与球形靶消失重生画面、致命重置画面，以及中英文最终视觉检查仍需在可见本地
