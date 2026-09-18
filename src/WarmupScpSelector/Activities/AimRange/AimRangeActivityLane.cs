@@ -104,8 +104,8 @@ namespace WarmupScpSelector.Activities.AimRange
         // sits on either while TAB is held. Clamped to the on-screen center-X range (edge-to-edge ~±1745).
         private float HudX => Sanitize(AimConfig.HudX, -1745f, 1745f, -1077f);
 
-        // Configurable, non-overlapping HSM bands (defaults flash 592 / hero 700 / footer 805). The collapsed
-        // status strip at 900 is owned by SelectorController. All clamped into the on-screen 0..1080 range.
+        // Configurable, non-overlapping HSM bands (defaults flash 592 / hero 700 / footer 805). The compact
+        // round-countdown strip at 900 is owned by SelectorController. All clamped into the on-screen 0..1080 range.
         private float FlashY => SanitizeY(AimConfig.FlashY, 592f);
 
         private float HeroY => SanitizeY(AimConfig.HeroY, 700f);
@@ -293,7 +293,7 @@ namespace WarmupScpSelector.Activities.AimRange
         // ---- HUD (collision-free bilingual range card) ------------------------------------------------------
         // Per active session: the persistent hero card + footer, plus force-shown flashes when a session counter
         // rises (target hit / bot engaged / incoming) or a bot respawns. Bounded to the three lane IDs
-        // (aim.hero / aim.footer / aim.flash); the collapsed warmupscp.status strip is owned by SelectorController.
+        // (aim.hero / aim.footer / aim.flash); the compact warmupscp.status countdown strip is owned by SelectorController.
 
         private void RenderHud()
         {

@@ -66,7 +66,9 @@ only once that activity's world, props, and scheduler have all started successfu
   the lobby countdown and your current pick, with a small badge for how many players picked the same SCP
   (e.g. `SCP-096　·　5 picks`) and a tiny `·N` tally on each chip in the offered-role row. You can change
   your pick any time before the round starts. (The panel is only re-sent when its text changes, so it does
-  not spam the network.)
+  not spam the network.) The countdown is the largest element after the title. Inside the Aim Range or the
+  parkour shaft the full panel gives way to that activity's HUD, but the countdown stays on screen as a smaller,
+  quieter strip so nobody loses track of round start.
 - The plugin never forces the native lobby countdown. The only exception is an ownership-safe temporary lobby lock
   while one human is using configured native bots, preventing counted dummies from falsely starting the round; it is
   released synchronously when another human joins, the last human leaves, or Aim stops.
@@ -200,11 +202,13 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   both bots use Crossvec only, react in 0.5–0.6 seconds, and keep the first-attacker lock for 12 seconds.
 - `Activities.Aim.SphereActiveCount` and `SphereDiameter` — lane-3 Aim-Lab population and size. Every credited hit
   immediately teleports the same sphere to the next position in a fixed, irregular 50-point 3D deck.
-- `Activities.Aim.FlashY`, `HeroY`, and `FooterY` — the three non-overlapping Aim HSM bands. The retained
-  `CollapsedStatusY` setting is legacy compatibility and is not rendered.
+- `Activities.Aim.FlashY`, `HeroY`, and `FooterY` — the three non-overlapping Aim HSM bands.
+  `Activities.Aim.CollapsedStatusY` and `Activities.Parkour.CollapsedStatusY` (default `900`) place the small
+  round-countdown strip that replaces the full SCP panel while you are inside that activity, so the lobby countdown
+  is always visible; it is deliberately smaller and quieter than the full panel's countdown.
 - `Activities.Aim.HudX` — HSM center-X for the in-bay Aim HUD lane (default `-1077`). It keeps the flash,
-  hero, and footer in the narrow left corridor between the native inventory list and wheel so the HUD never overlaps
-  them while TAB is held. Outside the bay only the original centered SCP panel is shown.
+  hero, footer, and compact countdown in the narrow left corridor between the native inventory list and wheel so the
+  HUD never overlaps them while TAB is held. Outside the bay only the original centered SCP panel is shown.
 - `PedestalSpacing` — spacing of the gallery's back rank of stands (default `3.7`). Wider spacing fits fewer
   stands in the back rank and pushes the remainder onto the side walls; the gallery holds ten in total.
   With an **authored station** the stands come from the schematic, so this setting no longer decides where
@@ -381,7 +385,8 @@ SCP 名额交换给选择它的玩家。
   以便正对看到服务器 Logo。
 - **拿取硬币**即选择该 SCP（拾取被取消，硬币保持原位）。提示面板显示大厅倒计时和你当前的选择，并标注有多少玩家
   选了同一个 SCP（例如 `SCP-096　·　5 人选择`），职业行的每个标签上还有 `·N` 计数。回合开始前可随时改选。
-  （面板只在文本变化时重新发送，不会刷屏。）
+  （面板只在文本变化时重新发送，不会刷屏。）倒计时是标题之下最醒目的元素。进入射击训练场或跑酷竖井后，
+  完整面板让位给该活动的 HUD，但倒计时仍以更小、更低调的形式留在屏幕上，确保不会错过开局。
 - 插件不会强制原版大厅倒计时。唯一例外是单人使用原生机器人时的临时大厅锁，防止被计数的假人误启动回合；
   当第二名真实玩家加入、最后一名真实玩家离开或训练场停止时会同步释放。
 - 默认关闭的**瞄准训练场**位于东侧训练舱，沿舱室方向 21.5 m 射击。射击柜台上永久摆放六把枪械，两侧墙边对称放置
@@ -486,10 +491,11 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
 - `Activities.Aim.BotWeaponPresets`、`BotRespawnSeconds`、`BotAggroLeaseSeconds` 等——机器人确定性枪械和还击时序。
 - `Activities.Aim.SphereActiveCount` 与 `SphereDiameter`——第三训练道球形靶的数量和大小。每次有效命中
   都会立即计分并把同一球体传送到固定 50 点不规则三维位置表中的下一点。
-- `Activities.Aim.FlashY`、`HeroY`、`FooterY`——三个互不重叠的 Aim HSM 显示区域；保留的
-  `CollapsedStatusY` 仅用于配置兼容，不再渲染。
+- `Activities.Aim.FlashY`、`HeroY`、`FooterY`——三个互不重叠的 Aim HSM 显示区域。
+  `Activities.Aim.CollapsedStatusY` 与 `Activities.Parkour.CollapsedStatusY`（默认 `900`）决定在活动区内
+  替代完整 SCP 面板的小型开局倒计时条的位置，保证大厅倒计时始终可见；它比完整面板的倒计时更小、更低调。
 - `Activities.Aim.HudX`——训练侧 Aim HUD 通道的 HSM 中心 X（默认 `-1077`）。选择侧只显示原始居中的 SCP
-  选择面板；越过地面分界线后 SCP 面板完全隐藏，只显示位于原生物品栏列表与物品转盘之间的 Aim HUD。
+  选择面板；越过地面分界线后 SCP 面板隐藏，只显示位于原生物品栏列表与物品转盘之间的 Aim HUD 和小型倒计时条。
 
 ### 把房间交给其他人编辑
 

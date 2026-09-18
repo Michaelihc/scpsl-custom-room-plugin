@@ -47,6 +47,9 @@ namespace WarmupScpSelector.Activities
 
         [Description("HSM Y of the parkour instruction footer.")]
         public float FooterY { get; set; } = 805f;
+
+        [Description("HSM Y of the small round-countdown strip shown inside the parkour shaft in place of the full SCP draft panel. Keep it below the footer band. 0..1080.")]
+        public float CollapsedStatusY { get; set; } = 900f;
     }
 
     public sealed class AimRangeActivityConfig
@@ -137,7 +140,7 @@ namespace WarmupScpSelector.Activities
         [Description("Full positive health restored by a same-life Aim lethal intercept.")]
         public float HumanResetHealth { get; set; } = 100f;
 
-        [Description("HSM center-X for the whole in-range HUD lane (flash + hero + footer + collapsed status). Rendered center px = 960 + X/2 (in-game measured 2026-08-18), so the default -1077 renders near px421, between the native inventory list and the inventory wheel while TAB is held. CAUTION: multi-char lines starting left of X = -800 word-wrap after their first glyph in game; values below -800 need the ghost-tail placement recipe and an in-game recheck.")]
+        [Description("HSM center-X for the whole in-range HUD lane (flash + hero + footer + compact countdown). Rendered center px = 960 + X/2 (in-game measured 2026-08-18), so the default -1077 renders near px421, between the native inventory list and the inventory wheel while TAB is held. CAUTION: multi-char lines starting left of X = -800 word-wrap after their first glyph in game; values below -800 need the ghost-tail placement recipe and an in-game recheck.")]
         public float HudX { get; set; } = -1077f;
 
         [Description("HSM Y of the force-shown range event flash (HIT / INCOMING / BOT DOWN ...). Keep the flash/hero/footer/collapsed bands non-overlapping. 0 (top) .. 1080 (bottom).")]
@@ -149,7 +152,7 @@ namespace WarmupScpSelector.Activities
         [Description("HSM Y of the single active-voice range coaching footer. 0..1080.")]
         public float FooterY { get; set; } = 805f;
 
-        [Description("HSM Y of the one-line collapsed warmup status strip shown while inside the range (replaces the full SCP draft panel). 0..1080.")]
+        [Description("HSM Y of the small round-countdown strip shown inside the range in place of the full SCP draft panel. Keep it below the footer band. 0..1080.")]
         public float CollapsedStatusY { get; set; } = 900f;
 
         // Compatibility keys retained so an existing spike-era YAML (including port 7777) still deserializes.

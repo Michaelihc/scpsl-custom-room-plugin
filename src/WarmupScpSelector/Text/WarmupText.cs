@@ -116,71 +116,40 @@ namespace WarmupScpSelector.Text
         }
 
         /// <summary>
-        /// The one-line collapsed status strip shown while a player is inside an activity lane (e.g. the Aim
-        /// Range): current SCP pick + its pick count + the round countdown, all on a single line. It renders on
-        /// the lane's narrow left HUD X, so the whole strip is wrapped in one outer <c>&lt;size&gt;</c> span
-        /// (never nested) to stay inside the ~284px lane even at the widest role name plus a two-digit pick count,
-        /// and the countdown is kept terse ("12s" / "12秒", "Wait"/"Start") for the same reason. Threaded through
-        /// <see cref="ActivityGlyphs"/> so the glyph fallback is preserved. The full draft panel is restored
+        /// The one-line compact round countdown shown while a player is inside an activity lane (Aim Range,
+        /// Pulse Line). The full draft panel is hidden there so the lane HUD owns the screen, but the round
+        /// countdown must never disappear: this strip keeps it visible at deliberately lower prominence than
+        /// the full panel (one small outer <c>&lt;size&gt;</c> span, muted label, no title/pick/players). It renders
+        /// on the lane's narrow left HUD X, so the size span is never nested and the copy stays terse. Threaded
+        /// through <see cref="ActivityGlyphs"/> so the glyph fallback is preserved. The full panel is restored
         /// automatically once the player leaves the lane.
         /// </summary>
-        public static string BuildCollapsedStatusStrip(
-            short nativeTimer,
-            RoleTypeId? selectedRole,
-            int selectionCount,
-            bool useChineseLocalization,
-            bool useAsciiGlyphs)
+        public static string BuildCompactCountdownStrip(short nativeTimer, bool useChineseLocalization, bool useAsciiGlyphs)
         {
-            StringBuilder sb = new StringBuilder(160);
-            sb.Append("<align=center><size=88%>");
-            sb.Append(Colored(Muted, useChineseLocalization ? "已选" : "PICK")).Append(' ');
-            if (selectedRole.HasValue)
-            {
-                sb.Append("<b>").Append(Colored(Accent, FormatRoleName(selectedRole.Value))).Append("</b>");
-                if (selectionCount > 0)
-                {
-                    sb.Append(Colored(Dim, " ·" + selectionCount.ToString()));
-                }
-            }
-            else
-            {
-                sb.Append("<i>").Append(Colored(Dim, useChineseLocalization ? "尚未选择" : "none yet")).Append("</i>");
-            }
-
-            sb.Append(Colored(Dim, " | "));
+            StringBuilder sb = new StringBuilder(120);
+            sb.Append("<align=center><size=" + CompactStripSize + ">");
             sb.Append(CompactCountdown(nativeTimer, useChineseLocalization));
             sb.Append("</size></align>");
             return ActivityGlyphs.Resolve(sb.ToString(), useAsciiGlyphs);
         }
 
-        // Terse countdown for the collapsed strip (no leading glyph or verb prefix) so it fits the narrow lane.
+        // Relative sizes of the countdown. The full panel's seconds are the biggest element after the title so
+        // the number reads at a glance; the lane strip is a single small span so it stays secondary to the lane HUD.
+        private const string FullSecondsSize = "150%";
+        private const string FullStateSize = "120%";
+        private const string CompactStripSize = "78%";
+
+        // Terse countdown for the lane strip: short verb label + seconds, no leading glyph, one outer size only.
         private static string CompactCountdown(short nativeTimer, bool cn)
         {
             if (nativeTimer == -2)
             {
-                return Colored(Muted, cn ? "等待" : "Wait");
+                return Colored(Muted, cn ? "等待玩家中" : "Waiting for players");
             }
 
             if (nativeTimer <= 0)
             {
-                return "<b>" + Colored(Ready, cn ? "开始" : "Start") + "</b>";
-            }
-
-            string color = nativeTimer <= 5 ? Urgent : Gold;
-            string seconds = "<b>" + Colored(color, nativeTimer.ToString()) + "</b>";
-            return seconds + Colored(Muted, cn ? "秒" : "s");
-        }
-
-        private static string CountdownChunk(short nativeTimer, bool cn)
-        {
-            if (nativeTimer == -2)
-            {
-                return Colored(Muted, cn ? "● 等待玩家中" : "● Waiting for players");
-            }
-
-            if (nativeTimer <= 0)
-            {
-                return "<b>" + Colored(Ready, cn ? "▶ 即将开始" : "▶ Starting") + "</b>";
+                return "<b>" + Colored(Ready, cn ? "即将开始" : "Starting") + "</b>";
             }
 
             string color = nativeTimer <= 5 ? Urgent : Gold;
@@ -188,6 +157,32 @@ namespace WarmupScpSelector.Text
             return cn
                 ? Colored(Muted, "倒计时 ") + seconds + Colored(Muted, "秒")
                 : Colored(Muted, "Starts in ") + seconds + Colored(Muted, "s");
+        }
+
+        // Countdown row of the full panel. The seconds number is enlarged well past the body text so the time
+        // left is the first thing read after the title; the waiting/starting states get a milder bump.
+        private static string CountdownChunk(short nativeTimer, bool cn)
+        {
+            if (nativeTimer == -2)
+            {
+                return Sized(FullStateSize, Colored(Muted, cn ? "● 等待玩家中" : "● Waiting for players"));
+            }
+
+            if (nativeTimer <= 0)
+            {
+                return Sized(FullStateSize, "<b>" + Colored(Ready, cn ? "▶ 即将开始" : "▶ Starting") + "</b>");
+            }
+
+            string color = nativeTimer <= 5 ? Urgent : Gold;
+            string seconds = Sized(FullSecondsSize, "<b>" + Colored(color, nativeTimer.ToString()) + "</b>");
+            return cn
+                ? Colored(Muted, "倒计时 ") + seconds + Colored(Muted, "秒")
+                : Colored(Muted, "Starts in ") + seconds + Colored(Muted, "s");
+        }
+
+        private static string Sized(string size, string text)
+        {
+            return "<size=" + size + ">" + text + "</size>";
         }
 
         private static string PlayersChunk(int playerCount, int maxPlayers, bool cn)

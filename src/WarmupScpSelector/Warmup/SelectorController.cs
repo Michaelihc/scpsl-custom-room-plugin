@@ -113,6 +113,8 @@ internal sealed class SelectorController
 
     private bool UseChinese => string.Equals(Config.Language, "cn", StringComparison.OrdinalIgnoreCase);
 
+    private bool UseAscii => Config.Activities?.UseAsciiGlyphFallback == true;
+
     // ---- Server lifecycle ------------------------------------------------------------------------
 
     public void OnWaitingForPlayers()
@@ -1436,9 +1438,11 @@ internal sealed class SelectorController
         ShowStatus(player, CountdownNow(), SelectionCounts());
     }
 
-    // Draw/refresh the original warmup status panel outside the Aim UI area. Crossing the UI-only floor line
-    // removes it completely so only the Aim hero/footer can render; mechanics remain active on both sides.
-    // The provider owns the change-skip cache, so an unchanged render never reaches HSM or the network.
+    // Draw/refresh the original warmup status panel outside an activity lane. Inside the Aim UI area or the
+    // parkour shaft the full panel gives way to the lane hero/footer, but the round countdown itself must stay
+    // visible: the same hint id is re-rendered as a small countdown-only strip on the lane's HUD X, below its
+    // footer band. Mechanics remain active on both sides. The provider owns the change-skip cache (X is part
+    // of the signature), so an unchanged render never reaches HSM or the network.
     private void ShowStatus(Player player, CountdownContext context, IReadOnlyDictionary<RoleTypeId, int> counts)
     {
         if (player == null || !player.IsReady)
@@ -1450,16 +1454,45 @@ internal sealed class SelectorController
         RoleTypeId? selection = Selection(player);
 
         string? currentLane = _activities.CurrentLane(key);
-        if ((string.Equals(currentLane, LaneHintIds.Aim, StringComparison.Ordinal) && _aimLane.IsInAimUiArea(player)) ||
-            (string.Equals(currentLane, LaneHintIds.Parkour, StringComparison.Ordinal) && _parkourLane.Contains(player.Position)))
+        if (string.Equals(currentLane, LaneHintIds.Aim, StringComparison.Ordinal) && _aimLane.IsInAimUiArea(player))
         {
-            _hints.Remove(player, StatusTagId);
+            AimRangeActivityConfig? aim = Config.Activities?.Aim;
+            ShowCompactCountdown(player, context, aim?.HudX, aim?.CollapsedStatusY);
+            return;
+        }
+
+        if (string.Equals(currentLane, LaneHintIds.Parkour, StringComparison.Ordinal) && _parkourLane.Contains(player.Position))
+        {
+            ParkourActivityConfig? parkour = Config.Activities?.Parkour;
+            ShowCompactCountdown(player, context, parkour?.HudX, parkour?.CollapsedStatusY);
             return;
         }
 
         string text = WarmupText.BuildWarmupStatusHint(
             context.Timer, context.Players, context.Max, _offeredOptions, selection, counts, UseChinese);
         _hints.ShowPrompt(player, StatusTagId, Config.StatusHintY, text);
+    }
+
+    // The lane-side countdown strip. It shares the lane's HudX so it sits in the same narrow left corridor as the
+    // lane flash/hero/footer (clear of the native inventory list + wheel), and its own Y below the footer band so
+    // the four bands never overlap. Both coordinates are clamped on-screen so a bad YAML value cannot hide it.
+    private void ShowCompactCountdown(Player player, CountdownContext context, float? laneX, float? laneY)
+    {
+        float x = Clamp(laneX, -1745f, 1745f, -1077f);
+        float y = Clamp(laneY, 0f, 1080f, 900f);
+        string strip = WarmupText.BuildCompactCountdownStrip(context.Timer, UseChinese, UseAscii);
+        _hints.ShowPrompt(player, StatusTagId, y, strip, x);
+    }
+
+    private static float Clamp(float? value, float min, float max, float fallback)
+    {
+        float resolved = value ?? fallback;
+        if (float.IsNaN(resolved) || float.IsInfinity(resolved))
+        {
+            resolved = fallback;
+        }
+
+        return Math.Max(min, Math.Min(max, resolved));
     }
 
     // Tally, per offered SCP, how many current participants have it selected. Bounded by the small warmup
