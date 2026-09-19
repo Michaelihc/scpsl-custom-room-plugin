@@ -5,7 +5,8 @@
     {
       "op": "server-command",
       "mode": "ra",
-      "command": "countdownprobe arrange hub"
+      "command": "countdownprobe arrange hub",
+      "expect": "COUNTDOWN_NATIVE"
     },
     {
       "op": "gameplay"

@@ -5,7 +5,8 @@
     {
       "op": "server-command",
       "mode": "ra",
-      "command": "countdownprobe arrange aim"
+      "command": "countdownprobe arrange aim",
+      "expect": "COUNTDOWN_NATIVE"
     },
     {
       "op": "gameplay"
@@ -30,6 +31,12 @@
     {
       "op": "snapshot",
       "label": "inside"
+    },
+    {
+      "op": "server-command",
+      "mode": "ra",
+      "command": "countdownprobe require aim",
+      "expect": "COUNTDOWN_NATIVE_OK aim"
     },
     {
       "op": "server-command",
@@ -73,6 +80,27 @@
     {
       "op": "snapshot",
       "label": "waiting"
+    },
+    {
+      "op": "hold",
+      "keys": [
+        "a"
+      ],
+      "ms": 1000
+    },
+    {
+      "op": "wait",
+      "ms": 1100
+    },
+    {
+      "op": "server-command",
+      "mode": "ra",
+      "command": "countdownprobe require hub",
+      "expect": "COUNTDOWN_NATIVE_OK hub"
+    },
+    {
+      "op": "snapshot",
+      "label": "exited"
     }
   ],
   "checks": [
@@ -100,7 +128,18 @@
       "from": "outside",
       "min": 2,
       "max": 5,
-      "maxHeightChange": 0.3
+      "maxHeightChange": 0.3,
+      "axis": "x",
+      "direction": 1
+    },
+    {
+      "kind": "movement",
+      "at": "exited",
+      "from": "inside",
+      "min": 2,
+      "max": 5,
+      "axis": "x",
+      "direction": -1
     }
   ]
 }

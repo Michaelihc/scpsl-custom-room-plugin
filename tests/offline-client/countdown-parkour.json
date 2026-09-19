@@ -5,7 +5,8 @@
     {
       "op": "server-command",
       "mode": "ra",
-      "command": "countdownprobe arrange parkour"
+      "command": "countdownprobe arrange parkour",
+      "expect": "COUNTDOWN_NATIVE"
     },
     {
       "op": "gameplay"
@@ -30,6 +31,12 @@
     {
       "op": "snapshot",
       "label": "inside"
+    },
+    {
+      "op": "server-command",
+      "mode": "ra",
+      "command": "countdownprobe require parkour",
+      "expect": "COUNTDOWN_NATIVE_OK parkour"
     },
     {
       "op": "server-command",
@@ -95,7 +102,9 @@
       "from": "outside",
       "min": 2,
       "max": 5,
-      "maxHeightChange": 0.3
+      "maxHeightChange": 0.3,
+      "axis": "z",
+      "direction": 1
     },
     {
       "kind": "state",

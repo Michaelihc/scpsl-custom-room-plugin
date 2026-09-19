@@ -1,0 +1,23 @@
+{
+  "kind": "native-suite",
+  "name": "warmup-countdown-cn",
+  "budgetSeconds": 180,
+  "prepare": [
+    {
+      "op": "window"
+    },
+    {
+      "op": "orient",
+      "yaw": 0,
+      "pitch": 0
+    }
+  ],
+  "cases": [
+    "countdown-full.json",
+    "countdown-aim.json",
+    "countdown-parkour.json"
+  ],
+  "cleanup": [
+    "dummies destroy CountdownNativeFixture"
+  ]
+}

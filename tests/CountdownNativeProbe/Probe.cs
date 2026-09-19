@@ -39,6 +39,12 @@ public sealed class ProbeCommand : ICommand
         if (!ProbePlugin.Active) { response = "Offline probe disabled"; return false; }
         if (!sender.CheckPermission(PlayerPermissions.ServerConfigs, out response)) return false;
         var room = WarmupScpSelectorPlugin.Instance?.WarmupRoom;
+        if (args.Count == 1 && args.At(0) == "status")
+        {
+            bool ready = room?.Hall != null && room.IsSpawned && room.AimRangeDoorPrepared && room.ParkourDoorPrepared;
+            response = ready ? "COUNTDOWN_READY" : "Countdown station not ready";
+            return ready;
+        }
         var player = Player.List.SingleOrDefault(p => !p.IsHost && !p.IsDummy && p.IsReady);
         if (room?.Hall == null || !room.IsSpawned || player == null)
         { response = "Expected standing station and one ready native player"; return false; }
@@ -56,6 +62,14 @@ public sealed class ProbeCommand : ICommand
             if (!Physics.Raycast(target + Vector3.up * 2, Vector3.down, out var hit, 4))
             { response = "No floor below arrangement anchor"; return false; }
             player.Position = hit.point + Vector3.up * 0.97f;
+        }
+        else if (args.Count == 2 && args.At(0) == "require")
+        {
+            var zone = args.At(1) == "aim" ? room.Hall.AimBay : args.At(1) == "parkour" ? room.Hall.ParkourShaft : args.At(1) == "hub" ? room.Hall.Hub : null;
+            if (zone == null || !WarmupScpSelector.Warmup.WarmupHallLayout.ContainsPoint(room.Hall.InteriorBounds(zone), player.Position))
+            { response = "Native actor did not reach required station zone"; return false; }
+            response = "COUNTDOWN_NATIVE_OK " + args.At(1);
+            return true;
         }
         else if (args.Count != 1 || args.At(0) != "state")
         { response = Description; return false; }
