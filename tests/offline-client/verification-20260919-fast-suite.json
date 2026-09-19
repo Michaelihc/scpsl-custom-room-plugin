@@ -1,0 +1,118 @@
+{
+  "productRevision": "cb5b32d",
+  "probeRevision": "d87a2a5",
+  "guestHarnessRevision": "6500a1b",
+  "language": "cn",
+  "resolution": "1280x720",
+  "suiteReport": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\suites\\20260919-224949-977313\\report.json",
+  "elapsedSeconds": 169.382,
+  "withinBudget": true,
+  "timingScope": "Prepared sandbox; includes connect, setup, actions, audio/video, cleanup and review artifacts",
+  "excludedTiming": [
+    "Build/deployment",
+    "Manual visual review"
+  ],
+  "logsReviewedFirst": true,
+  "logFailures": [],
+  "cases": [
+    {
+      "name": "countdown-full-cn",
+      "automated": "passed",
+      "visual": "passed",
+      "visualEvidence": "Contact sheets and relevant full-size snapshots",
+      "note": "Enlarged full panel waiting/gold/red states fit above the native HUD; urgent snapshot shows red 5 seconds.",
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-225025-e2cb0d\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-225025-e2cb0d\\clip.mp4",
+      "windowBefore": {
+        "Left": 91,
+        "Top": 105,
+        "Right": 1371,
+        "Bottom": 825
+      },
+      "windowAfter": {
+        "Left": 91,
+        "Top": 105,
+        "Right": 1371,
+        "Bottom": 825
+      },
+      "audio": {
+        "codec": "AAC",
+        "channels": 2,
+        "sampleRate": 44100,
+        "hasSignal": true,
+        "meanDb": -39.9,
+        "peakDb": -27.5,
+        "listened": false
+      }
+    },
+    {
+      "name": "countdown-aim-cn",
+      "automated": "passed",
+      "visual": "passed",
+      "visualEvidence": "Contact sheets and relevant full-size snapshots",
+      "note": "Native D enters Aim, compact waiting/gold/red strip fits below footer, native A restores full hub panel.",
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-225101-9f7b0a\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-225101-9f7b0a\\clip.mp4",
+      "windowBefore": {
+        "Left": 91,
+        "Top": 105,
+        "Right": 1371,
+        "Bottom": 825
+      },
+      "windowAfter": {
+        "Left": 91,
+        "Top": 105,
+        "Right": 1371,
+        "Bottom": 825
+      },
+      "audio": {
+        "codec": "AAC",
+        "channels": 2,
+        "sampleRate": 44100,
+        "hasSignal": true,
+        "meanDb": -38.6,
+        "peakDb": -9.0,
+        "listened": false
+      }
+    },
+    {
+      "name": "countdown-parkour-cn",
+      "automated": "passed",
+      "visual": "passed",
+      "visualEvidence": "Contact sheets and relevant full-size snapshots",
+      "note": "Native W enters parkour shaft, compact waiting/gold/red/Starting states fit; native round begins as SCP-106 and warmup hints disappear.",
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-225148-b2160e\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-225148-b2160e\\clip.mp4",
+      "windowBefore": {
+        "Left": 91,
+        "Top": 105,
+        "Right": 1371,
+        "Bottom": 825
+      },
+      "windowAfter": {
+        "Left": 91,
+        "Top": 105,
+        "Right": 1371,
+        "Bottom": 825
+      },
+      "audio": {
+        "codec": "AAC",
+        "channels": 2,
+        "sampleRate": 44100,
+        "hasSignal": true,
+        "meanDb": -39.1,
+        "peakDb": -9.2,
+        "listened": false
+      }
+    }
+  ],
+  "combinedClip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\countdown-cb5b32d-cn-audio.mp4",
+  "windowFinding": "One viewer retained. Preparation resized oversized window once; every recorded case kept identical 1280x720 bounds. Recorded yaw=0 and pitch=-0.00134277344 throughout movement.",
+  "limits": [
+    "Single timed run within 180 seconds; not a latency percentile guarantee.",
+    "Audio codec and real signal verified; no subjective listening or sample-accurate sync certification.",
+    "Default activity lane entry/exit tested, not an active parkour run or inventory overlap.",
+    "Full-panel Starting state not captured separately.",
+    "Native client logs include missing fallback translation and dedicated-server shader warnings; no test failure or exception found."
+  ]
+}
