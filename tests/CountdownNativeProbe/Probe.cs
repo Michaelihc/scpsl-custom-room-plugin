@@ -22,7 +22,7 @@ public sealed class ProbePlugin : Plugin
     public override void Enable()
     {
         Active = Environment.GetEnvironmentVariable("OFFLINE_LAB_OBSERVER") == "1";
-        if (Active) ConfigFile.ServerConfig.SetString("lobby_waiting_time", "25");
+        if (Active) ConfigFile.ServerConfig.SetString("lobby_waiting_time", "15");
     }
     public override void Disable() => Active = false;
 }
