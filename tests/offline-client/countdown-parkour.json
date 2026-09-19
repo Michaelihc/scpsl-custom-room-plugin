@@ -1,0 +1,119 @@
+{
+  "name": "countdown-parkour-cn",
+  "fidelity": "standard: server-arranged approach; native boundary walking and native lobby countdown",
+  "arrangeSteps": [
+    {
+      "op": "server-command",
+      "mode": "ra",
+      "command": "countdownprobe arrange parkour"
+    },
+    {
+      "op": "gameplay"
+    }
+  ],
+  "steps": [
+    {
+      "op": "snapshot",
+      "label": "outside"
+    },
+    {
+      "op": "hold",
+      "keys": [
+        "w"
+      ],
+      "ms": 800
+    },
+    {
+      "op": "wait",
+      "ms": 1300
+    },
+    {
+      "op": "snapshot",
+      "label": "inside"
+    },
+    {
+      "op": "server-command",
+      "mode": "ra",
+      "command": "countdownprobe state"
+    },
+    {
+      "op": "server-command",
+      "mode": "ra",
+      "command": "dummies spawn CountdownNativeFixture"
+    },
+    {
+      "op": "wait",
+      "ms": 2000
+    },
+    {
+      "op": "snapshot",
+      "label": "gold"
+    },
+    {
+      "op": "wait",
+      "ms": 10000
+    },
+    {
+      "op": "wait",
+      "ms": 4000
+    },
+    {
+      "op": "snapshot",
+      "label": "urgent"
+    },
+    {
+      "op": "wait",
+      "ms": 6000
+    },
+    {
+      "op": "snapshot",
+      "label": "round-started"
+    }
+  ],
+  "checks": [
+    {
+      "kind": "state",
+      "at": "outside",
+      "field": "role",
+      "equals": "Tutorial"
+    },
+    {
+      "kind": "state",
+      "at": "gold",
+      "field": "role",
+      "equals": "Tutorial"
+    },
+    {
+      "kind": "state",
+      "at": "urgent",
+      "field": "role",
+      "equals": "Tutorial"
+    },
+    {
+      "kind": "movement",
+      "at": "inside",
+      "from": "outside",
+      "min": 2,
+      "max": 5,
+      "maxHeightChange": 0.3
+    },
+    {
+      "kind": "state",
+      "at": "round-started",
+      "field": "role",
+      "oneOf": [
+        "ClassD",
+        "NtfPrivate",
+        "Scientist",
+        "FacilityGuard",
+        "Scp173",
+        "Scp049",
+        "Scp096",
+        "Scp106",
+        "Scp939",
+        "Scp3114",
+        "Scp079"
+      ]
+    }
+  ]
+}
