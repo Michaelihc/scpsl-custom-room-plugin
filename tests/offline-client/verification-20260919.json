@@ -1,0 +1,95 @@
+{
+  "revision": "cb5b32d",
+  "productDllSha256": "8cc74eba7021c81561d7ab44cbba3bc258a17d58369db3966c1f442b7de66d45",
+  "build": "Release; 0 warnings/errors",
+  "probeRevision": "5b92286",
+  "language": "cn",
+  "resolution": "1280x720",
+  "port": 8910,
+  "mapSeed": 8910,
+  "network": "Windows Sandbox Networking=Disable; loopback-only server; unmodified -noauth client",
+  "result": "3 core visual cases passed; 2 extra boundary runs invalid due to harness",
+  "cases": [
+    {
+      "case": "full-panel",
+      "review": {
+        "status": "passed",
+        "note": "Waiting, enlarged gold seconds and red urgent seconds remain clear of chips and native health HUD.",
+        "logsReviewedFirst": true,
+        "visualReviewed": true,
+        "audio": "not-recorded"
+      },
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221414-f6ea51\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221414-f6ea51\\clip.mp4",
+      "execution": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\requests\\cf441bd0854a4a07a86e9ba25aa16145"
+    },
+    {
+      "case": "aim-strip",
+      "review": {
+        "status": "passed",
+        "note": "Native D moved 3.898 m across threshold. Compact waiting/gold/red countdown fits on one line at default X=-1077 and Y=900.",
+        "logsReviewedFirst": true,
+        "visualReviewed": true,
+        "audio": "not-recorded"
+      },
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221518-bc81c3\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221518-bc81c3\\clip.mp4",
+      "execution": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\requests\\a66a2312ae3b431aaf13d2607cdfdd27"
+    },
+    {
+      "case": "parkour-strip",
+      "review": {
+        "status": "passed",
+        "note": "Native W moved 2.162 m into shaft. Compact waiting/gold/red/Starting states remain below footer. Native round start changed actor to ClassD; warmup hints removed.",
+        "logsReviewedFirst": true,
+        "visualReviewed": true,
+        "audio": "not-recorded"
+      },
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221628-22f7b2\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221628-22f7b2\\clip.mp4",
+      "execution": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\requests\\c7c0bc97ab9d4932befa5e805567c6d0"
+    },
+    {
+      "case": "aim-exit-inventory",
+      "review": {
+        "status": "invalid-harness-run",
+        "note": "Camera yaw136.699 pitch-79.500 sent movement away from activity. Distance-only automated pass is insufficient. Inventory left open. Not product evidence.",
+        "logsReviewedFirst": true,
+        "visualReviewed": false,
+        "audio": "not-recorded"
+      },
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221933-e3af21\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-221933-e3af21\\clip.mp4",
+      "execution": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\requests\\81cd35d0653a448d863c70661e146b23"
+    },
+    {
+      "case": "aim-exit-inventory-repeat",
+      "review": {
+        "status": "invalid-harness-run",
+        "note": "Attempted camera correction ran with inventory open, did not converge; shell continued to recipe. Wrong direction again. Automated role/distance pass is not acceptance.",
+        "logsReviewedFirst": true,
+        "visualReviewed": false,
+        "audio": "not-recorded"
+      },
+      "report": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-222148-84328a\\report.json",
+      "clip": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\tests\\20260919-222148-84328a\\clip.mp4",
+      "execution": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\requests\\090e45d2d08b435aa457d4bbc12e4ace"
+    }
+  ],
+  "limits": [
+    "Full-panel Starting state not captured separately.",
+    "Inventory-open overlap and native exit restoration not accepted: invalid supplemental runs.",
+    "Parkour occupancy checked; active parkour run not exercised.",
+    "Only 16:9 1280x720 and default coordinates checked.",
+    "No audio: recorder uses -an; no DirectShow capture devices enumerated in guest."
+  ],
+  "observations": [
+    "Muted gray labels have weak contrast against the station floor; a readability improvement, not countdown clipping."
+  ],
+  "cameraRecovery": {
+    "result": "Inventory closed with native Tab, then native mouse correction succeeded; yaw=0 pitch=0.001343.",
+    "evidence": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\sandbox\\20260919-220516\\output\\requests\\9a49d3fb62d041f8a4f4ee2bbd7501c7"
+  },
+  "lint": "Shared scenario lint exit 0; new local probe uses no reflection.",
+  "demo": "C:\\Users\\Michael\\source-from-fsp9-2026-08-15\\scpsl-plugins-metarepo\\.tests\\offline-clients-worktrees\\recorded-playtests\\runtime\\countdown-cb5b32d-cn.mp4"
+}
