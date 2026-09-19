@@ -1,0 +1,73 @@
+{
+  "name": "countdown-aim-boundary-cn",
+  "fidelity": "standard: arranged approach; native entry, exit, inventory or parkour jump",
+  "arrangeSteps": [
+    {
+      "op": "server-command",
+      "mode": "ra",
+      "command": "countdownprobe arrange aim"
+    },
+    {
+      "op": "gameplay"
+    }
+  ],
+  "steps": [
+    {
+      "op": "snapshot",
+      "label": "outside"
+    },
+    {
+      "op": "hold",
+      "keys": [
+        "d"
+      ],
+      "ms": 1000
+    },
+    {
+      "op": "wait",
+      "ms": 1300
+    },
+    {
+      "op": "snapshot",
+      "label": "inside"
+    },
+    {
+      "op": "hold",
+      "keys": [
+        "tab"
+      ],
+      "ms": 2500
+    },
+    {
+      "op": "hold",
+      "keys": [
+        "a"
+      ],
+      "ms": 1000
+    },
+    {
+      "op": "wait",
+      "ms": 1500
+    },
+    {
+      "op": "snapshot",
+      "label": "returned"
+    }
+  ],
+  "checks": [
+    {
+      "kind": "state",
+      "at": "returned",
+      "field": "role",
+      "equals": "Tutorial"
+    },
+    {
+      "kind": "movement",
+      "at": "inside",
+      "from": "outside",
+      "min": 2,
+      "max": 5,
+      "maxHeightChange": 0.3
+    }
+  ]
+}
