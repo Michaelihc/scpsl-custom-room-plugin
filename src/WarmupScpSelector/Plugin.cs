@@ -7,6 +7,7 @@ using LabApi.Loader.Features.Plugins;
 using PlayerRoles;
 using PlayerRoles.RoleAssign;
 using WarmupScpSelector.Replacement;
+using WarmupScpSelector.Roles;
 using WarmupScpSelector.Services;
 using WarmupScpSelector.Warmup;
 using Logger = LabApi.Features.Console.Logger;
@@ -45,7 +46,7 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 
     public override string Author => "Michael";
 
-    public override Version Version => new(1, 1, 0);
+    public override Version Version => new(1, 2, 0);
 
     public override Version RequiredApiVersion => new(LabApiProperties.CompiledVersion);
 
@@ -83,6 +84,11 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         RoleAssigner.OnBeforePlayersSpawned += _controller.OnBeforeVanillaRoleAssignment;
         RoleAssigner.OnPlayersSpawned += _controller.OnVanillaRolesAssigned;
 
+        // The special-role draft runs after the SCP coin draft: subscribed after the controller so its
+        // compatibility-swap decision is already made when this handler reads it.
+        RoundRoles.EnableHost();
+        RoleAssigner.OnPlayersSpawned += OnNativeRolesAssigned;
+
         Logger.Info($"{Name} {Version} enabled.");
     }
 
@@ -101,6 +107,8 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         PlayerEvents.SearchingPickup -= _controller.OnSearchingPickup;
         RoleAssigner.OnBeforePlayersSpawned -= _controller.OnBeforeVanillaRoleAssignment;
         RoleAssigner.OnPlayersSpawned -= _controller.OnVanillaRolesAssigned;
+        RoleAssigner.OnPlayersSpawned -= OnNativeRolesAssigned;
+        RoundRoles.DisableHost();
 
         _replacement.Cleanup();
         _controller.Cleanup();
@@ -109,6 +117,19 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         _hints = null!;
         Instance = null!;
         Logger.Info($"{Name} disabled.");
+    }
+
+    private void OnNativeRolesAssigned()
+    {
+        try
+        {
+            RoundRoles.OnNativeRolesAssigned(_controller?.ScpSwapPending == true);
+        }
+        catch (Exception ex)
+        {
+            // Runs inside the native round start; never let it abort.
+            Logger.Error($"[WarmupScpSelector] Could not schedule the role draft: {ex}");
+        }
     }
 
     public void LogDebug(string message)

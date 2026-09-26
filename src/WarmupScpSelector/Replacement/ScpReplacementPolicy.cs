@@ -72,55 +72,6 @@ internal static class ScpReplacementPolicy
         return allowAliveVolunteers && isAlive;
     }
 
-    public static bool IsHumanCommandRole(RoleTypeId role)
-    {
-        switch (role)
-        {
-            case RoleTypeId.ClassD:
-            case RoleTypeId.Scientist:
-            case RoleTypeId.FacilityGuard:
-            case RoleTypeId.NtfPrivate:
-            case RoleTypeId.NtfSergeant:
-            case RoleTypeId.NtfCaptain:
-            case RoleTypeId.NtfSpecialist:
-            case RoleTypeId.ChaosConscript:
-            case RoleTypeId.ChaosRifleman:
-            case RoleTypeId.ChaosMarauder:
-            case RoleTypeId.ChaosRepressor:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    public static RoleTypeId PickWeightedHumanRole(
-        IReadOnlyDictionary<RoleTypeId, int>? weights,
-        int nonNegativeRoll)
-    {
-        KeyValuePair<RoleTypeId, int>[] valid = (weights ?? new Dictionary<RoleTypeId, int>())
-            .Where(pair => pair.Value > 0 && IsHumanCommandRole(pair.Key))
-            .OrderBy(pair => (int)pair.Key)
-            .ToArray();
-
-        long total = valid.Sum(pair => (long)pair.Value);
-        if (total <= 0)
-        {
-            return RoleTypeId.ClassD;
-        }
-
-        long roll = Math.Abs((long)nonNegativeRoll) % total;
-        foreach (KeyValuePair<RoleTypeId, int> pair in valid)
-        {
-            roll -= pair.Value;
-            if (roll < 0)
-            {
-                return pair.Key;
-            }
-        }
-
-        return RoleTypeId.ClassD;
-    }
-
     public static string ScpNumber(RoleTypeId role)
     {
         switch (role)

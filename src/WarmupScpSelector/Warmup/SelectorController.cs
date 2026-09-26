@@ -57,6 +57,7 @@ internal sealed class SelectorController
     private CoroutineHandle _hintLoop;
     private CoroutineHandle _maintainLoop;
     private CoroutineHandle _swapDelay;
+    private bool _swapScheduled;
     private bool _active;
     private bool _handedOff;
     private Vector3? _savedStartRoundScale;
@@ -274,6 +275,7 @@ internal sealed class SelectorController
             }
 
             delay = Math.Max(0f, Math.Min(30f, delay));
+            _swapScheduled = true;
             _swapDelay = Timing.CallDelayed(delay, ApplySelectedSwaps);
         }
         catch (Exception ex)
@@ -1089,6 +1091,7 @@ internal sealed class SelectorController
     {
         // Cancel any pending swap so a stale callback from a prior round can never run against a new one.
         Timing.KillCoroutines(_swapDelay);
+        _swapScheduled = false;
         Timing.KillCoroutines(_maintainLoop);
         _participantState.Clear();
         _externalSelections.Clear();
@@ -1241,7 +1244,23 @@ internal sealed class SelectorController
         }
     }
 
+    /// <summary>True while the compatibility SCP swap is scheduled; the role draft then waits for it.</summary>
+    internal bool ScpSwapPending => _swapScheduled;
+
     private void ApplySelectedSwaps()
+    {
+        try
+        {
+            ApplySelectedSwapsCore();
+        }
+        finally
+        {
+            _swapScheduled = false;
+            Roles.RoundRoles.RunPendingDraft();
+        }
+    }
+
+    private void ApplySelectedSwapsCore()
     {
         try
         {

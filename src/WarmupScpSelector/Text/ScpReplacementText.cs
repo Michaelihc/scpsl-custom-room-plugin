@@ -62,14 +62,55 @@ internal static class ScpReplacementText
     }
 
     public static string HumanHint(bool chinese) => Header + (chinese
-        ? "若想放弃本局SCP身份，可在回合早期打开控制台 <color=#f4cf72>~</color> 输入 <color=#62e6c6>.human</color>。"
-        : "To give up your SCP role early this round, open <color=#f4cf72>~</color> and use <color=#62e6c6>.human</color>.");
+        ? "若想和人类交换身份，可在回合早期打开控制台 <color=#f4cf72>~</color> 输入 <color=#62e6c6>.human</color>。"
+        : "To swap roles with a human early this round, open <color=#f4cf72>~</color> and use <color=#62e6c6>.human</color>.");
 
-    public static string HumanSuccess(RoleTypeId role, bool chinese)
+    public static string SwapOffered(RoleTypeId role, bool chinese)
     {
-        string name = ScpReplacementPolicy.HumanRoleName(role, chinese);
-        return chinese ? $"你已成为{name}；原SCP名额已开放替补。" : $"You became {name}; your former SCP slot is now open for replacement.";
+        string number = ScpReplacementPolicy.ScpNumber(role);
+        return Header + (chinese
+            ? $"<color=#ff6b6b>SCP-{number}</color> 想和人类交换身份（保留血量与等级）。存活的人类可打开控制台 <color=#f4cf72>~</color> 输入 <color=#62e6c6>.volunteer {number}</color>，先到先得。"
+            : $"<color=#ff6b6b>SCP-{number}</color> wants to swap roles with a human (health and tiers carry over). Living humans can open <color=#f4cf72>~</color> and use <color=#62e6c6>.volunteer {number}</color>; first come, first served.");
     }
+
+    public static string SwapOfferOpened(RoleTypeId role, bool chinese)
+    {
+        string number = ScpReplacementPolicy.ScpNumber(role);
+        return chinese
+            ? $"已发出交换请求。第一个输入 .volunteer {number} 的人类会和你交换身份。"
+            : $"Swap offer sent. The first human to use .volunteer {number} trades roles with you.";
+    }
+
+    public static string SwapDone(RoleTypeId role, bool isNewScp, bool chinese)
+    {
+        string number = ScpReplacementPolicy.ScpNumber(role);
+        if (isNewScp)
+        {
+            return Header + (chinese ? $"你已和 SCP-{number} 交换身份。" : $"You swapped roles and are now SCP-{number}.");
+        }
+
+        return Header + (chinese
+            ? $"有人接受了交换，你已接手对方的人类身份与装备。"
+            : $"A human accepted the swap; you took over their role and kit.");
+    }
+
+    public static string SwapTaken(RoleTypeId role, bool chinese)
+    {
+        string number = ScpReplacementPolicy.ScpNumber(role);
+        return Header + (chinese ? $"SCP-{number} 的交换已被接受。" : $"SCP-{number}'s swap offer was taken.");
+    }
+
+    public static string SwapNeedsHuman(bool chinese) =>
+        chinese ? "只有存活的人类可以接受交换。" : "Only a living human can accept a swap.";
+
+    public static string SwapUnavailable(bool chinese) =>
+        chinese ? "该交换请求已失效。" : "That swap offer is no longer available.";
+
+    public static string SwapAlreadyOffered(bool chinese) =>
+        chinese ? "你已经发出了交换请求。" : "You already offered a swap.";
+
+    public static string ClaimedRole(bool chinese) =>
+        chinese ? "你当前的特殊身份不能参加替补或交换。" : "Your current special role cannot volunteer or swap.";
 
     public static string Usage(bool chinese) => chinese
         ? "用法：.volunteer <SCP编号>（例如 .volunteer 079 或 .v 079）"
@@ -91,4 +132,5 @@ internal static class ScpReplacementText
     public static string CapacityReached(bool chinese) => chinese ? "本回合的替补数量已达上限。" : "This round's replacement limit has been reached.";
     public static string SlotAlreadyOpen(bool chinese) => chinese ? "该SCP已经有一个待处理的替补名额。" : "That SCP already has a pending replacement slot.";
     public static string RoleChangeFailed(bool chinese) => chinese ? "职业切换失败；没有开放替补名额。" : "The role change failed; no replacement slot was opened.";
+    public static string SwapFailed(bool chinese) => chinese ? "交换失败，双方身份保持不变。" : "The swap failed; both roles are unchanged.";
 }

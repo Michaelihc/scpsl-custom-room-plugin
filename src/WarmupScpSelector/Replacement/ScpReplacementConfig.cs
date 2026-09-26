@@ -28,7 +28,7 @@ public sealed class ScpReplacementConfig
     [Description("Allow living non-SCP players as well as spectators to volunteer. Enabled by default for this port.")]
     public bool AllowAliveVolunteers { get; set; } = true;
 
-    [Description("Allow an early-round SCP to use .human (alias .no), opening their SCP slot and becoming a weighted random human role.")]
+    [Description("Allow an early-round SCP to use .human (alias .no) to offer a role swap; the first living unclaimed human to accept trades roles with it.")]
     public bool AllowHumanCommand { get; set; } = true;
 
     [Description("Maximum successful replacements per round. 0 means unlimited. Pending slots also reserve capacity.")]
@@ -38,21 +38,6 @@ public sealed class ScpReplacementConfig
     public List<RoleTypeId> IgnoredRoles { get; set; } = new()
     {
         RoleTypeId.Scp0492,
-    };
-
-    [Description("Weighted human roles used by .human. Non-human/dead roles and non-positive weights are ignored.")]
-    public Dictionary<RoleTypeId, int> HumanCommandRoles { get; set; } = new()
-    {
-        [RoleTypeId.ClassD] = 45,
-        [RoleTypeId.Scientist] = 45,
-        [RoleTypeId.FacilityGuard] = 10,
-    };
-
-    [Description("Extra items granted if .human selects ClassD.")]
-    public List<ItemType> ClassDBonusItems { get; set; } = new()
-    {
-        ItemType.Flashlight,
-        ItemType.Coin,
     };
 
     [Description("Also write replacement announcements to each eligible player's client console.")]

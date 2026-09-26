@@ -10,6 +10,7 @@ using WarmupScpSelector.Activities.Parkour;
 using WarmupScpSelector.Import;
 using WarmupScpSelector.Models;
 using WarmupScpSelector.Replacement;
+using WarmupScpSelector.Roles;
 using WarmupScpSelector.Selection;
 using WarmupScpSelector.Services;
 using WarmupScpSelector.Text;
@@ -32,6 +33,7 @@ namespace WarmupScpSelector.Tests
         {
             List<Action> tests = new List<Action>
             {
+                RoleDraftFillsSlotsInPriorityOrderWithoutSharingPlayers,
                 SelectedPlayerSwapsWithVanillaScpHolderAndPreservesOriginalClass,
                 UnspawnedSelectionIsSkipped,
                 NaturalHolderKeepsRole,
@@ -113,7 +115,6 @@ namespace WarmupScpSelector.Tests
                 ScpReplacementRoundGenerationRejectsStaleLottery,
                 ScpReplacementCapacityCountsPendingReservations,
                 ScpReplacementParserAcceptsFriendlyScpNumbers,
-                ScpReplacementWeightedHumanRolesRejectInvalidEntries,
                 ScpReplacementCooldownIsSharedAndResettable,
                 ScpReplacementTextIsBilingualAndMarkupSafe,
                 AuthoredSchematicWithNegativeObjectIdsKeepsItsHierarchy,
@@ -2091,20 +2092,37 @@ namespace WarmupScpSelector.Tests
             AssertEqual(false, ScpReplacementPolicy.MatchesScpArgument(RoleTypeId.Scp079, "not079"), "unrecognized prefix rejected");
         }
 
-        private static void ScpReplacementWeightedHumanRolesRejectInvalidEntries()
+        private static void RoleDraftFillsSlotsInPriorityOrderWithoutSharingPlayers()
         {
-            Dictionary<RoleTypeId, int> weights = new Dictionary<RoleTypeId, int>
+            // Registered out of order; eligibility overlaps so only priority and exclusivity keep them apart.
+            List<DraftSlot<string>> slots = new List<DraftSlot<string>>
             {
-                [RoleTypeId.Scp096] = 1000,
-                [RoleTypeId.Spectator] = 1000,
-                [RoleTypeId.ClassD] = 1,
-                [RoleTypeId.Scientist] = 1,
+                new DraftSlot<string>("scp999", 300, 1, player => player != "guard", null),
+                new DraftSlot<string>("rs.facility_manager", 100, 1, player => player.StartsWith("sci"), null),
+                new DraftSlot<string>("scarlet.sleeper", 400, 3, player => player != "guard", null),
+                new DraftSlot<string>("rs.goc_spy", 200, 1, player => true, null),
+                new DraftSlot<string>("never", 50, 1, player => false, null),
             };
-            AssertEqual(RoleTypeId.ClassD, ScpReplacementPolicy.PickWeightedHumanRole(weights, 0), "first valid weighted role");
-            AssertEqual(RoleTypeId.Scientist, ScpReplacementPolicy.PickWeightedHumanRole(weights, 1), "second valid weighted role");
-            AssertEqual(RoleTypeId.ClassD,
-                ScpReplacementPolicy.PickWeightedHumanRole(new Dictionary<RoleTypeId, int> { [RoleTypeId.Scp939] = 5 }, 0),
-                "invalid-only weights fail closed to ClassD");
+            string[] pool = { "sci1", "sci2", "classd1", "classd2", "guard" };
+
+            List<KeyValuePair<string, string>> picks = RoleDraftPlanner.Plan(slots, pool, () => 0d);
+
+            AssertEqual("rs.facility_manager", picks[0].Key, "lowest priority drafts first");
+            AssertEqual("sci1", picks[0].Value, "facility manager takes an eligible scientist");
+            AssertEqual("rs.goc_spy", picks[1].Key, "spy drafts second");
+            AssertEqual("scp999", picks[2].Key, "scp999 drafts third");
+            AssertEqual(4, picks.Count, "the guard is eligible only for the spy slot, which is already filled");
+            AssertEqual(false, picks.Any(pick => pick.Value == "guard"), "an ineligible leftover stays undrafted");
+            AssertEqual(picks.Count, picks.Select(pick => pick.Value).Distinct().Count(), "no player is shared");
+            AssertEqual(0, picks.Count(pick => pick.Key == "never"), "an unsatisfiable slot takes nobody");
+            AssertEqual(true, picks.Count(pick => pick.Key == "scarlet.sleeper") <= 3, "max count respected");
+            AssertEqual(false, picks.Any(pick => pick.Key == "scp999" && pick.Value == "guard"), "eligibility respected");
+
+            List<KeyValuePair<string, string>> weighted = RoleDraftPlanner.Plan(
+                new[] { new DraftSlot<string>("w", 1, 1, _ => true, player => player == "b" ? 9f : 1f) },
+                new[] { "a", "b" },
+                () => 0.5d);
+            AssertEqual("b", weighted[0].Value, "weights bias the random choice");
         }
 
         private static void ScpReplacementCooldownIsSharedAndResettable()

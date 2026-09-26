@@ -8,6 +8,7 @@ using LabApi.Features.Wrappers;
 using MEC;
 using PlayerRoles;
 using UnityEngine;
+using WarmupScpSelector.Roles;
 using WarmupScpSelector.Text;
 using Logger = LabApi.Features.Console.Logger;
 
@@ -24,6 +25,7 @@ internal sealed class ScpReplacementService
     private readonly WarmupScpSelectorPlugin _plugin;
     private readonly ScpReplacementState _state = new();
     private readonly Dictionary<RoleTypeId, CoroutineHandle> _lotteryHandles = new();
+    private readonly Dictionary<RoleTypeId, SwapOffer> _offers = new();
 
     public ScpReplacementService(WarmupScpSelectorPlugin plugin)
     {
@@ -95,6 +97,10 @@ internal sealed class ScpReplacementService
 
             string userId = StableUserId(player);
             _state.RemoveVolunteer(userId);
+            foreach (RoleTypeId offered in _offers.Where(pair => pair.Value.UserId == userId).Select(pair => pair.Key).ToList())
+            {
+                _offers.Remove(offered);
+            }
 
             if (!Config.IsEnabled || !_state.RoundActive || !Round.IsRoundStarted || !IsDepartingHuman(player))
             {
@@ -129,7 +135,8 @@ internal sealed class ScpReplacementService
             return false;
         }
 
-        if (_state.PendingCount == 0)
+        PruneOffers();
+        if (_state.PendingCount == 0 && _offers.Count == 0)
         {
             response = ScpReplacementText.NoPending(Chinese);
             return false;
@@ -143,7 +150,7 @@ internal sealed class ScpReplacementService
 
         if (string.IsNullOrWhiteSpace(argument))
         {
-            response = ScpReplacementText.Available(_state.PendingRoles, Chinese);
+            response = ScpReplacementText.Available(AvailableRoles(), Chinese);
             return true;
         }
 
@@ -155,9 +162,24 @@ internal sealed class ScpReplacementService
             return false;
         }
 
+        // A player whose role another plugin owns (SCP-999, Facility Manager, GOC spy, reinforcements, ...)
+        // must not be pulled into an SCP slot.
+        if (RoundRoles.IsClaimed(player))
+        {
+            response = ScpReplacementText.ClaimedRole(Chinese);
+            return false;
+        }
+
+        SwapOffer? offer = _offers.Values.FirstOrDefault(candidate =>
+            ScpReplacementPolicy.MatchesScpArgument(candidate.Role, argument!));
+        if (offer != null)
+        {
+            return AcceptSwap(player, offer, out response);
+        }
+
         if (!_state.TryFind(argument!, out PendingScpReplacement? entry) || entry == null)
         {
-            response = ScpReplacementText.Invalid(Chinese) + " " + ScpReplacementText.Available(_state.PendingRoles, Chinese);
+            response = ScpReplacementText.Invalid(Chinese) + " " + ScpReplacementText.Available(AvailableRoles(), Chinese);
             return false;
         }
 
@@ -248,62 +270,34 @@ internal sealed class ScpReplacementService
             return false;
         }
 
-        if (!TryOpenDeparture(player, announce: false, out PendingScpReplacement? opened, out OpenFailure failure) || opened == null)
+        if (_state.IsCapacityReserved(Config.MaxReplacementsPerRound))
         {
-            response = failure == OpenFailure.Capacity
-                ? ScpReplacementText.CapacityReached(Chinese)
-                : ScpReplacementText.SlotAlreadyOpen(Chinese);
+            response = ScpReplacementText.CapacityReached(Chinese);
             return false;
         }
 
-        RoleTypeId oldRole = player.Role;
-        RoleTypeId humanRole = ScpReplacementPolicy.PickWeightedHumanRole(
-            Config.HumanCommandRoles,
-            UnityEngine.Random.Range(0, int.MaxValue));
-
-        try
+        if (FindOffer(player) != null)
         {
-            player.DisableAllEffects();
-            player.SetRole(humanRole, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.All);
-        }
-        catch (Exception ex)
-        {
-            _state.RemovePending(oldRole, opened);
-            Logger.Error($"{LogPrefix} .human role change failed for {userId}: {ex}");
-            response = ScpReplacementText.RoleChangeFailed(Chinese);
+            response = ScpReplacementText.SwapAlreadyOffered(Chinese);
             return false;
         }
 
-        if (player.Role != humanRole)
+        RoleTypeId role = player.Role;
+        _offers[role] = new SwapOffer(player, userId, role);
+        foreach (Player other in Player.ReadyList.ToArray())
         {
-            _state.RemovePending(oldRole, opened);
-            response = ScpReplacementText.RoleChangeFailed(Chinese);
-            return false;
-        }
-
-        if (humanRole == RoleTypeId.ClassD)
-        {
-            foreach (ItemType item in Config.ClassDBonusItems ?? Enumerable.Empty<ItemType>())
+            if (IsLiveHuman(other) && !other.IsSCP)
             {
-                if (item != ItemType.None)
+                SendBroadcast(other, ScpReplacementText.SwapOffered(role, Chinese), Config.AnnounceBroadcastSeconds);
+                if (Config.AnnounceInConsole)
                 {
-                    try
-                    {
-                        player.AddItem(item, ItemAddReason.AdminCommand);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Warn($"{LogPrefix} Could not grant .human bonus item {item} to {userId}: {ex.Message}");
-                    }
+                    SendConsoleMessage(other, StripHeader(ScpReplacementText.SwapOffered(role, Chinese)));
                 }
             }
         }
 
-        AnnounceDeparture(oldRole);
-        string success = ScpReplacementText.HumanSuccess(humanRole, Chinese);
-        SendBroadcast(player, "<color=#d6b35a>[SCP REPLACEMENT]</color>\n" + success, Config.ResultBroadcastSeconds);
-        Logger.Info($"{LogPrefix} {player.Nickname} ({userId}) gave up {oldRole} and became {humanRole}.");
-        response = success;
+        Logger.Info($"{LogPrefix} {player.Nickname} ({userId}) offered to swap SCP-{ScpReplacementPolicy.ScpNumber(role)}.");
+        response = ScpReplacementText.SwapOfferOpened(role, Chinese);
         return true;
     }
 
@@ -380,7 +374,8 @@ internal sealed class ScpReplacementService
 
             List<Player> candidates = Player.ReadyList
                 .Where(player => IsLiveHuman(player) && entry.Volunteers.Contains(StableUserId(player)) &&
-                                 ScpReplacementPolicy.CanVolunteer(player.Role, player.IsAlive, Config.AllowAliveVolunteers))
+                                 ScpReplacementPolicy.CanVolunteer(player.Role, player.IsAlive, Config.AllowAliveVolunteers) &&
+                                 !RoundRoles.IsClaimed(player))
                 .ToList();
 
             Shuffle(candidates);
@@ -408,6 +403,7 @@ internal sealed class ScpReplacementService
                     continue;
                 }
 
+                RoundRoles.TryClaim(candidate, RoundRoles.ScpClaim);
                 _state.RemoveVolunteer(StableUserId(candidate));
                 _state.MarkReplacementSucceeded();
                 AnnounceWinner(candidate, role);
@@ -421,6 +417,153 @@ internal sealed class ScpReplacementService
         {
             Logger.Error($"{LogPrefix} SCP-{ScpReplacementPolicy.ScpNumber(role)} lottery failed: {ex}");
         }
+    }
+
+    private SwapOffer? FindOffer(Player player) =>
+        _offers.Values.FirstOrDefault(offer => offer.UserId == StableUserId(player));
+
+    /// <summary>Drops offers whose SCP died, left, or changed role since offering.</summary>
+    private void PruneOffers()
+    {
+        foreach (RoleTypeId role in _offers.Where(pair => !pair.Value.IsStillValid()).Select(pair => pair.Key).ToList())
+        {
+            _offers.Remove(role);
+        }
+    }
+
+    private IReadOnlyList<RoleTypeId> AvailableRoles() =>
+        _state.PendingRoles.Concat(_offers.Keys).Distinct().OrderBy(role => (int)role).ToArray();
+
+    /// <summary>
+    /// Trades roles between an SCP that used <c>.human</c> and the first living, unclaimed human to accept.
+    /// The human becomes the SCP where it stands, with its health, Hume Shield and ScpTiers progression; the
+    /// SCP takes the human's role, position, health, items and ammo. The SCP claim moves with the role.
+    /// </summary>
+    private bool AcceptSwap(Player human, SwapOffer offer, out string response)
+    {
+        if (!offer.IsStillValid())
+        {
+            _offers.Remove(offer.Role);
+            response = ScpReplacementText.SwapUnavailable(Chinese);
+            return false;
+        }
+
+        if (!human.IsAlive || !human.IsHuman || human.IsSCP || human == offer.Scp)
+        {
+            response = ScpReplacementText.SwapNeedsHuman(Chinese);
+            return false;
+        }
+
+        Player scp = offer.Scp;
+        RoleTypeId scpRole = offer.Role;
+        RoleTypeId humanRole = human.Role;
+        UnityEngine.Vector3 scpPosition = scp.Position;
+        UnityEngine.Vector3 humanPosition = human.Position;
+        float scpHealth = scp.Health;
+        float scpHume = scp.HumeShield;
+        float humanHealth = human.Health;
+        object? tiers = ScpTiersBridge.Capture(scp);
+        List<ItemType> items = human.Items.Select(item => item.Type).ToList();
+        Dictionary<ItemType, ushort> ammo = new(human.Ammo);
+
+        _offers.Remove(scpRole);
+        bool transferred = RoundRoles.TryTransfer(scp, human, RoundRoles.ScpClaim) ||
+                           RoundRoles.TryClaim(human, RoundRoles.ScpClaim);
+        try
+        {
+            human.DisableAllEffects();
+            human.ClearInventory();
+            human.SetRole(scpRole, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+            if (human.Role != scpRole)
+            {
+                throw new InvalidOperationException("the SCP role change was blocked");
+            }
+
+            if (scpRole != RoleTypeId.Scp079)
+            {
+                human.Position = scpPosition;
+                human.Health = Mathf.Min(scpHealth, human.MaxHealth);
+                human.HumeShield = Mathf.Min(scpHume, human.MaxHumeShield);
+            }
+
+            if (tiers != null && !ScpTiersBridge.Restore(human, tiers))
+            {
+                Logger.Warn($"{LogPrefix} ScpTiers progression could not be restored on {human.Nickname}.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error($"{LogPrefix} Swap into SCP-{ScpReplacementPolicy.ScpNumber(scpRole)} failed: {ex.Message}");
+            if (transferred)
+            {
+                RoundRoles.Release(human, RoundRoles.ScpClaim);
+                RoundRoles.TryClaim(scp, RoundRoles.ScpClaim);
+            }
+
+            response = ScpReplacementText.SwapFailed(Chinese);
+            return false;
+        }
+
+        try
+        {
+            scp.DisableAllEffects();
+            scp.SetRole(humanRole, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+            scp.Position = humanPosition;
+            scp.ClearInventory();
+            foreach (ItemType item in items)
+            {
+                scp.AddItem(item, ItemAddReason.AdminCommand);
+            }
+
+            foreach (KeyValuePair<ItemType, ushort> pair in ammo)
+            {
+                scp.SetAmmo(pair.Key, pair.Value);
+            }
+
+            scp.Health = Mathf.Min(humanHealth, scp.MaxHealth);
+        }
+        catch (Exception ex)
+        {
+            // The human already holds the SCP; the former SCP keeps whatever state the failure left.
+            Logger.Error($"{LogPrefix} Former SCP {scp.Nickname} could not fully take {humanRole}: {ex.Message}");
+        }
+
+        _state.MarkReplacementSucceeded();
+        SendBroadcast(human, ScpReplacementText.SwapDone(scpRole, isNewScp: true, Chinese), Config.ResultBroadcastSeconds);
+        SendBroadcast(scp, ScpReplacementText.SwapDone(scpRole, isNewScp: false, Chinese), Config.ResultBroadcastSeconds);
+        foreach (Player other in Player.ReadyList.ToArray())
+        {
+            if (IsLiveHuman(other) && other != human && other != scp && !other.IsSCP)
+            {
+                SendBroadcast(other, ScpReplacementText.SwapTaken(scpRole, Chinese), Config.ResultBroadcastSeconds);
+            }
+        }
+
+        Logger.Info($"{LogPrefix} {human.Nickname} swapped with {scp.Nickname}: SCP-{ScpReplacementPolicy.ScpNumber(scpRole)} <-> {humanRole}.");
+        response = ScpReplacementText.SwapDone(scpRole, isNewScp: true, Chinese);
+        return true;
+    }
+
+    private sealed class SwapOffer
+    {
+        public SwapOffer(Player scp, string userId, RoleTypeId role)
+        {
+            Scp = scp;
+            UserId = userId;
+            Role = role;
+            LifeId = scp.LifeId;
+        }
+
+        public Player Scp { get; }
+
+        public string UserId { get; }
+
+        public RoleTypeId Role { get; }
+
+        public int LifeId { get; }
+
+        public bool IsStillValid() =>
+            Scp is { IsDestroyed: false, IsAlive: true } && Scp.Role == Role && Scp.LifeId == LifeId;
     }
 
     private void AnnounceDeparture(RoleTypeId role)
@@ -482,6 +625,7 @@ internal sealed class ScpReplacementService
     private void CleanupRound()
     {
         CancelLotteries();
+        _offers.Clear();
         _state.EndRound();
     }
 
@@ -532,15 +676,6 @@ internal sealed class ScpReplacementService
 
         config.MaxReplacementsPerRound = Math.Max(0, config.MaxReplacementsPerRound);
         config.IgnoredRoles ??= new List<RoleTypeId> { RoleTypeId.Scp0492 };
-        config.ClassDBonusItems ??= new List<ItemType>();
-
-        bool hasValidHumanRole = config.HumanCommandRoles?.Any(pair =>
-            pair.Value > 0 && ScpReplacementPolicy.IsHumanCommandRole(pair.Key)) ?? false;
-        if (!hasValidHumanRole)
-        {
-            Logger.Warn($"{LogPrefix} HumanCommandRoles has no valid positive human role; using ClassD.");
-            config.HumanCommandRoles = new Dictionary<RoleTypeId, int> { [RoleTypeId.ClassD] = 1 };
-        }
     }
 
     private static void SendBroadcast(Player player, string message, ushort duration)
