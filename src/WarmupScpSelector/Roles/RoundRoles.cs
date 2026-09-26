@@ -146,6 +146,19 @@ public static class RoundRoles
         }
     }
 
+    /// <summary>Current claims as (player id, claim id), for diagnostics.</summary>
+    public static IReadOnlyList<KeyValuePair<int, string>> Snapshot() =>
+        Claims.OrderBy(pair => pair.Key).ToList();
+
+    /// <summary>Registered slot ids in draft order, for diagnostics.</summary>
+    public static IReadOnlyList<string> SlotIds()
+    {
+        lock (Slots)
+        {
+            return Slots.OrderBy(slot => slot.Priority).Select(slot => $"{slot.Id} ({slot.Priority})").ToList();
+        }
+    }
+
     // ---------------------------------------------------------------- host lifecycle
 
     internal static void EnableHost()
