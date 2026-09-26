@@ -24,7 +24,13 @@ function Wait-For([scriptblock]$Condition,[string]$Message,[int]$Seconds=20) {
     throw $Message
 }
 function Get-Claims {
-    $text=Server '/roundroles'
+    # The command channel occasionally returns an empty reply; retry until the listing header arrives.
+    $text=''
+    foreach($attempt in 1..6) {
+        $text=Server '/roundroles'
+        if ($text -match 'ROUNDROLES') { break }
+        Start-Sleep -Milliseconds 500
+    }
     $claims=@{}
     foreach($line in ($text -split "`n")) {
         if ($line -match '^claim (\d+) (\S+) ') { $claims[[int]$Matches[1]]=$Matches[2] }
