@@ -122,14 +122,36 @@ only once that activity's world, props, and scheduler have all started successfu
 - Replacement is vacancy-safe: if another plugin or an administrator has already restored that SCP role,
   the lottery cancels instead of creating a duplicate. Round end, restart, disable, and disconnect remove
   all pending callbacks/candidates. `MaxReplacementsPerRound` also counts pending reservations.
-- An SCP may optionally use `.human` (alias `.no`) during the same early window to become a weighted
-  random human role and offer their former SCP slot for replacement.
+- An SCP may optionally use `.human` (alias `.no`) during the same early window to offer a **role swap**.
+  The first living human without a round role claim to answer with `.volunteer <number>` trades roles with
+  it: the human becomes the SCP where it stands, keeping the SCP's health, Hume Shield and ScpTiers
+  progression; the SCP takes the human's role, position, health, items and ammo. An unanswered offer
+  lapses and the SCP stays an SCP.
+- Players holding a round role claim (SCP-999, the Facility Manager, the GOC spy, reinforcements, ...)
+  cannot volunteer or accept a swap.
+
+### Round role draft
+
+The plugin hosts a shared **round role draft** for special roles other plugins own
+(`src/WarmupScpSelector/Roles/RoundRoles.cs`). It runs whether or not the station is enabled.
+
+- Plugins register a `RoleSlot` (id, priority, eligibility, apply, optional count, activity and weight)
+  with `RoundRoles.Register`. Registration is static, so it may happen before this plugin is enabled.
+- Once per round, one frame after the native role assignment and the SCP coin draft (or right after the
+  compatibility swap when that path runs), every SCP is claimed as `warmup.scp` and the slots are filled in
+  ascending priority from living players nobody has claimed. Each chosen player is claimed with the slot's
+  id and the slot's `Apply` runs as the claim owner.
+- A claim ends on disconnect and on any role change its owner did not make inside `RoundRoles.RunAsOwner`
+  (an SCP claim survives SCP-to-SCP changes). Other role changers ask `RoundRoles.IsClaimed` first.
+- Current slots: `rs.facility_manager` (100) and `rs.goc_spy` (200) from ReinforcementsSystem, `scp999`
+  (300) from SCP999. Consumers compile against this project and keep their own round-start pick only when
+  this plugin is not loaded.
 
 ### Replacement commands
 
 - `.volunteer` / `.v` — list SCP roles currently awaiting replacement.
 - `.volunteer 079` / `.v 079` — enter that role's replacement lottery. `SCP-079` and `79` are also accepted.
-- `.human` / `.no` — if enabled, give up an eligible healthy SCP role early in the round.
+- `.human` / `.no` — if enabled, offer an eligible healthy SCP role for a swap early in the round.
 
 ### Build
 
@@ -168,7 +190,7 @@ Key options:
 - `ScpReplacement.AllowAliveVolunteers` — allows living non-SCP players in addition to spectators (default `true`).
 - `ScpReplacement.DepartureCutoffSeconds`, `VolunteerCutoffSeconds`, `RequiredHealthPercentage`, and
   `LotterySeconds` — departure/entry windows, departure health gate, and lottery duration.
-- `ScpReplacement.AllowHumanCommand`, `HumanCommandRoles`, and `ClassDBonusItems` — `.human` behavior.
+- `ScpReplacement.AllowHumanCommand` — enables the `.human` swap offer.
 - `ScpReplacement.MaxReplacementsPerRound`, `IgnoredRoles`, and `CommandCooldownSeconds` — capacity,
   exclusions, and shared `.volunteer`/`.human` rate limiting.
 - `RoomOrigin` — world position of the floating selector room (high Y keeps it clear of the live map).
@@ -414,13 +436,13 @@ SCP 名额交换给选择它的玩家。
   第一名志愿者会启动短暂抽选，结算时只保留仍在线、仍符合条件的 UserId。
 - 结算前会再次确认该 SCP 职业确实空缺；若管理员或其他插件已经补位，就取消抽选，不会生成重复 SCP。
   回合结束、重启、插件禁用和玩家断线都会清理候选人与延迟回调。
-- 可选的 `.human`（别名 `.no`）允许健康的 SCP 在回合早期转为加权随机人类职业，并开放其原 SCP 名额。
+- 可选的 `.human`（别名 `.no`）允许健康的 SCP 在回合早期发起身份交换；第一个用 `.volunteer <编号>` 接受的无特殊身份存活人类与其交换，血量、休谟护盾与 ScpTiers 等级随 SCP 身份转移。
 
 ### 替补命令
 
 - `.volunteer` / `.v`——列出当前可替补的 SCP。
 - `.volunteer 079` / `.v 079`——参加该 SCP 的替补抽选，也接受 `SCP-079` 或 `79`。
-- `.human` / `.no`——若配置启用，在回合早期放弃符合条件的 SCP 职业。
+- `.human` / `.no`——若配置启用，在回合早期发起身份交换。
 
 ### 构建
 
@@ -453,8 +475,7 @@ dotnet build -c Release -p:ServerManagedPath="C:\path\to\SCPSL_Data\Managed"
 - `ScpReplacement.AllowAliveVolunteers`——除旁观者外，也允许存活的非 SCP 玩家参加（默认 `true`）。
 - `ScpReplacement.DepartureCutoffSeconds`、`VolunteerCutoffSeconds`、`RequiredHealthPercentage`、
   `LotterySeconds`——断线/报名窗口、生命值阈值和抽选时长。
-- `ScpReplacement.AllowHumanCommand`、`HumanCommandRoles`、`ClassDBonusItems`——`.human` 的开关、
-  人类职业权重和 D级额外物品。
+- `ScpReplacement.AllowHumanCommand`——`.human` 身份交换的开关。
 - `ScpReplacement.MaxReplacementsPerRound`、`IgnoredRoles`、`CommandCooldownSeconds`——每回合上限、
   排除职业和两个命令共用的冷却。
 - `RoomOrigin`——悬空选择房间的世界坐标（较高的 Y 可避免与正式地图冲突）。
