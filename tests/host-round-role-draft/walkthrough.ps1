@@ -1,6 +1,7 @@
 param($Context)
 # Real-client walkthrough for the round role draft (run with --clients 3).
-# Package: WarmupScpSelector + ReinforcementsSystem + SCP999 candidates, SCP999.config.yml beside this file.
+# Package: WarmupScpSelector + ReinforcementsSystem + SCP999 candidates with SCP999.config.yml and
+# WarmupScpSelector.config.yml (wider replacement window) beside this file.
 # 1. Round start with 3 clients + 4 dummies: the draft claims every SCP and fills rs.facility_manager,
 #    rs.goc_spy (when the campaign is on) and scp999 on different players; scp999 lands on a real client.
 # 2. .human swap: client X becomes SCP-173 at 97% health and offers a swap; the SCP-999 client's
