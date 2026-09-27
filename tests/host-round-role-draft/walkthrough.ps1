@@ -1,7 +1,7 @@
 param($Context)
-# Real-client walkthrough for the round role draft (run with --clients 4).
+# Real-client walkthrough for the round role draft (run with --clients 3).
 # Package: WarmupScpSelector + ReinforcementsSystem + SCP999 candidates, SCP999.config.yml beside this file.
-# 1. Round start with 4 clients + 3 dummies: the draft claims every SCP and fills rs.facility_manager,
+# 1. Round start with 3 clients + 4 dummies: the draft claims every SCP and fills rs.facility_manager,
 #    rs.goc_spy (when the campaign is on) and scp999 on different players; scp999 lands on a real client.
 # 2. .human swap: client X becomes SCP-173 at 97% health and offers a swap; the SCP-999 client's
 #    .volunteer is refused (claimed); unclaimed client Y accepts and becomes SCP-173 where X stood with
@@ -40,12 +40,12 @@ function Get-Claims {
 
 $clients=@($Context.ClientIds)
 $actors=@($Context.Actors | ForEach-Object { $_.id })
-if ($clients.Count -lt 4) { throw "Run with --clients 4 (got $($clients.Count))" }
+if ($clients.Count -lt 3) { throw "Run with --clients 3 (got $($clients.Count))" }
 function ClientOf([int]$ActorId) { $clients[[Array]::IndexOf($actors,$ActorId)] }
 
 # 1. Round start through the draft.
 $null=Server '/roundlock on'
-foreach($n in 1..3) { $null=Server "/dummies spawn RrdDummy$n" }
+foreach($n in 1..4) { $null=Server "/dummies spawn RrdDummy$n" }
 Start-Sleep -Seconds 2
 $null=Server '/forcestart'
 $draft=Wait-For { $c=Get-Claims; if($c.done) { $c } } 'Round role draft did not complete' 30
