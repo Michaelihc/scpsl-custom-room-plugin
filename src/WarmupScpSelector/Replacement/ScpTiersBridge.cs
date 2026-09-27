@@ -23,7 +23,8 @@ internal static class ScpTiersBridge
         Resolve();
         try
         {
-            return _capture?.Invoke(null, new object[] { player });
+            // Without the transfer hook there is nothing to carry the state to; skip the capture entirely.
+            return _transfer == null ? null : _capture?.Invoke(null, new object[] { player });
         }
         catch (Exception ex)
         {
@@ -41,7 +42,7 @@ internal static class ScpTiersBridge
         }
         catch (Exception ex)
         {
-            Logger.Warn($"[WarmupScpSelector:Replacement] ScpTiers restore failed: {ex.GetBaseException().Message}");
+            Logger.Warn($"[WarmupScpSelector:Replacement] ScpTiers transfer failed: {ex.GetBaseException().Message}");
             return false;
         }
     }
