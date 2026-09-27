@@ -41,7 +41,11 @@ function Get-Claims {
 $clients=@($Context.ClientIds)
 $actors=@($Context.Actors | ForEach-Object { $_.id })
 if ($clients.Count -lt 3) { throw "Run with --clients 3 (got $($clients.Count))" }
-function ClientOf([int]$ActorId) { $clients[[Array]::IndexOf($actors,$ActorId)] }
+# Actor ids arrive from JSON as Int64; compare with -eq (Array.IndexOf would miss an Int32 argument).
+function ClientOf([int]$ActorId) {
+    for ($i=0; $i -lt $actors.Count; $i++) { if ($actors[$i] -eq $ActorId) { return $clients[$i] } }
+    throw "No client for actor $ActorId"
+}
 
 # 1. Round start through the draft.
 $null=Server '/roundlock on'
