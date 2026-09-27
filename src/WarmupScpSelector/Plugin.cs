@@ -19,7 +19,8 @@ namespace WarmupScpSelector;
 /// offered SCP, each with a big coin. Players walk up and grab a coin to pick that SCP. When the round
 /// starts, vanilla still chooses the SCP role multiset; the plugin buffers those pending assignments and
 /// remaps their recipients before any SCP role is initialized or sent. Displaced holders remain eligible for
-/// vanilla human assignment. It never creates extra SCPs: a pick is honoured only if vanilla spawned it.
+/// vanilla human assignment. The optional SCP-3114 carve-out replaces one picker's human assignment
+/// once the configured player threshold is met; other SCP picks require a vanilla slot.
 /// </summary>
 public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 {

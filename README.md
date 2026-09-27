@@ -112,8 +112,20 @@ only once that activity's world, props, and scheduler have all started successfu
   the selected SCP slots to the pickers:
   - If vanilla spawned an SCP that someone picked, one picker from that pool takes the slot, and the
     displaced vanilla holder inherits the picker's original (human) role.
-  - If vanilla did **not** spawn that SCP this round, the pick is skipped. The plugin **never creates
-    extra SCPs** or invents fallback roles — it only rearranges what vanilla already assigned.
+  - For the regular SCP slots, a pick is skipped if vanilla did not spawn that SCP this round.
+    Those slots only rearrange vanilla assignments.
+  - **SCP-3114 is the one exception.** Vanilla only spawns SCP-3114 on holidays
+    (see `../.references/Decompiled/DedicatedServer/Assembly-CSharp/PlayerRoles/PlayableScps/Scp3114/Scp3114Role.cs`,
+    `EnableSpawning`).
+    When at least `Scp3114MinPlayers` players (default 26, i.e. more than 25) are counted for round-start
+    role assignment and someone picked SCP-3114, one random picker becomes SCP-3114 **instead of the human
+    role vanilla was about to give them**: the round has one more SCP and one fewer human, and nobody else's
+    role changes. Only a player who picked SCP-3114 can receive it. The picker's status panel shows the
+    player threshold while SCP-3114 is selected. If vanilla did spawn SCP-3114 this round, the normal swap
+    above owns it. `Scp3114DraftEnabled: false` turns this off.
+  - The SCP-3114 assignment happens inside the native role-assignment pass. The shared round role draft
+    runs afterward, claims the winner as `warmup.scp`, and excludes them from the Facility Manager,
+    GOC spy and SCP-999 candidate pools.
 - The station and all models **despawn when the round starts**.
 - If a main SCP disconnects during the configured early-round window while still above the configured
   health threshold, that exact role becomes available through `.volunteer <number>` (alias `.v`).
@@ -197,6 +209,8 @@ Key options:
 - `PedestalSpacing`, `ModelScale`, `SelectorCoinScale` — layout/sizing.
 - `SelectorItem` — the pickup used as the selection coin (default `Coin`).
 - `RoleSwapDelaySeconds` — delay after round start before swapping (lets vanilla roles settle).
+- `Scp3114DraftEnabled` and `Scp3114MinPlayers` — give one random SCP-3114 picker SCP-3114 in place of their
+  vanilla human role once the lobby has at least this many players counted for role assignment (default `true`, `26`).
 - `MusicEnabled`, `MusicFilePath` — optional lobby music. `MusicFilePath` must point to preconverted
   `48000 Hz` mono raw float32 little-endian PCM (`.f32le`). Relative paths resolve under the plugin
   config folder above. Convert once offline, then the plugin loads the samples directly:

@@ -75,6 +75,12 @@ internal sealed class SelectorController
     private Player? _atomicCallbackPlayer;
     private RoleTypeId _atomicCallbackRole = RoleTypeId.None;
 
+    // SCP-3114 carve-out. Vanilla never spawns SCP-3114 outside holidays, so its coin would otherwise be dead.
+    // Armed next to the vanilla eligibility count; the winner is chosen on the first human callback, once every
+    // SCP role (vanilla's and the draft permutation) is final. Pure rules live in Selection/Scp3114DraftPolicy.cs.
+    private bool _scp3114Armed;
+    private Scp3114Draft<Player>? _scp3114Draft;
+
     private readonly struct PendingScpAssignment
     {
         public PendingScpAssignment(Player player, RoleTypeId role)
@@ -202,6 +208,17 @@ internal sealed class SelectorController
         }
 
         _handedOff = false;
+
+        try
+        {
+            FinishScp3114Draft();
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"[WarmupScpSelector] SCP-3114 carve-out post-spawn step failed: {ex.Message}");
+            _scp3114Armed = false;
+            _scp3114Draft = null;
+        }
 
         bool callbackApplied = false;
         if (_atomicDraftCompleted)
@@ -490,6 +507,111 @@ internal sealed class SelectorController
                 ev.IsAllowed = true;
             }
         }
+
+        try
+        {
+            OnScp3114HumanAssignment(ev);
+        }
+        catch (Exception ex)
+        {
+            // Independent of the SCP-phase state above: a fault here only stands the carve-out down and lets
+            // the in-flight vanilla human role through untouched.
+            Logger.Error($"[WarmupScpSelector] SCP-3114 carve-out failed safely: {ex}");
+            _scp3114Armed = false;
+            _scp3114Draft = null;
+        }
+    }
+
+    // Human-phase companion to the atomic SCP draft. HumanSpawner hands out one shuffled human role per
+    // cancellable callback and re-picks anyone still None for later slots, so a human callback may be rewritten
+    // in place but must never be cancelled (someone would end the pass with no role at all).
+    private void OnScp3114HumanAssignment(PlayerChangingRoleEventArgs? ev)
+    {
+        if (!_scp3114Armed || ev == null || ev.ChangeReason != RoleChangeReason.RoundStart ||
+            !Scp3114DraftPolicy.IsHumanRoundRole(ev.NewRole))
+        {
+            return;
+        }
+
+        if (_scp3114Draft == null)
+        {
+            _scp3114Draft = ChooseScp3114Winner();
+            if (_scp3114Draft == null)
+            {
+                _scp3114Armed = false;
+                return;
+            }
+        }
+
+        Player player = ev.Player;
+        if (player == null || player.ReferenceHub == null ||
+            !_scp3114Draft.TryRewrite(player, ev.NewRole, out RoleTypeId rewrittenRole))
+        {
+            return;
+        }
+
+        RoleTypeId vanillaRole = ev.NewRole;
+        ev.NewRole = rewrittenRole;
+        ev.ChangeReason = RoleChangeReason.RoundStart;
+        ev.SpawnFlags = RoleSpawnFlags.All;
+        ev.IsAllowed = true;
+        _plugin.LogDebug($"SCP-3114 carve-out: {player.UserId} takes SCP-3114 instead of vanilla {vanillaRole}.");
+    }
+
+    // Chosen on the first human callback: by then every SCP role is final, so a 3114 picker who kept or won an
+    // SCP is no longer vanilla-eligible and cannot win. If SCP-3114 already exists this round (holiday spawning),
+    // the regular draft swap owns it and the carve-out stands down.
+    private Scp3114Draft<Player>? ChooseScp3114Winner()
+    {
+        if (Player.ReadyList.Any(player => player != null && player.Role == RoleTypeId.Scp3114))
+        {
+            _plugin.LogDebug("SCP-3114 carve-out: vanilla already spawned SCP-3114; the regular draft owns it.");
+            return null;
+        }
+
+        List<Player> candidates = new();
+        foreach (Player player in Participants())
+        {
+            if (player == null || player.ReferenceHub == null || !player.IsReady ||
+                !RoleAssigner.CheckPlayer(player.ReferenceHub) ||
+                !_participantState.TryGetSelection(Key(player), out RoleTypeId selected) ||
+                selected != RoleTypeId.Scp3114)
+            {
+                continue;
+            }
+
+            candidates.Add(player);
+        }
+
+        if (candidates.Count == 0)
+        {
+            _plugin.LogDebug("SCP-3114 carve-out: no vanilla-eligible SCP-3114 picker remained.");
+            return null;
+        }
+
+        return new Scp3114Draft<Player>(candidates[_random.Next(candidates.Count)]);
+    }
+
+    // Closes the carve-out once vanilla finished spawning. All role writes already happened inside the callbacks,
+    // still within the synchronous RoleAssigner pass and before the shared round role draft claims SCPs
+    // and selects the Facility Manager, GOC spy and SCP-999 from the remaining human players.
+    private void FinishScp3114Draft()
+    {
+        Scp3114Draft<Player>? draft = _scp3114Draft;
+        bool armed = _scp3114Armed;
+        _scp3114Armed = false;
+        _scp3114Draft = null;
+        if (draft == null)
+        {
+            if (armed)
+            {
+                _plugin.LogDebug("SCP-3114 carve-out: no vanilla human assignment was observed.");
+            }
+        }
+        else if (!draft.WinnerPromoted)
+        {
+            _plugin.LogDebug("SCP-3114 carve-out: the winner never received a vanilla human role; nothing changed.");
+        }
     }
 
     private void OnPlayerChangingRoleCore(PlayerChangingRoleEventArgs ev)
@@ -733,6 +855,8 @@ internal sealed class SelectorController
         _atomicDraftNeedsFallback = false;
         _atomicCallbackPlayer = null;
         _atomicCallbackRole = RoleTypeId.None;
+        _scp3114Armed = false;
+        _scp3114Draft = null;
 
         if (_participantState.SelectionCount == 0)
         {
@@ -743,6 +867,19 @@ internal sealed class SelectorController
         {
             string queue = ConfigFile.ServerConfig.GetString("team_respawn_queue", DefaultTeamRespawnQueue);
             int eligiblePlayers = ReferenceHub.AllHubs.Count(RoleAssigner.CheckPlayer);
+
+            // Same count vanilla is about to use for its own SCP/human split, so the SCP-3114 threshold and the
+            // native role multiset agree on who is in the round.
+            _scp3114Armed = Scp3114DraftPolicy.ShouldArm(
+                Config.Scp3114DraftEnabled,
+                eligiblePlayers,
+                Config.Scp3114MinPlayers,
+                _participantState.SelectedRoles.Count(role => role == RoleTypeId.Scp3114));
+            if (_scp3114Armed)
+            {
+                _plugin.LogDebug($"Armed the SCP-3114 carve-out for {eligiblePlayers} eligible player(s).");
+            }
+
             _expectedScpAssignments = VanillaScpSlotCounter.Count(
                 queue,
                 eligiblePlayers,
@@ -1107,6 +1244,8 @@ internal sealed class SelectorController
         _atomicDraftNeedsFallback = false;
         _atomicCallbackPlayer = null;
         _atomicCallbackRole = RoleTypeId.None;
+        _scp3114Armed = false;
+        _scp3114Draft = null;
     }
 
     private void MoveIntoSelector(Player player)
@@ -1476,8 +1615,12 @@ internal sealed class SelectorController
             return;
         }
 
+        // SCP-3114 is the one pick vanilla does not back with a slot: tell the picker what it takes to be honoured.
+        string? selectionNote = selection == RoleTypeId.Scp3114 && Config.Scp3114DraftEnabled
+            ? WarmupText.Scp3114Note(Config.Scp3114MinPlayers, UseChinese)
+            : null;
         string text = WarmupText.BuildWarmupStatusHint(
-            context.Timer, context.Players, context.Max, _offeredOptions, selection, counts, UseChinese);
+            context.Timer, context.Players, context.Max, _offeredOptions, selection, counts, UseChinese, selectionNote);
         _hints.ShowPrompt(player, StatusTagId, Config.StatusHintY, text);
     }
 
