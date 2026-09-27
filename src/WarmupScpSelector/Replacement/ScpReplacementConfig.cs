@@ -28,7 +28,7 @@ public sealed class ScpReplacementConfig
     [Description("Allow living non-SCP players as well as spectators to volunteer. Enabled by default for this port.")]
     public bool AllowAliveVolunteers { get; set; } = true;
 
-    [Description("Allow an early-round SCP to use .human (alias .no) to offer a role swap; the first living unclaimed human to accept trades roles with it.")]
+    [Description("Allow an SCP to use .human (alias .no) to offer a role swap; both the offer and acceptance must occur before 30 seconds into the round. The first living unclaimed human to accept trades roles with it.")]
     public bool AllowHumanCommand { get; set; } = true;
 
     [Description("Maximum successful replacements per round. 0 means unlimited. Pending slots also reserve capacity.")]

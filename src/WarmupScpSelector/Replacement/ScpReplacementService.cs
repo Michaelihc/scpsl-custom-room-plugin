@@ -21,6 +21,7 @@ namespace WarmupScpSelector.Replacement;
 internal sealed class ScpReplacementService
 {
     private const string LogPrefix = "[WarmupScpSelector:Replacement]";
+    private const float HumanSwapCutoffSeconds = 30f;
 
     private readonly WarmupScpSelectorPlugin _plugin;
     private readonly ScpReplacementState _state = new();
@@ -251,7 +252,7 @@ internal sealed class ScpReplacementService
             return false;
         }
 
-        if (ElapsedSeconds > Config.DepartureCutoffSeconds)
+        if (ElapsedSeconds >= HumanSwapCutoffSeconds)
         {
             response = ScpReplacementText.TooLate(Chinese);
             return false;
@@ -262,7 +263,7 @@ internal sealed class ScpReplacementService
                 player.Health,
                 player.MaxHealth,
                 ElapsedSeconds,
-                Config.DepartureCutoffSeconds,
+                HumanSwapCutoffSeconds,
                 Config.RequiredHealthPercentage,
                 Config.IgnoredRoles))
         {
@@ -422,9 +423,15 @@ internal sealed class ScpReplacementService
     private SwapOffer? FindOffer(Player player) =>
         _offers.Values.FirstOrDefault(offer => offer.UserId == StableUserId(player));
 
-    /// <summary>Drops offers whose SCP died, left, or changed role since offering.</summary>
+    /// <summary>Drops expired offers and offers whose SCP died, left, or changed role.</summary>
     private void PruneOffers()
     {
+        if (ElapsedSeconds >= HumanSwapCutoffSeconds)
+        {
+            _offers.Clear();
+            return;
+        }
+
         foreach (RoleTypeId role in _offers.Where(pair => !pair.Value.IsStillValid()).Select(pair => pair.Key).ToList())
         {
             _offers.Remove(role);
@@ -441,6 +448,13 @@ internal sealed class ScpReplacementService
     /// </summary>
     private bool AcceptSwap(Player human, SwapOffer offer, out string response)
     {
+        if (ElapsedSeconds >= HumanSwapCutoffSeconds)
+        {
+            _offers.Clear();
+            response = ScpReplacementText.TooLate(Chinese);
+            return false;
+        }
+
         if (!offer.IsStillValid())
         {
             _offers.Remove(offer.Role);

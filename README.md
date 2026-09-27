@@ -134,7 +134,8 @@ only once that activity's world, props, and scheduler have all started successfu
 - Replacement is vacancy-safe: if another plugin or an administrator has already restored that SCP role,
   the lottery cancels instead of creating a duplicate. Round end, restart, disable, and disconnect remove
   all pending callbacks/candidates. `MaxReplacementsPerRound` also counts pending reservations.
-- An SCP may optionally use `.human` (alias `.no`) during the same early window to offer a **role swap**.
+- An SCP may optionally use `.human` (alias `.no`) to offer a **role swap** before 30 seconds into the round.
+  Acceptance must also occur before 30 seconds; this fixed cutoff is separate from disconnect replacement timing.
   The first living human without a round role claim to answer with `.volunteer <number>` trades roles with
   it: the human becomes the SCP where it stands, keeping the SCP's health, Hume Shield and ScpTiers
   progression; the SCP takes the human's role, position, health, items and ammo. An unanswered offer
@@ -163,7 +164,7 @@ The plugin hosts a shared **round role draft** for special roles other plugins o
 
 - `.volunteer` / `.v` — list SCP roles currently awaiting replacement.
 - `.volunteer 079` / `.v 079` — enter that role's replacement lottery. `SCP-079` and `79` are also accepted.
-- `.human` / `.no` — if enabled, offer an eligible healthy SCP role for a swap early in the round.
+- `.human` / `.no` — if enabled, offer an eligible healthy SCP role for a swap before 30 seconds into the round.
 
 ### Build
 

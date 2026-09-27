@@ -62,8 +62,8 @@ internal static class ScpReplacementText
     }
 
     public static string HumanHint(bool chinese) => Header + (chinese
-        ? "若想和人类交换身份，可在回合早期打开控制台 <color=#f4cf72>~</color> 输入 <color=#62e6c6>.human</color>。"
-        : "To swap roles with a human early this round, open <color=#f4cf72>~</color> and use <color=#62e6c6>.human</color>.");
+        ? "若想和人类交换身份，请打开控制台 <color=#f4cf72>~</color> 输入 <color=#62e6c6>.human</color>。发起和接受均须在回合开始后30秒内完成。"
+        : "To swap roles with a human, open <color=#f4cf72>~</color> and use <color=#62e6c6>.human</color>. Both offering and accepting close 30 seconds into the round.");
 
     public static string SwapOffered(RoleTypeId role, bool chinese)
     {
@@ -77,8 +77,8 @@ internal static class ScpReplacementText
     {
         string number = ScpReplacementPolicy.ScpNumber(role);
         return chinese
-            ? $"已发出交换请求。第一个输入 .volunteer {number} 的人类会和你交换身份。"
-            : $"Swap offer sent. The first human to use .volunteer {number} trades roles with you.";
+            ? $"已发出交换请求。第一个输入 .volunteer {number} 的人类会和你交换身份，回合开始后30秒截止。"
+            : $"Swap offer sent. The first human to use .volunteer {number} trades roles with you; acceptance closes 30 seconds into the round.";
     }
 
     public static string SwapDone(RoleTypeId role, bool isNewScp, bool chinese)
