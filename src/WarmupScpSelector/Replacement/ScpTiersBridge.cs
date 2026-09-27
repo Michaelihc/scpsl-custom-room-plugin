@@ -8,13 +8,14 @@ namespace WarmupScpSelector.Replacement;
 
 /// <summary>
 /// Optional bridge to ScpTiers' public tutorial-state hooks, so an SCP swap carries tier, progress and feat
-/// counters to the new holder. <c>RestoreTutorialState</c> reapplies tier buffs without promotion healing or
-/// tier cards. Absent ScpTiers makes both calls no-ops. Source: <c>SCP Enhacements/scp-tiers/Plugin.cs</c>.
+/// counters to the new holder. <c>TransferTutorialState</c> applies the captured state to the other player now
+/// holding the SCP role, reapplying tier buffs without promotion healing or tier cards. Absent ScpTiers (or a
+/// build without the transfer hook) makes both calls no-ops. Source: <c>SCP Enhacements/scp-tiers/Plugin.cs</c>.
 /// </summary>
 internal static class ScpTiersBridge
 {
     private static MethodInfo? _capture;
-    private static MethodInfo? _restore;
+    private static MethodInfo? _transfer;
     private static bool _resolved;
 
     public static object? Capture(Player player)
@@ -31,12 +32,12 @@ internal static class ScpTiersBridge
         }
     }
 
-    public static bool Restore(Player player, object state)
+    public static bool Transfer(Player player, object state)
     {
         Resolve();
         try
         {
-            return _restore?.Invoke(null, new[] { player, state }) is true;
+            return _transfer?.Invoke(null, new[] { player, state }) is true;
         }
         catch (Exception ex)
         {
@@ -61,7 +62,7 @@ internal static class ScpTiersBridge
         }
 
         _capture = type.GetMethod("CaptureTutorialState", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(Player) }, null);
-        _restore = type.GetMethod("RestoreTutorialState", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(Player), typeof(object) }, null);
-        _resolved = _capture != null && _restore != null;
+        _transfer = type.GetMethod("TransferTutorialState", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(Player), typeof(object) }, null);
+        _resolved = _capture != null && _transfer != null;
     }
 }

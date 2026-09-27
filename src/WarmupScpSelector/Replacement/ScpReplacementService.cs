@@ -486,7 +486,7 @@ internal sealed class ScpReplacementService
                 human.HumeShield = Mathf.Min(scpHume, human.MaxHumeShield);
             }
 
-            if (tiers != null && !ScpTiersBridge.Restore(human, tiers))
+            if (tiers != null && !ScpTiersBridge.Transfer(human, tiers))
             {
                 Logger.Warn($"{LogPrefix} ScpTiers progression could not be restored on {human.Nickname}.");
             }

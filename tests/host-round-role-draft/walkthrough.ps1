@@ -92,7 +92,9 @@ $xHuman=Wait-For { $a=Get-Actor $x; if($a.role -eq 'ClassD') { $a } } 'X did not
 Mark 'swapped'
 $dx=$yScp.position.x-$beforeSwap.x.position.x; $dz=$yScp.position.z-$beforeSwap.x.position.z
 $swapDistance=[Math]::Sqrt($dx*$dx+$dz*$dz)
-if ([Math]::Abs($yScp.health-$beforeSwap.x.health) -gt 2) { throw "Health did not carry over: $($beforeSwap.x.health) -> $($yScp.health)" }
+# ScpTiers regenerates a standing SCP between the arrangement and the swap, so allow a small rise but no
+# reset to full health.
+if ($yScp.health -lt $beforeSwap.x.health-2 -or $yScp.health -gt $beforeSwap.x.health+150) { throw "Health did not carry over: $($beforeSwap.x.health) -> $($yScp.health)" }
 if ($swapDistance -gt 1.5) { throw "New SCP-173 did not take X's position: $swapDistance m" }
 $afterSwap=Get-Claims
 if (-not ($afterSwap.text -match "claim $y warmup\.scp")) { throw "SCP claim did not move to Y:`n$($afterSwap.text)" }
