@@ -7,7 +7,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <ServerManagedPath Condition="'$(ServerManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</ServerManagedPath>
-    <HintServiceMeowPath Condition="'$(HintServiceMeowPath)' == ''">$(APPDATA)\SCP Secret Laboratory\LabAPI\plugins\7777</HintServiceMeowPath>
+    <HsmAdapterProject Condition="'$(HsmAdapterProject)' == '' And Exists('$(MSBuildThisFileDirectory)..\..\..\HsmAdapter\HsmAdapter.csproj')">$(MSBuildThisFileDirectory)..\..\..\HsmAdapter\HsmAdapter.csproj</HsmAdapterProject>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,11 +20,18 @@
     <Reference Include="CommandSystem.Core" HintPath="$(ServerManagedPath)\CommandSystem.Core.dll" Private="false" />
     <Reference Include="LabApi" HintPath="$(ServerManagedPath)\LabApi.dll" Private="false" />
     <Reference Include="Pooling" HintPath="$(ServerManagedPath)\Pooling.dll" Private="false" />
-    <Reference Include="HintServiceMeow" HintPath="$(HintServiceMeowPath)\HintServiceMeow.dll" Private="false" />
     <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="false" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="UnityEngine.PhysicsModule" HintPath="$(ServerManagedPath)\UnityEngine.PhysicsModule.dll" Private="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="$(HsmAdapterProject)" Private="false" />
+  </ItemGroup>
+
+  <Target Name="RequireHsmAdapterSource" BeforeTargets="BeforeBuild" Condition="!Exists('$(HsmAdapterProject)')">
+    <Error Text="HsmAdapter source not found. Pass -p:HsmAdapterProject=&lt;path to HsmAdapter.csproj&gt;." />
+  </Target>
 
   <!-- Each authored SCP model ships inside the DLL. WithCulture=false + LogicalName avoids the MSBuild
        "mer = culture code" trap that would otherwise route *.mer.json into a satellite resources.dll. -->

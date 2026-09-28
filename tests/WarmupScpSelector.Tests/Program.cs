@@ -12,7 +12,6 @@ using WarmupScpSelector.Models;
 using WarmupScpSelector.Replacement;
 using WarmupScpSelector.Roles;
 using WarmupScpSelector.Selection;
-using WarmupScpSelector.Services;
 using WarmupScpSelector.Text;
 using WarmupScpSelector.Warmup;
 
@@ -68,7 +67,6 @@ namespace WarmupScpSelector.Tests
                 ActivityManagerOnPlayerLeftNotifiesLaneAndIsIdempotent,
                 ActivityManagerKeepsOwnershipCurrentDuringPlayerLeftCleanup,
                 ActivityManagerSwitchingLaneTearsDownPriorLane,
-                LaneFlashTrackerGuardsRepeatableExpiry,
                 ActivityGlyphsProvideAsciiFallbacks,
                 LaneHintIdsComposeStableZoneIds,
                 AimRangeSessionsTrackOccupancyAndWeapons,
@@ -104,7 +102,6 @@ namespace WarmupScpSelector.Tests
                 AimRangeFooterIsStateSpecificAndActiveVoice,
                 AimRangeFlashRendersEveryEventInOneLanguage,
                 AimRangeTextMarkupIsBalancedAndUnnested,
-                HintChangeCacheSkipsUnchangedButResendsOnChange,
                 ParkourDefaultsToExplicitOptIn,
                 ParkourRunRequiresOrderedGatesAndFreezesFinishTime,
                 ParkourRouteIsClearableButNotTrivial,
@@ -851,27 +848,6 @@ namespace WarmupScpSelector.Tests
             manager.OnPlayerLeft("u1");
             AssertEqual(true, currentDuringCleanup, "lane ownership remains current during disconnect cleanup");
             AssertEqual(null, manager.CurrentLane("u1"), "lane ownership is removed after cleanup");
-        }
-
-        private static void LaneFlashTrackerGuardsRepeatableExpiry()
-        {
-            LaneFlashTracker tracker = new LaneFlashTracker();
-            int first = tracker.Arm("u1", "aim");
-            AssertEqual(true, tracker.ShouldClear("u1", "aim", first), "latest token clears");
-
-            // Re-arming (an identical repeat verdict) invalidates the earlier expiry so it can't clear the new one.
-            int second = tracker.Arm("u1", "aim");
-            AssertEqual(false, first == second, "flash token advanced on re-arm");
-            AssertEqual(false, tracker.ShouldClear("u1", "aim", first), "stale flash token does not clear");
-            AssertEqual(true, tracker.ShouldClear("u1", "aim", second), "new flash token clears");
-
-            // Separate lanes/players are tracked independently.
-            int other = tracker.Arm("u2", "aim");
-            AssertEqual(true, tracker.ShouldClear("u2", "aim", other), "independent key tracked");
-            AssertEqual(true, tracker.ShouldClear("u1", "aim", second), "unrelated arm does not disturb");
-
-            tracker.Clear("u1", "aim");
-            AssertEqual(false, tracker.ShouldClear("u1", "aim", second), "cleared token no longer clears");
         }
 
         private static void ActivityGlyphsProvideAsciiFallbacks()
@@ -1835,38 +1811,6 @@ namespace WarmupScpSelector.Tests
 
             // ASCII glyph fallback path stays balanced/safe (no signature glyphs used, so it is a no-op here).
             AssertMarkupSafe(AimRangeText.BuildHero(injected, true, true), "ascii-fallback hero markup balanced");
-        }
-
-        private static void HintChangeCacheSkipsUnchangedButResendsOnChange()
-        {
-            HintChangeCache cache = new HintChangeCache();
-            string key = "u1|warmupscp.aim.hero";
-            string sig = HintChangeCache.Signature(0f, 700f, "HELLO");
-
-            AssertEqual(false, cache.Matches(key, sig), "empty cache never matches (first push sent)");
-            cache.Set(key, sig);
-            AssertEqual(true, cache.Matches(key, sig), "identical resubmission is skipped");
-
-            AssertEqual(false, cache.Matches(key, HintChangeCache.Signature(0f, 700f, "WORLD")), "changed text re-sends");
-            AssertEqual(false, cache.Matches(key, HintChangeCache.Signature(0f, 701f, "HELLO")), "moved Y re-sends");
-            AssertEqual(false, cache.Matches(key, HintChangeCache.Signature(-1077f, 700f, "HELLO")), "moved X re-sends (status collapsing into the Aim lane)");
-            AssertEqual(false,
-                HintChangeCache.Signature(0f, 700f, "HELLO") == HintChangeCache.Signature(0f, 701f, "HELLO"),
-                "Y is part of the signature");
-            AssertEqual(false,
-                HintChangeCache.Signature(0f, 700f, "HELLO") == HintChangeCache.Signature(-1077f, 700f, "HELLO"),
-                "X is part of the signature");
-            AssertEqual(false,
-                HintChangeCache.Signature(0f, 700f, "HELLO") == HintChangeCache.Signature(0f, 700f, "WORLD"),
-                "text is part of the signature");
-
-            cache.Remove(key);
-            AssertEqual(false, cache.Matches(key, sig), "removed key re-sends (Remove clears the entry)");
-
-            cache.Set(key, sig);
-            cache.Clear();
-            AssertEqual(false, cache.Matches(key, sig), "cleared cache re-sends (Disable clears all)");
-            AssertEqual(0, cache.Count, "cleared cache is empty");
         }
 
         private static void ParkourDefaultsToExplicitOptIn()
