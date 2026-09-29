@@ -88,31 +88,31 @@ namespace WarmupScpSelector.Text
     /// deliberately compact: a force-shown flash, a persistent three-line hero (a tiny weapon/target/bot eyebrow,
     /// then the short signature state rail, then a compact hits/accuracy strip), and one short active-voice footer.
     /// Every line owns exactly one <c>&lt;size&gt;</c> span — NO nested sizes — so TMP never resolves a nested
-    /// scale. Color obeys the plan's HUD law: teal = live/you (your marker + filled rail), white = values,
-    /// dim/line = the empty "not-yet" track and dividers, red = incoming only, green = a clean handoff/success
+    /// scale. Color obeys the plan's HUD law: lavender = live/you (your marker + filled rail), white = values,
+    /// dim/line = the empty "not-yet" track and dividers, red = incoming only, coral = a clean handoff/success
     /// flash. Gold (time) and green (personal best) are deferred — no stored PB exists yet, so the rail reads only
     /// honest live session data (accuracy fill + hit count). Exactly one language is rendered per call. Everything
     /// is pure string work threaded through <see cref="ActivityGlyphs"/> so the glyph-reality fallback is preserved.
     /// </summary>
     public static class AimRangeText
     {
-        // 莺歌傲然 palette (mirrors WarmupText): cyan accent for live/you, brand green for the success/handoff
+        // Sunset community palette (mirrors WarmupText): lavender accent for live/you, coral for the success/handoff
         // verdicts, one red kept for incoming only. Muted/Dim label greys plus the near-black Line keep the rail
         // scannable against the dark facility HUD; Line is the plan's "empty / not-yet" cell color.
-        private const string Accent = "#4FCBFF";
+        private const string Accent = "#B6A4E8";
         private const string Urgent = "#FF5555";
-        private const string Ready = "#5BFF80";
+        private const string Ready = "#EB6355";
         private const string White = "#E7ECF3";
         private const string Muted = "#8B95A6";
         private const string Dim = "#5B6270";
         private const string Line = "#232A37";
 
-        // The signature rail is a fixed-width track: a teal "you"-filled span (session accuracy) with a teal
+        // The signature rail is a fixed-width track: a lavender "you"-filled span (session accuracy) with a lavender
         // marker at the frontier, then the dim/Line "not-yet" remainder. Five cells keep the rail (plus marker)
         // comfortably inside the ~284px left HUD lane even when the ASCII fallback doubles each cell.
         private const int RailCells = 5;
 
-        /// <summary>Prettify a shelf/bot preset id into a short weapon label (markup-safe).</summary>
+        /// <summary>Prettify an armoury/bot preset id into a short weapon label (markup-safe).</summary>
         public static string WeaponLabel(string presetId)
         {
             if (string.IsNullOrWhiteSpace(presetId))

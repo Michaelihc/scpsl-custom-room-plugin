@@ -1,0 +1,42 @@
+{
+  "source_sha256": "d823cc990f784f5fccda5f33852815829a571234b4b4e1bcbcb67f5b32db428b",
+  "before": 1090,
+  "after": 1113,
+  "protected_blocks_unchanged_except_lighting": 658,
+  "scp_primitives": {
+    "049": {
+      "before": 12,
+      "after": 15
+    },
+    "079": {
+      "before": 7,
+      "after": 13
+    },
+    "096": {
+      "before": 14,
+      "after": 20
+    },
+    "106": {
+      "before": 11,
+      "after": 21
+    },
+    "173": {
+      "before": 11,
+      "after": 18
+    },
+    "939": {
+      "before": 13,
+      "after": 27
+    },
+    "3114": {
+      "before": 18,
+      "after": 28
+    }
+  },
+  "light_intensity_multiplier": 1.7320508075688772,
+  "light_range_multiplier": 1.7320508075688772,
+  "brightened_lights": 33,
+  "gallery_fill_lights": 6,
+  "removed_brand_blocks": 218,
+  "added_decor": 179
+}

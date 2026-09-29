@@ -3,6 +3,7 @@ using System.ComponentModel;
 using PlayerRoles;
 using UnityEngine;
 using WarmupScpSelector.Activities;
+using WarmupScpSelector.Replacement;
 using WarmupScpSelector.Services;
 
 namespace WarmupScpSelector;
@@ -15,23 +16,32 @@ public sealed class Config
     [Description("Whether debug logging is enabled.")]
     public bool Debug { get; set; } = false;
 
-    [Description("Master switch for the optional warmup activity suite (Aim / Dodgeball / Parkour / Duel lanes). Default OFF: the SCP draft behaves exactly as before. Turning it on only enables lanes that are also gated on under Activities. The Aim Range includes occupancy, physical weapon shelves, deterministic native targets, owned native RA bots, lethal human range reset, and a collision-free bilingual HSM range HUD; persistence/scoring remain separate work.")]
+    [Description("Master switch for the optional warmup activity suite. Default OFF: the SCP draft behaves exactly as before. Turning it on only enables lanes that are also gated on under Activities. Each lane owns one station compartment: Aim fits out the east Aim Bay with persistent counter guns, deterministic native targets, owned native RA bots, lethal human reset, and a bilingual HSM HUD; Parkour generates the Pulse Line in the north shaft. Persistence/scoring remain separate work.")]
     public bool ActivitiesEnabled { get; set; } = false;
 
     [Description("Shared settings for the warmup activity suite. Only applies when ActivitiesEnabled is true.")]
     public ActivityConfig Activities { get; set; } = new();
 
+    [Description("Early-round SCP disconnect replacement and optional .human opt-out settings. This system is independent of the waiting-for-players draft.")]
+    public ScpReplacementConfig ScpReplacement { get; set; } = new();
+
+    [Description("Filename of an authored ProjectMER station schematic to spawn INSTEAD of the generated shell, decor, and gallery exhibits. Empty (default) generates the station in code. Looked up in this plugin's config folder under Schematics/<name>/<name>.json, then ProjectMER's own Schematics folder. Gameplay stays code-driven: selection coins, counter guns, hatch gates, targets, and bots are still spawned at the code anchors, and the Aim Bay is always built by code so its furniture is not spawned twice. An authored parkour shaft IS used, and the Pulse Line reads its gates back off those landings. Keep the exported marker_* blocks in the file - they are the anchor contract.")]
+    public string AuthoredStationAsset { get; set; } = string.Empty;
+
+    [Description("Write the standing station to a ProjectMER schematic every time it is built, under that name. Empty (default) disables it. Use this to hand a fresh snapshot to someone editing the room in the in-game map editor; the same export is available on demand via the warmupexport RA command. Written to ProjectMER's Schematics folder when that plugin is installed, otherwise this plugin's own config folder.")]
+    public string ExportSchematicName { get; set; } = string.Empty;
+
     [Description("Player-facing language: \"cn\" for Simplified Chinese (default), \"en\" for English.")]
     public string Language { get; set; } = "cn";
 
-    [Description("Meters to float the selector room above the surface zone. SCP:SL collision/physics misbehave at extreme coords, so the room is anchored just above the static surface (no map gen there) at sane coordinates where its floor is actually walkable. Enough to clear surface structures.")]
-    public float SurfaceClearance { get; set; } = 20f;
+    [Description("Meters to float the warmup station above the surface zone. SCP:SL collision/physics misbehave at extreme coords, so the room is anchored just above the static surface (no map gen there) at sane coordinates where its floor is actually walkable. Enough to clear surface structures.")]
+    public float SurfaceClearance { get; set; } = 30f;
 
-    [Description("Fallback world-space origin used only if the surface zone cannot be found (it normally always can). Avoid extreme coordinates.")]
+    [Description("Fallback world-space origin (station deck centre) used only if the surface zone cannot be found (it normally always can). Avoid extreme coordinates.")]
     public Vector3 RoomOrigin { get; set; } = new(0f, 1015f, 0f);
 
-    [Description("Horizontal spacing between adjacent SCP display pedestals, in meters.")]
-    public float PedestalSpacing { get; set; } = 4f;
+    [Description("Horizontal spacing between adjacent SCP display stands in the gallery back rank, in meters. Wider spacing fits fewer stands in the back rank and pushes the rest onto the side walls.")]
+    public float PedestalSpacing { get; set; } = 3.7f;
 
     [Description("Uniform scale applied to each spawned SCP model.")]
     public float ModelScale { get; set; } = 1f;
@@ -51,8 +61,14 @@ public sealed class Config
     [Description("HintServiceMeow display settings for the warmup status panel (hint-ID prefix, position, and text size). The countdown/selection text is drawn through HSM so it composes with other HSM/CUIMeow hints instead of being clobbered by the vanilla hint channel.")]
     public HintDisplayConfig HintDisplay { get; set; } = new();
 
-    [Description("Seconds after the vanilla round starts before selected SCPs are swapped in (lets vanilla roles settle).")]
+    [Description("Fallback-only delay used if atomic pre-spawn SCP remapping cannot be prepared. Normal round starts apply only each player's final role before it is sent.")]
     public float RoleSwapDelaySeconds { get; set; } = 1.5f;
+
+    [Description("Honour SCP-3114 picks even though vanilla only spawns SCP-3114 on holidays. When at least Scp3114MinPlayers players are counted for round-start role assignment and someone picked SCP-3114, one random picker becomes SCP-3114 instead of the human role vanilla was about to give them: the round gets one more SCP and one fewer human, nobody else's role changes. If vanilla did spawn SCP-3114 this round, the normal draft swap owns it instead.")]
+    public bool Scp3114DraftEnabled { get; set; } = true;
+
+    [Description("Minimum players counted for round-start role assignment before an SCP-3114 pick is honoured. Default 26, i.e. more than 25 players.")]
+    public int Scp3114MinPlayers { get; set; } = 26;
 
     [Description("Hide the vanilla 'WAITING FOR PLAYERS / ROUND START IS PAUSED' block while the selector is active.")]
     public bool HideWaitingUi { get; set; } = true;
@@ -90,7 +106,7 @@ public sealed class Config
     [Description("Safety cap for the decoded music length in seconds.")]
     public int MusicMaxSeconds { get; set; } = 240;
 
-    [Description("SCPs offered in the selector room, left to right. Each gets one model + one coin. Model is the embedded .mer.json basename; leave it blank to use this plugin's built-in model for known SCP roles.")]
+    [Description("SCPs offered in the gallery, in stand order (back rank first, then side walls). Each gets one model + one coin. Model is the embedded .mer.json basename; leave it blank to use this plugin's built-in model for known SCP roles.")]
     public List<ScpOption> ScpOptions { get; set; } = new()
     {
         new ScpOption(RoleTypeId.Scp049, "SCP-049", "scp-049"),

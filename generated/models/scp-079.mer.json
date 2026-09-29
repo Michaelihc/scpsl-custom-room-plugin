@@ -33,8 +33,36 @@
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 0.3,
+        "y": 0.1,
+        "z": -0.04
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
         "z": 0.0
+      },
+      "Scale": {
+        "x": 1.03,
+        "y": 0.2,
+        "z": 0.61
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#4C5046",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "monitor_0002",
+      "ObjectId": 3,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.75,
+        "z": -0.09
       },
       "Rotation": {
         "x": 0.0,
@@ -43,54 +71,26 @@
       },
       "Scale": {
         "x": 1.1,
-        "y": 0.6,
-        "z": 0.8
+        "y": 0.91,
+        "z": 0.69
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#A89C72",
+        "Color": "#A69C7F",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "base_top_0002",
-      "ObjectId": 3,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": 0.0,
-        "y": 0.65,
-        "z": 0.02
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.98,
-        "y": 0.08,
-        "z": 0.7
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#C7BD96",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "monitor_0003",
+      "Name": "bezel_0003",
       "ObjectId": 4,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 1.18,
-        "z": -0.04
+        "y": 0.75,
+        "z": 0.276
       },
       "Rotation": {
         "x": 0.0,
@@ -98,27 +98,27 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 1.2,
-        "y": 0.88,
-        "z": 0.78
+        "x": 0.97,
+        "y": 0.78,
+        "z": 0.055
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#C7BD96",
+        "Color": "#5D5B4E",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "monitor_top_0004",
+      "Name": "screen_0004",
       "ObjectId": 5,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 1.65,
-        "z": -0.04
+        "x": -0.045,
+        "y": 0.78,
+        "z": 0.312
       },
       "Rotation": {
         "x": 0.0,
@@ -126,83 +126,167 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 1.06,
-        "y": 0.1,
-        "z": 0.72
+        "x": 0.77,
+        "y": 0.62,
+        "z": 0.04
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#A89C72",
+        "Color": "#101517",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "bezel_0005",
+      "Name": "screen_x_0005",
       "ObjectId": 6,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 1.2,
-        "z": 0.44
+        "x": -0.045,
+        "y": 0.78,
+        "z": 0.342
       },
       "Rotation": {
         "x": 0.0,
         "y": 0.0,
-        "z": 0.0
+        "z": -42
       },
       "Scale": {
-        "x": 1.02,
-        "y": 0.74,
-        "z": 0.08
+        "x": 0.085,
+        "y": 0.57,
+        "z": 0.024
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#20201E",
+        "Color": "#DEE1D9",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "screen_0006",
+      "Name": "screen_x_0006",
       "ObjectId": 7,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 1.22,
-        "z": 0.5
+        "x": -0.045,
+        "y": 0.78,
+        "z": 0.342
       },
       "Rotation": {
         "x": 0.0,
         "y": 0.0,
-        "z": 0.0
+        "z": 42
       },
       "Scale": {
-        "x": 0.72,
-        "y": 0.52,
-        "z": 0.05
+        "x": 0.085,
+        "y": 0.57,
+        "z": 0.024
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#2BC24A",
+        "Color": "#DEE1D9",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "led_0007",
+      "Name": "keyboard_0007",
       "ObjectId": 8,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.4,
-        "y": 0.88,
+        "x": 0.0,
+        "y": 0.225,
+        "z": 0.47
+      },
+      "Rotation": {
+        "x": 11,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 1.18,
+        "y": 0.2,
         "z": 0.5
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#B0A58C",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "keys_0008",
+      "ObjectId": 9,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 0.329,
+        "z": 0.48
+      },
+      "Rotation": {
+        "x": 11,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.98,
+        "y": 0.025,
+        "z": 0.31
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#5D5B4E",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "spacebar_0009",
+      "ObjectId": 10,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.02,
+        "y": 0.329,
+        "z": 0.642
+      },
+      "Rotation": {
+        "x": 11,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.46,
+        "y": 0.04,
+        "z": 0.04
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#B0A58C",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "knob_0010",
+      "ObjectId": 11,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.445,
+        "y": 0.47,
+        "z": 0.319
       },
       "Rotation": {
         "x": 0.0,
@@ -210,21 +294,105 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.07,
-        "y": 0.05,
-        "z": 0.05
+        "x": 0.055,
+        "y": 0.055,
+        "z": 0.041
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#262A28",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "power_0011",
+      "ObjectId": 12,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.455,
+        "y": 0.405,
+        "z": 0.326
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.031,
+        "y": 0.025,
+        "z": 0.027
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#E0402E",
+        "Color": "#C58342",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "drive_0012",
+      "ObjectId": 13,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.64,
+        "y": 0.115,
+        "z": 0.25
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.3,
+        "y": 0.21,
+        "z": 0.43
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#A69C7F",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "drive_slot_0013",
+      "ObjectId": 14,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.64,
+        "y": 0.135,
+        "z": 0.467
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.22,
+        "y": 0.018,
+        "z": 0.02
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#30362F",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
       "Name": "marker_pivot",
-      "ObjectId": 9,
+      "ObjectId": 15,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
@@ -252,13 +420,13 @@
     },
     {
       "Name": "marker_screen",
-      "ObjectId": 10,
+      "ObjectId": 16,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 1.22,
-        "z": 0.53
+        "x": -0.045,
+        "y": 0.78,
+        "z": 0.342
       },
       "Rotation": {
         "x": 0.0,

@@ -27,20 +27,6 @@ namespace WarmupScpSelector.Activities.AimRange
         public int PreviousPointIndex { get; }
     }
 
-    public readonly struct SphereTargetPop
-    {
-        internal SphereTargetPop(int slotId, int generation, int pointIndex)
-        {
-            SlotId = slotId;
-            Generation = generation;
-            PointIndex = pointIndex;
-        }
-
-        public int SlotId { get; }
-        public int Generation { get; }
-        public int PointIndex { get; }
-    }
-
     /// <summary>Pure multi-slot deadline and generation gate; it owns no Unity or LabAPI objects.</summary>
     public sealed class SphereTargetState
     {
@@ -143,32 +129,28 @@ namespace WarmupScpSelector.Activities.AimRange
             slot.RespawnAt = Math.Max(0d, now) + Math.Max(0.001d, retrySeconds);
         }
 
-        public bool TryPop(
+        public bool TryCommitRelocation(
             int rangeGeneration,
             int slotId,
             int generation,
-            double now,
-            double respawnDelaySeconds,
-            out SphereTargetPop pop)
+            int pointIndex,
+            out int relocatedGeneration)
         {
-            pop = default;
-            if (!_running || rangeGeneration != _rangeGeneration ||
+            relocatedGeneration = 0;
+            if (!_running || rangeGeneration != _rangeGeneration || pointIndex < 0 ||
                 !_slots.TryGetValue(slotId, out Slot slot) ||
                 slot.Generation != generation || slot.Phase != SphereTargetPhase.Live)
             {
                 return false;
             }
 
-            int creditedPoint = slot.PointIndex;
-            pop = new SphereTargetPop(slotId, generation, creditedPoint);
-
-            // Invalidate before the controller destroys the collider. Re-entrant, duplicate, or stale callbacks
-            // cannot credit this generation after this point.
+            // Relocation never leaves Live: the same visible, collidable toy has already been moved synchronously.
+            // Advancing the generation rejects any later duplicate callback for the point that was just credited.
+            slot.PreviousPointIndex = slot.PointIndex;
             slot.Generation = Next(slot.Generation);
-            slot.PreviousPointIndex = creditedPoint;
-            slot.PointIndex = -1;
-            slot.Phase = SphereTargetPhase.Waiting;
-            slot.RespawnAt = Math.Max(0d, now) + Math.Max(0.001d, respawnDelaySeconds);
+            slot.SpawnOrdinal = Next(slot.SpawnOrdinal);
+            slot.PointIndex = pointIndex;
+            relocatedGeneration = slot.Generation;
             return true;
         }
 

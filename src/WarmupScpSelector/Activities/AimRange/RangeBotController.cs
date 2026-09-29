@@ -40,13 +40,6 @@ namespace WarmupScpSelector.Activities.AimRange
             AwaitFirearmActions,
         }
 
-        private enum RetaliationAimStage
-        {
-            Tracking,
-            Verify,
-            Fire,
-        }
-
         private enum ReloadTacticalStage
         {
             None,
@@ -78,14 +71,13 @@ namespace WarmupScpSelector.Activities.AimRange
             public double NextProgressCheckAt { get; set; }
             public bool ReportedMovementStall { get; set; }
             public double NextShotAt { get; set; }
-            public RetaliationAimStage AimStage { get; set; }
-            public double AimTrackingStartedAt { get; set; }
             public bool AwaitingShotVerification { get; set; }
             public bool ObservedShotEvent { get; set; }
             public ReferenceHub? AggressorHub { get; set; }
             public int AmmoBeforeShot { get; set; }
             public double ShotVerificationAt { get; set; }
             public bool ShootHeld { get; set; }
+            public bool HasFiredThisEngagement { get; set; }
             public bool ZoomHeld { get; set; }
             public Vector3 CombatAnchor { get; set; }
             public double EngagementStartedAt { get; set; }
@@ -104,6 +96,7 @@ namespace WarmupScpSelector.Activities.AimRange
         }
 
         private const float NativeWalkStepMeters = 0.45f;
+        private const float CombatWalkStepMeters = 0.08f;
         private const float PathReachedRadius = 0.35f;
         private const float CoverReachedRadius = 0.5f;
         private const float CombatStrafeRadius = 1.15f;
@@ -114,7 +107,6 @@ namespace WarmupScpSelector.Activities.AimRange
         private const float MovementProgressMinimumMeters = 0.05f;
         private const double FirearmDrawSeconds = 1d;
         private const double FirearmActionPollSeconds = 3d;
-        private const double AimSettleSeconds = 0.6d;
         private const double NormalJumpCooldownSeconds = 2.5d;
         private const double CloseJumpCooldownSeconds = 0.8d;
         private const double CoverLosGraceSeconds = 0.35d;
@@ -268,7 +260,11 @@ namespace WarmupScpSelector.Activities.AimRange
             _acquireDelay = settings.AcquireDelaySeconds;
             _shotCadence = settings.ShotCadenceSeconds;
             _shotVerificationSeconds = settings.ShotVerificationSeconds;
-            _maxDistance = settings.MaxRetaliationDistance;
+            // A valid aggressor can occupy either half of the continuous widened hall. Older configs still carry
+            // the original 24 m cap, which is shorter than the diagonal from the new wall-side armoury to lane 1
+            // and silently prevented the native trigger path after a successful provocation. Always cover the
+            // authored activity bounds; a larger configured value remains respected.
+            _maxDistance = Math.Max(settings.MaxRetaliationDistance, layout.RequiredRetaliationDistance);
             _aimTolerance = settings.AimToleranceDegrees;
             _respawnDelay = settings.RespawnSeconds;
             _aggroLease = settings.AggroLeaseSeconds;
@@ -560,16 +556,23 @@ namespace WarmupScpSelector.Activities.AimRange
         public void Stop()
         {
             _running = false;
-            ReleaseSoloLobbyLock();
-            List<ReferenceHub> hubs = _ownedHubs.Values.Distinct().ToList();
-            List<ushort> serials = _slots.Values.Select(slot => slot.FirearmSerial)
-                .Concat(_retiredSerials.Values).Where(serial => serial != 0).ToList();
+            // Snapshot ownership before touching native state. Round reset can destroy a hub or its action table
+            // between any two calls, so teardown must detach every slot even when releasing one stale handle fails.
+            List<ReferenceHub> hubs = _ownedHubs.Values.ToList();
+            HashSet<ushort> serials = new HashSet<ushort>(_retiredSerials.Values.Where(serial => serial != 0));
+            foreach (SlotRuntime slot in _slots.Values)
+            {
+                if (slot.FirearmSerial != 0)
+                {
+                    serials.Add(slot.FirearmSerial);
+                }
+            }
 
             _registry.InvalidateAll();
             foreach (SlotRuntime slot in _slots.Values)
             {
-                ResetTacticalState(slot);
-                slot.Lifecycle.Disable();
+                try { ResetTacticalState(slot); } catch { }
+                try { slot.Lifecycle.Disable(); } catch { }
                 slot.Hub = null;
                 slot.Player = null;
                 slot.Firearm = null;
@@ -591,6 +594,9 @@ namespace WarmupScpSelector.Activities.AimRange
             _layout = null;
             _rangeGeneration = 0;
             _requestedBotCount = 0;
+            // Counted dummy hubs must be gone before the solo lock opens. This preserves the invariant even if
+            // teardown later gains a yielding step or a re-entrant callback observes the native connection count.
+            ReleaseSoloLobbyLock();
         }
 
         private void BeginSpawn(SlotRuntime slot, double now)
@@ -668,6 +674,8 @@ namespace WarmupScpSelector.Activities.AimRange
                 }
 
                 slot.Player.SetRole(_botRole, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+                // Native role initialization grants this independently of RoleSpawnFlags.
+                slot.Player.DisableEffect<CustomPlayerEffects.SpawnProtected>();
                 slot.InitializeStage = InitializeStage.AwaitRole;
                 slot.StageReadyAt = now + 0.2d;
                 return;
@@ -687,6 +695,7 @@ namespace WarmupScpSelector.Activities.AimRange
                 }
 
                 slot.Player.ClearInventory();
+                slot.Player.DisableEffect<CustomPlayerEffects.SpawnProtected>();
                 slot.Player.MaxHealth = _botHealth;
                 slot.Player.Health = _botHealth;
                 Vector3 startPosition = WorldPathPoint(slot.Path.Segments[0].From);
@@ -742,7 +751,6 @@ namespace WarmupScpSelector.Activities.AimRange
                     slot.LastProgressPosition = slot.Hub.transform.position;
                     slot.NextProgressCheckAt = now + MovementProgressCheckSeconds;
                     slot.NextShotAt = now;
-                    ResetAim(slot);
                     slot.Lifecycle.MarkPassive();
                     _plugin.LogDebug($"Aim bot slot {slot.Path.SlotId} initialized with {slot.Preset?.Id} generation {slot.Lifecycle.SpawnGeneration}.");
                     return;
@@ -898,15 +906,21 @@ namespace WarmupScpSelector.Activities.AimRange
                 return;
             }
 
+            // Preserve a short readable reaction beat before snapping to the torso. Alert-phase strafing remains
+            // paused so the bot cannot lose the provoking sightline before native automatic fire is held.
+            if (slot.Lifecycle.State == RangeBotState.Alerted)
+            {
+                ReleaseHeldActions(slot);
+                return;
+            }
+
             Vector3 aimPoint = RangeBotNative.AimPoint(target.ReferenceHub);
             float distance = Vector3.Distance(slot.Hub.PlayerCameraReference.position, aimPoint);
-            TickEngagedMovement(slot, aimPoint, distance, now);
             RangeBotNative.ApplyLook(slot.Hub, aimPoint);
 
             if (slot.Hub.inventory.CurInstance?.ItemSerial != slot.FirearmSerial)
             {
                 ReleaseHeldActions(slot);
-                ResetAim(slot);
                 slot.Hub.inventory.ServerSelectItem(slot.FirearmSerial);
                 slot.NextShotAt = now + FirearmDrawSeconds;
                 return;
@@ -925,14 +939,20 @@ namespace WarmupScpSelector.Activities.AimRange
                 return;
             }
 
-            SetZoomHeld(slot, distance >= ZoomDistanceMeters);
+            // Native movement and automatic-fire dispersion are substantial even at short range. Hold ADS
+            // throughout retaliation so a stationary participant is punished consistently, while the authored
+            // upper-chest aim point still keeps every shot away from the head collider.
+            SetZoomHeld(slot, true);
             bool canFire = slot.Lifecycle.State == RangeBotState.ReturningFire && distance <= _maxDistance &&
                 RangeBotNative.HasLineOfSight(slot.Hub, target.ReferenceHub, aimPoint);
             if (!canFire)
             {
                 ReleaseShoot(slot, cancelVerification: true);
-                ResetAim(slot);
                 slot.NextShotAt = now + Math.Min(0.25d, _shotCadence);
+                if (slot.HasFiredThisEngagement)
+                {
+                    TickEngagedMovement(slot, aimPoint, distance, now);
+                }
                 return;
             }
 
@@ -942,43 +962,22 @@ namespace WarmupScpSelector.Activities.AimRange
                 if (aimError > _aimTolerance)
                 {
                     ReleaseShoot(slot, cancelVerification: true);
-                    ResetAim(slot);
+                }
+
+                if (slot.HasFiredThisEngagement)
+                {
+                    TickEngagedMovement(slot, aimPoint, distance, now);
                 }
 
                 return;
             }
 
-            if (slot.AimStage == RetaliationAimStage.Tracking)
+            if (now < slot.NextShotAt || aimError > _aimTolerance)
             {
-                if (slot.AimTrackingStartedAt <= 0d)
+                if (slot.HasFiredThisEngagement)
                 {
-                    slot.AimTrackingStartedAt = now;
+                    TickEngagedMovement(slot, aimPoint, distance, now);
                 }
-
-                if (now >= slot.NextShotAt && now - slot.AimTrackingStartedAt >= AimSettleSeconds)
-                {
-                    slot.AimStage = RetaliationAimStage.Verify;
-                }
-
-                return;
-            }
-
-            if (slot.AimStage == RetaliationAimStage.Verify)
-            {
-                if (aimError > _aimTolerance)
-                {
-                    ResetAim(slot);
-                    slot.NextShotAt = now + 0.05d;
-                    return;
-                }
-
-                slot.AimStage = RetaliationAimStage.Fire;
-                return;
-            }
-
-            if (now < slot.NextShotAt)
-            {
-                ResetAim(slot);
                 return;
             }
 
@@ -1014,7 +1013,7 @@ namespace WarmupScpSelector.Activities.AimRange
                 : Vector3.right * slot.TacticalSide;
             float wave = Mathf.Sin((float)((now - slot.EngagementStartedAt) * 2.6d) + slot.TacticalPhase);
             Vector3 destination = slot.CombatAnchor + lateral * (CombatStrafeRadius * wave);
-            bool moving = RangeBotNative.WalkTowards(slot.Hub, destination, NativeWalkStepMeters);
+            bool moving = RangeBotNative.WalkTowards(slot.Hub, destination, CombatWalkStepMeters);
             if (moving)
             {
                 TryJumpWhileMoving(slot, now, distance);
@@ -1036,7 +1035,6 @@ namespace WarmupScpSelector.Activities.AimRange
             }
 
             ReleaseHeldActions(slot);
-            ResetAim(slot);
             if (slot.ReloadStage == ReloadTacticalStage.None)
             {
                 slot.ReloadStage = ReloadTacticalStage.MovingToCover;
@@ -1159,6 +1157,9 @@ namespace WarmupScpSelector.Activities.AimRange
             {
                 slot.AwaitingShotVerification = false;
                 slot.ObservedShotEvent = false;
+                slot.HasFiredThisEngagement = true;
+                // Verification proves the native automatic input is live. Keep Shoot->Hold latched; LOS, aim,
+                // reload, lease loss, death, and teardown remain the only release paths.
                 return true;
             }
 
@@ -1172,12 +1173,6 @@ namespace WarmupScpSelector.Activities.AimRange
             ResetTacticalState(slot);
             Logger.Warn($"[WarmupScpSelector] Aim bot slot {slot.Path.SlotId} retaliation disabled: native ShotWeapon/ammo verification failed ({slot.AmmoBeforeShot}->{ammoAfter}).");
             return false;
-        }
-
-        private static void ResetAim(SlotRuntime slot)
-        {
-            slot.AimStage = RetaliationAimStage.Tracking;
-            slot.AimTrackingStartedAt = 0d;
         }
 
         private void BeginEngagement(SlotRuntime slot, double now)
@@ -1369,10 +1364,10 @@ namespace WarmupScpSelector.Activities.AimRange
             slot.ObservedShotEvent = false;
             slot.AmmoBeforeShot = -1;
             slot.ShotVerificationAt = 0d;
+            slot.HasFiredThisEngagement = false;
             slot.CombatAnchor = Vector3.zero;
             slot.EngagementStartedAt = 0d;
             ResetReload(slot);
-            ResetAim(slot);
             if (clearAggressorHub)
             {
                 slot.AggressorHub = null;
@@ -1556,7 +1551,6 @@ namespace WarmupScpSelector.Activities.AimRange
             slot.AwaitingShotVerification = false;
             slot.ObservedShotEvent = false;
             slot.AggressorHub = null;
-            ResetAim(slot);
         }
 
     }

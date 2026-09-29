@@ -11,32 +11,29 @@ using Logger = LabApi.Features.Console.Logger;
 
 namespace WarmupScpSelector.Activities.AimRange
 {
-    /// <summary>Owns physical shelf pickups and all range-gun item/pickup/ammo cleanup.</summary>
+    /// <summary>Owns persistent shooting-counter pickups and all granted range-gun cleanup.</summary>
     internal sealed class WeaponShelfController
     {
         private readonly AimRangeSessions _sessions;
         private readonly WeaponShelfState _state = new WeaponShelfState();
         private readonly Dictionary<int, AimWeaponPresetConfig> _presets = new Dictionary<int, AimWeaponPresetConfig>();
         private readonly Dictionary<int, AimShelfAnchor> _anchors = new Dictionary<int, AimShelfAnchor>();
-        private readonly Dictionary<string, PendingClaim> _pending = new Dictionary<string, PendingClaim>(StringComparer.Ordinal);
+        private readonly Dictionary<string, IssuedWeapon> _issued = new Dictionary<string, IssuedWeapon>(StringComparer.Ordinal);
         private readonly Func<Player, bool> _isHuman;
         private readonly Func<Player, string> _key;
-        private float _replenishSeconds;
         private bool _running;
 
-        private readonly struct PendingClaim
+        private sealed class IssuedWeapon
         {
-            public PendingClaim(int slotId, int generation, ushort serial, double expiresAt)
+            public IssuedWeapon(string presetId, ushort serial, int reserveAmmo)
             {
-                SlotId = slotId;
-                Generation = generation;
+                PresetId = presetId;
                 Serial = serial;
-                ExpiresAt = expiresAt;
+                ReserveAmmo = reserveAmmo;
             }
-            public int SlotId { get; }
-            public int Generation { get; }
+            public string PresetId { get; }
             public ushort Serial { get; }
-            public double ExpiresAt { get; }
+            public int ReserveAmmo { get; set; }
         }
 
         public WeaponShelfController(AimRangeSessions sessions, Func<Player, bool> isHuman, Func<Player, string> key)
@@ -46,7 +43,7 @@ namespace WarmupScpSelector.Activities.AimRange
             _key = key;
         }
 
-        public bool Start(IReadOnlyList<AimShelfAnchor> anchors, AimRangeActivityConfig config, double now)
+        public bool Start(IReadOnlyList<AimShelfAnchor> anchors, AimRangeActivityConfig config)
         {
             Stop();
             if (anchors == null || anchors.Count == 0 || config == null)
@@ -55,7 +52,6 @@ namespace WarmupScpSelector.Activities.AimRange
             }
 
             _running = true;
-            _replenishSeconds = Sanitize(config.ShelfReplenishSeconds, 0f, 30f, 1.5f);
             List<AimWeaponPresetConfig> configured = config.WeaponPresets ?? new List<AimWeaponPresetConfig>();
             HashSet<string> duplicateIds = AimWeaponPresetRules.FindDuplicateConventionalIds(configured);
             for (int i = 0; i < anchors.Count; i++)
@@ -72,14 +68,14 @@ namespace WarmupScpSelector.Activities.AimRange
                 if (!AimWeaponPresetRules.IsConventional(preset))
                 {
                     _state.Disable(anchor.SlotId);
-                    Logger.Warn($"[WarmupScpSelector] Aim shelf slot {anchor.SlotId} disabled: invalid firearm/ammo preset.");
+                    Logger.Warn($"[WarmupScpSelector] Armoury counter slot {anchor.SlotId} disabled: invalid firearm/ammo preset.");
                     continue;
                 }
 
                 if (duplicateIds.Contains(preset!.Id))
                 {
                     _state.Disable(anchor.SlotId);
-                    Logger.Warn($"[WarmupScpSelector] Aim shelf slot {anchor.SlotId} disabled: preset id '{preset.Id}' is duplicated.");
+                    Logger.Warn($"[WarmupScpSelector] Armoury counter slot {anchor.SlotId} disabled: preset id '{preset.Id}' is duplicated.");
                     continue;
                 }
 
@@ -91,133 +87,98 @@ namespace WarmupScpSelector.Activities.AimRange
             return _presets.Count > 0;
         }
 
-        public void OnPickingUp(PlayerPickingUpItemEventArgs ev, double now)
+        public void OnPickingUp(PlayerPickingUpItemEventArgs ev)
         {
             if (!_running || ev?.Player == null || ev.Pickup == null)
             {
                 return;
             }
 
-            if (!_state.BeginClaim(ev.Pickup.Serial, _key(ev.Player), out int slotId, out int generation))
+            if (!_state.TryResolveAvailable(ev.Pickup.Serial, out int slotId))
             {
                 return;
             }
 
-            if (!_isHuman(ev.Player) || !_sessions.TryGet(_key(ev.Player), out AimRangeSessions.Session session) || session.IsLeaving)
-            {
-                ev.IsAllowed = false;
-                _state.CancelClaim(slotId, generation);
-                return;
-            }
-
-            _pending[_key(ev.Player)] = new PendingClaim(slotId, generation, ev.Pickup.Serial, now + 1.5d);
-        }
-
-        public void OnPickedUp(PlayerPickedUpItemEventArgs ev, double now)
-        {
-            if (!_running || ev?.Player == null || ev.Item == null)
+            // The counter gun is a permanent dispenser trigger. Cancel native collection first, then grant a
+            // separate owned inventory item; every player sees the original pickup remain in place.
+            ev.IsAllowed = false;
+            if (!_isHuman(ev.Player) || !_presets.TryGetValue(slotId, out AimWeaponPresetConfig preset))
             {
                 return;
             }
 
-            string userKey = _key(ev.Player);
-            if (!_pending.TryGetValue(userKey, out PendingClaim claim) || claim.Serial != ev.Item.Serial ||
-                !_state.ConfirmClaim(claim.SlotId, claim.Generation, userKey, ev.Item.Serial, now, _replenishSeconds))
-            {
-                return;
-            }
-
-            _pending.Remove(userKey);
-            if (!_presets.TryGetValue(claim.SlotId, out AimWeaponPresetConfig preset) || ev.Item is not FirearmItem firearm ||
-                firearm.Type != preset.Firearm || (preset.AttachmentsCode != 0 && !firearm.CheckAttachmentsCode(preset.AttachmentsCode)))
-            {
-                DestroySerial(ev.Item.Serial);
-                _state.Disable(claim.SlotId);
-                _presets.Remove(claim.SlotId);
-                Logger.Warn($"[WarmupScpSelector] Aim shelf slot {claim.SlotId} disabled after native pickup validation failed.");
-                return;
-            }
-
-            if (_sessions.TryGet(userKey, out AimRangeSessions.Session session) && session.OwnedItemSerial != 0 &&
-                session.OwnedItemSerial != ev.Item.Serial)
-            {
-                DestroyOwnedWeapon(ev.Player, session);
-            }
-
-            if (preset.AttachmentsCode != 0)
-            {
-                firearm.AttachmentsCode = preset.AttachmentsCode;
-                if (firearm.AttachmentsCode != preset.AttachmentsCode)
-                {
-                    DestroySerial(ev.Item.Serial);
-                    _state.Disable(claim.SlotId);
-                    _presets.Remove(claim.SlotId);
-                    return;
-                }
-            }
-
-            if (firearm.AmmoType != preset.Ammo || !TryPreload(firearm))
-            {
-                DestroySerial(ev.Item.Serial);
-                _state.Disable(claim.SlotId);
-                _presets.Remove(claim.SlotId);
-                Logger.Warn($"[WarmupScpSelector] Aim shelf slot {claim.SlotId} disabled: firearm could not be preloaded safely.");
-                return;
-            }
-
-            int reserve = Math.Max(0, Math.Min(ushort.MaxValue, preset.ReserveAmmo));
-            ev.Player.SetAmmo(preset.Ammo, (ushort)reserve);
-            _sessions.TrackWeapon(userKey, preset.Id, ev.Item.Serial, reserve);
+            Grant(ev.Player, preset);
         }
 
         public bool OnDropped(PlayerDroppedItemEventArgs ev)
         {
-            if (!_running || ev?.Pickup == null || !_sessions.TryFindWeaponOwner(ev.Pickup.Serial, out AimRangeSessions.Session session))
+            if (!_running || ev?.Pickup == null)
             {
                 return false;
             }
 
+            KeyValuePair<string, IssuedWeapon> issued = _issued.FirstOrDefault(pair => pair.Value.Serial == ev.Pickup.Serial);
+            if (string.IsNullOrEmpty(issued.Key)) return false;
+
             try { ev.Pickup.Destroy(); } catch { }
-            Player? owner = ResolveHuman(session.UserKey);
-            ZeroAmmo(owner, session.PresetId);
-            _sessions.ClearWeapon(session.UserKey);
+            Player? owner = ResolveHuman(issued.Key);
+            ZeroAmmo(owner, issued.Value.PresetId);
+            _sessions.ClearWeapon(issued.Key);
+            _issued.Remove(issued.Key);
             return true;
         }
 
-        public void Tick(double now)
+        public void DetachSession(AimRangeSessions.Session session)
         {
-            if (!_running)
-            {
-                return;
-            }
-
-            foreach (KeyValuePair<string, PendingClaim> pair in _pending.ToList())
-            {
-                if (now >= pair.Value.ExpiresAt)
-                {
-                    _state.CancelClaim(pair.Value.SlotId, pair.Value.Generation);
-                    _pending.Remove(pair.Key);
-                }
-            }
-
-            foreach (int slotId in _state.Due(now))
-            {
-                SpawnSlot(slotId);
-            }
+            if (session != null) _sessions.ClearWeapon(session.UserKey);
         }
 
-        public void DestroyOwnedWeapon(Player? player, AimRangeSessions.Session session)
+        public void DestroyForPlayer(string userKey, Player? player = null)
         {
-            if (session == null)
+            if (string.IsNullOrEmpty(userKey)) return;
+            if (_issued.TryGetValue(userKey, out IssuedWeapon issued))
             {
-                return;
+                ZeroAmmo(player ?? ResolveHuman(userKey), issued.PresetId);
+                DestroySerial(issued.Serial);
+                _issued.Remove(userKey);
+            }
+            _sessions.ClearWeapon(userKey);
+        }
+
+        public bool AttachToSession(Player player, AimRangeSessions.Session session)
+        {
+            if (player == null || session == null || !_issued.TryGetValue(session.UserKey, out IssuedWeapon issued) ||
+                !Item.TryGet(issued.Serial, out Item? item) || item?.CurrentOwner != player)
+            {
+                return false;
             }
 
-            ushort serial = session.OwnedItemSerial;
-            string presetId = session.PresetId;
-            ZeroAmmo(player, presetId);
-            _sessions.ClearWeapon(session.UserKey);
-            DestroySerial(serial);
+            _sessions.TrackWeapon(session.UserKey, issued.PresetId, issued.Serial, issued.ReserveAmmo);
+            return true;
+        }
+
+        public bool IsIssuedWeapon(Player? player, ushort serial)
+        {
+            if (player == null || serial == 0) return false;
+            return _issued.TryGetValue(_key(player), out IssuedWeapon issued) && issued.Serial == serial;
+        }
+
+        /// <summary>
+        /// Reasserts session ownership from the controller's authoritative issued-item record. Native firearm
+        /// damage can be raised while the wrapper's CurrentItem is transiently unavailable, so damage routing
+        /// must not depend on that presentation-time property when the handler serial is already definitive.
+        /// </summary>
+        public bool SynchronizeIssuedWeapon(Player? player, AimRangeSessions.Session? session, ushort serial)
+        {
+            if (player == null || session == null || serial == 0 ||
+                !_issued.TryGetValue(_key(player), out IssuedWeapon issued) || issued.Serial != serial ||
+                !string.Equals(session.UserKey, _key(player), StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            _sessions.TrackWeapon(session.UserKey, issued.PresetId, issued.Serial, issued.ReserveAmmo);
+            return true;
         }
 
         public bool EnsureOwnedWeapon(Player player, AimRangeSessions.Session session)
@@ -227,15 +188,16 @@ namespace WarmupScpSelector.Activities.AimRange
                 return false;
             }
 
+            if (!_issued.TryGetValue(session.UserKey, out IssuedWeapon issued)) return false;
             AimWeaponPresetConfig? preset = _presets.Values.FirstOrDefault(value =>
-                string.Equals(value.Id, session.PresetId, StringComparison.Ordinal));
+                string.Equals(value.Id, issued.PresetId, StringComparison.Ordinal));
             if (!AimWeaponPresetRules.IsConventional(preset))
             {
                 return false;
             }
 
             FirearmItem? firearm = null;
-            if (session.OwnedItemSerial != 0 && Item.TryGet(session.OwnedItemSerial, out Item? existing) &&
+            if (issued.Serial != 0 && Item.TryGet(issued.Serial, out Item? existing) &&
                 existing is FirearmItem existingFirearm && existingFirearm.CurrentOwner == player)
             {
                 firearm = existingFirearm;
@@ -250,7 +212,8 @@ namespace WarmupScpSelector.Activities.AimRange
                     return false;
                 }
 
-                _sessions.TrackWeapon(session.UserKey, preset.Id, firearm.Serial, session.TrackedReserveAmmo);
+                issued = new IssuedWeapon(preset.Id, firearm.Serial, issued.ReserveAmmo);
+                _issued[session.UserKey] = issued;
             }
 
             if (preset!.AttachmentsCode != 0)
@@ -268,8 +231,9 @@ namespace WarmupScpSelector.Activities.AimRange
                 return false;
             }
 
-            int reserve = Math.Max(0, Math.Min(ushort.MaxValue, session.TrackedReserveAmmo));
+            int reserve = Math.Max(0, Math.Min(ushort.MaxValue, issued.ReserveAmmo));
             player.SetAmmo(preset.Ammo, (ushort)reserve);
+            _sessions.TrackWeapon(session.UserKey, preset.Id, firearm.Serial, reserve);
             player.CurrentItem = firearm;
             return player.CurrentItem?.Serial == firearm.Serial;
         }
@@ -279,8 +243,6 @@ namespace WarmupScpSelector.Activities.AimRange
             _running = false;
             List<ushort> shelfSerials = _state.Slots.Select(slot => slot.PickupSerial).Where(serial => serial != 0).ToList();
             _state.InvalidateAll(); // invalidate generations before destroying network objects
-            _pending.Clear();
-
             foreach (ushort serial in shelfSerials)
             {
                 DestroySerial(serial);
@@ -292,6 +254,14 @@ namespace WarmupScpSelector.Activities.AimRange
                 DestroySerial(serial);
             }
 
+            foreach (KeyValuePair<string, IssuedWeapon> pair in _issued.ToList())
+            {
+                ZeroAmmo(ResolveHuman(pair.Key), pair.Value.PresetId);
+                DestroySerial(pair.Value.Serial);
+                _sessions.ClearWeapon(pair.Key);
+            }
+
+            _issued.Clear();
             _presets.Clear();
             _anchors.Clear();
         }
@@ -315,6 +285,7 @@ namespace WarmupScpSelector.Activities.AimRange
                 }
 
                 pickup.Spawn();
+                pickup.IsLocked = false;
                 if (pickup.Rigidbody == null)
                 {
                     throw new InvalidOperationException("pickup has no standard rigidbody");
@@ -327,8 +298,44 @@ namespace WarmupScpSelector.Activities.AimRange
                 try { pickup?.Destroy(); } catch { }
                 _state.Disable(slotId);
                 _presets.Remove(slotId);
-                Logger.Warn($"[WarmupScpSelector] Aim shelf slot {slotId} spawn failed: {ex.Message}");
+                Logger.Warn($"[WarmupScpSelector] Armoury counter slot {slotId} spawn failed: {ex.Message}");
             }
+        }
+
+        private void Grant(Player player, AimWeaponPresetConfig preset)
+        {
+            string userKey = _key(player);
+            DestroyForPlayer(userKey, player);
+
+            FirearmItem? firearm = player.AddItem(preset.Firearm) as FirearmItem;
+            if (firearm == null)
+            {
+                Logger.Warn($"[WarmupScpSelector] Could not grant armoury weapon '{preset.Id}' to {userKey}.");
+                return;
+            }
+
+            if (preset.AttachmentsCode != 0)
+            {
+                firearm.AttachmentsCode = preset.AttachmentsCode;
+            }
+
+            if (firearm.Type != preset.Firearm ||
+                (preset.AttachmentsCode != 0 && firearm.AttachmentsCode != preset.AttachmentsCode) ||
+                firearm.AmmoType != preset.Ammo || !TryPreload(firearm))
+            {
+                DestroySerial(firearm.Serial);
+                Logger.Warn($"[WarmupScpSelector] Armoury weapon '{preset.Id}' failed native inventory validation.");
+                return;
+            }
+
+            int reserve = Math.Max(0, Math.Min(ushort.MaxValue, preset.ReserveAmmo));
+            player.SetAmmo(preset.Ammo, (ushort)reserve);
+            _issued[userKey] = new IssuedWeapon(preset.Id, firearm.Serial, reserve);
+            if (_sessions.TryGet(userKey, out AimRangeSessions.Session session) && !session.IsLeaving)
+            {
+                _sessions.TrackWeapon(userKey, preset.Id, firearm.Serial, reserve);
+            }
+            player.CurrentItem = firearm;
         }
 
         private void ZeroAmmo(Player? player, string presetId)
@@ -418,7 +425,5 @@ namespace WarmupScpSelector.Activities.AimRange
             return null;
         }
 
-        private static float Sanitize(float value, float min, float max, float fallback) =>
-            float.IsNaN(value) || float.IsInfinity(value) ? fallback : Mathf.Clamp(value, min, max);
     }
 }

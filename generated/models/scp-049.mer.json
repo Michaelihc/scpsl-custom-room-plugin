@@ -27,14 +27,14 @@
       }
     },
     {
-      "Name": "robe_skirt_0001",
+      "Name": "boot_0001",
       "ObjectId": 2,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 0.43,
-        "z": 0.0
+        "x": -0.18,
+        "y": 0.095,
+        "z": 0.12
       },
       "Rotation": {
         "x": 0.0,
@@ -42,55 +42,55 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 1.08,
-        "y": 0.43,
-        "z": 0.82
+        "x": 0.25,
+        "y": 0.19,
+        "z": 0.4
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 2,
-        "Color": "#2E2E37",
+        "PrimitiveType": 0,
+        "Color": "#1D2021",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "robe_body_0002",
+      "Name": "robe_panel_0002",
       "ObjectId": 3,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 1.22,
+        "x": -0.16,
+        "y": 0.86,
         "z": 0.0
       },
       "Rotation": {
         "x": 0.0,
         "y": 0.0,
-        "z": 0.0
+        "z": -2
       },
       "Scale": {
-        "x": 0.68,
-        "y": 1.02,
-        "z": 0.52
+        "x": 0.51,
+        "y": 1.5,
+        "z": 0.55
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#2E2E37",
+        "PrimitiveType": 0,
+        "Color": "#343838",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "shoulders_0003",
+      "Name": "boot_0003",
       "ObjectId": 4,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 1.75,
-        "z": 0.0
+        "x": 0.18,
+        "y": 0.095,
+        "z": 0.12
       },
       "Rotation": {
         "x": 0.0,
@@ -98,55 +98,55 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.9,
-        "y": 0.28,
-        "z": 0.54
+        "x": 0.25,
+        "y": 0.19,
+        "z": 0.4
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#2E2E37",
+        "PrimitiveType": 0,
+        "Color": "#1D2021",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "sleeve_0004",
+      "Name": "robe_panel_0004",
       "ObjectId": 5,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": -0.51,
-        "y": 1.22,
-        "z": 0.04
+        "x": 0.16,
+        "y": 0.86,
+        "z": 0.0
       },
       "Rotation": {
         "x": 0.0,
         "y": 0.0,
-        "z": 0.0
+        "z": 2
       },
       "Scale": {
-        "x": 0.23,
-        "y": 0.92,
-        "z": 0.36
+        "x": 0.51,
+        "y": 1.5,
+        "z": 0.55
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#2E2E37",
+        "PrimitiveType": 0,
+        "Color": "#343838",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "sleeve_0005",
+      "Name": "torso_0005",
       "ObjectId": 6,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.51,
-        "y": 1.22,
-        "z": 0.04
+        "x": 0.0,
+        "y": 1.54,
+        "z": -0.015
       },
       "Rotation": {
         "x": 0.0,
@@ -154,27 +154,27 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.23,
-        "y": 0.92,
-        "z": 0.36
+        "x": 0.62,
+        "y": 0.67,
+        "z": 0.49
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#2E2E37",
+        "PrimitiveType": 0,
+        "Color": "#343838",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "neck_0006",
+      "Name": "cape_0006",
       "ObjectId": 7,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 1.96,
-        "z": 0.02
+        "y": 1.84,
+        "z": -0.025
       },
       "Rotation": {
         "x": 0.0,
@@ -182,27 +182,27 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.22,
-        "y": 0.1,
-        "z": 0.22
+        "x": 0.93,
+        "y": 0.32,
+        "z": 0.61
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 2,
-        "Color": "#2E2E37",
+        "PrimitiveType": 0,
+        "Color": "#292D2E",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "mask_head_0007",
+      "Name": "hood_0007",
       "ObjectId": 8,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 2.27,
-        "z": 0.07
+        "y": 2.15,
+        "z": -0.035
       },
       "Rotation": {
         "x": 0.0,
@@ -210,27 +210,27 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.44,
-        "y": 0.48,
-        "z": 0.42
+        "x": 0.57,
+        "y": 0.7,
+        "z": 0.52
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#D9CDB0",
+        "PrimitiveType": 0,
+        "Color": "#202425",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "lens_0008",
+      "Name": "mask_head_0008",
       "ObjectId": 9,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": -0.14,
-        "y": 2.34,
-        "z": 0.32
+        "x": 0.0,
+        "y": 2.21,
+        "z": 0.188
       },
       "Rotation": {
         "x": 0.0,
@@ -238,133 +238,217 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.14,
-        "y": 0.14,
-        "z": 0.14
+        "x": 0.36,
+        "y": 0.41,
+        "z": 0.24
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 0,
-        "Color": "#0C0C10",
+        "Color": "#A9AAA1",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "lens_0009",
+      "Name": "beak_0009",
       "ObjectId": 10,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.14,
-        "y": 2.34,
-        "z": 0.32
+        "x": 0.0,
+        "y": 2.02,
+        "z": 0.375
       },
       "Rotation": {
-        "x": 0.0,
+        "x": -49,
         "y": 0.0,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.14,
-        "y": 0.14,
-        "z": 0.14
+        "x": 0.21,
+        "y": 0.52,
+        "z": 0.23
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 0,
-        "Color": "#0C0C10",
+        "Color": "#A9AAA1",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "beak_0010",
+      "Name": "eye_0010",
       "ObjectId": 11,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 2.18,
-        "z": 0.52
+        "x": -0.115,
+        "y": 2.27,
+        "z": 0.309
       },
       "Rotation": {
-        "x": -65.0,
+        "x": 0.0,
         "y": 0.0,
-        "z": 0.0
+        "z": -9
       },
       "Scale": {
-        "x": 0.13,
-        "y": 0.3,
-        "z": 0.13
+        "x": 0.09,
+        "y": 0.055,
+        "z": 0.045
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 2,
-        "Color": "#D9CDB0",
+        "PrimitiveType": 0,
+        "Color": "#202325",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "hat_brim_0011",
+      "Name": "sleeve_0011",
       "ObjectId": 12,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 2.55,
-        "z": 0.0
+        "x": -0.395,
+        "y": 1.385,
+        "z": 0.055
       },
       "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
+        "x": 82.87157,
+        "y": -41.18593,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.94,
-        "y": 0.07,
-        "z": 0.84
+        "x": 0.23,
+        "y": 0.23,
+        "z": 1.10962
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 2,
-        "Color": "#17171C",
+        "PrimitiveType": 0,
+        "Color": "#343838",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "hat_crown_0012",
+      "Name": "glove_0012",
       "ObjectId": 13,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 2.76,
-        "z": 0.0
+        "x": -0.43,
+        "y": 0.83,
+        "z": 0.12
+      },
+      "Rotation": {
+        "x": -8,
+        "y": 0.0,
+        "z": -6
+      },
+      "Scale": {
+        "x": 0.16,
+        "y": 0.3,
+        "z": 0.15
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#222526",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "eye_0013",
+      "ObjectId": 14,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.115,
+        "y": 2.27,
+        "z": 0.309
       },
       "Rotation": {
         "x": 0.0,
         "y": 0.0,
-        "z": 0.0
+        "z": 9
       },
       "Scale": {
-        "x": 0.42,
-        "y": 0.22,
-        "z": 0.42
+        "x": 0.09,
+        "y": 0.055,
+        "z": 0.045
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 2,
-        "Color": "#17171C",
+        "PrimitiveType": 0,
+        "Color": "#202325",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "sleeve_0014",
+      "ObjectId": 15,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.395,
+        "y": 1.385,
+        "z": 0.055
+      },
+      "Rotation": {
+        "x": 82.87157,
+        "y": 41.18593,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.23,
+        "y": 0.23,
+        "z": 1.10962
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#343838",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "glove_0015",
+      "ObjectId": 16,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.43,
+        "y": 0.83,
+        "z": 0.12
+      },
+      "Rotation": {
+        "x": -8,
+        "y": 0.0,
+        "z": 6
+      },
+      "Scale": {
+        "x": 0.16,
+        "y": 0.3,
+        "z": 0.15
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#222526",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
       "Name": "marker_pivot",
-      "ObjectId": 14,
+      "ObjectId": 17,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
@@ -392,13 +476,13 @@
     },
     {
       "Name": "marker_head",
-      "ObjectId": 15,
+      "ObjectId": 18,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 2.27,
-        "z": 0.0
+        "y": 2.21,
+        "z": 0.188
       },
       "Rotation": {
         "x": 0.0,

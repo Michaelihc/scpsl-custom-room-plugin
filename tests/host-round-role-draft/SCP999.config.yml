@@ -1,0 +1,18 @@
+# Walkthrough-only SCP999 config: draft-driven auto spawn with dummies counted toward the minimum.
+is_enabled: true
+debug: true
+language: ''
+auto_spawn: true
+min_players: 6
+count_dummies_toward_min_players: true
+selection_delay: 2
+health: 999
+damage_resistance_multiplier: 3.5
+spawn_ammo: 120
+aura_radius: 6
+aura_heal_per_second: 2
+aura_comfort_seconds: 30
+invigorated_seconds: 60
+candy_cooldown_seconds: 20
+scp_team_voice: true
+two_way_scp_voice: true

@@ -1,5 +1,28 @@
 # Full Aim Range automatic live verification transcript
 
+## Current verification addendum — 2026-08-12
+
+- Isolated local port: `7997`, headless automated test only.
+- Result: `PASS summary checks=253/253 cleanup=verified manualQaRange=restarted`.
+- The current harness verified a 37 m shell, ceiling-height lane dividers, a 36.4 m shooting counter, six persistent
+  counter guns, two symmetric native attachment workstations, 20 horizontally spread spheres, and exactly three
+  intensity-24/range-16 training-side point lights plus three intensity-24/range-18 selector-side point lights, all
+  using ordinary non-HDR colors.
+- The sphere-pool check credited slot 0 once and observed the same always-visible/collidable network toy move directly
+  to another authored point with no hide, parking, destruction, or delay; it remained non-static for client transform
+  synchronization and passed a collider ray at the new position.
+- A real native COM15 shot was fired from the normal player side of the counter. It consumed participant ammo, damaged
+  the live product bot (`250 -> 225`), and entered aggro through the real `Hurting` event. Both bots held Crossvecs; the
+  first native return shot arrived in `0.564 s`, held fire consumed multiple rounds, and the selected torso point stayed
+  outside every head collider.
+- The stationary-attacker contract passed through native incoming hits and the product's no-spectator lethal-reset path:
+  `LifeId` changed `3 -> 8`, Tutorial health restored to 100, and elapsed time was `1.022 s`.
+- Both selector- and training-side points remained in full session bounds, while the UI-only seam classified selector-side
+  Aim UI as false and training-side Aim UI as true.
+- The verifier requires bilateral LOS through the real counter geometry; the former beside-the-bot shortcut was removed.
+- Cleanup and lane restart both passed. The verifier DLL was removed from the test process afterward and is not deployed
+  with the product.
+
 ## Scope
 
 - Product: `WarmupScpSelector`

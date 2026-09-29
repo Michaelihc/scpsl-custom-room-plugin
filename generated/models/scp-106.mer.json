@@ -27,14 +27,14 @@
       }
     },
     {
-      "Name": "tar_shadow_0001",
+      "Name": "foot_0001",
       "ObjectId": 2,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.0,
-        "y": 0.03,
-        "z": 0.1
+        "x": -0.145,
+        "y": 0.06,
+        "z": 0.085
       },
       "Rotation": {
         "x": 0.0,
@@ -42,55 +42,83 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 1.08,
-        "y": 0.06,
-        "z": 0.92
+        "x": 0.18,
+        "y": 0.12,
+        "z": 0.3
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#15181D",
+        "PrimitiveType": 0,
+        "Color": "#514C43",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "leg_0002",
+      "Name": "shin_0002",
       "ObjectId": 3,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": -0.15,
-        "y": 0.45,
-        "z": 0.02
+        "x": -0.1525,
+        "y": 0.295,
+        "z": -0.0275
       },
       "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
+        "x": -80.74878,
+        "y": -164.74488,
         "z": 0.0
       },
       "Scale": {
-        "x": 0.18,
-        "y": 0.82,
-        "z": 0.22
+        "x": 0.135,
+        "y": 0.135,
+        "z": 0.50311
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#363B43",
+        "PrimitiveType": 0,
+        "Color": "#514C43",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "leg_0003",
+      "Name": "thigh_0003",
       "ObjectId": 4,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.15,
-        "y": 0.45,
-        "z": 0.02
+        "x": -0.14,
+        "y": 0.68,
+        "z": -0.0575
+      },
+      "Rotation": {
+        "x": -84.51759,
+        "y": 97.12502,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.18,
+        "y": 0.18,
+        "z": 0.61993
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#514C43",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "foot_0004",
+      "ObjectId": 5,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.145,
+        "y": 0.06,
+        "z": 0.085
       },
       "Rotation": {
         "x": 0.0,
@@ -99,26 +127,82 @@
       },
       "Scale": {
         "x": 0.18,
-        "y": 0.82,
-        "z": 0.22
+        "y": 0.12,
+        "z": 0.3
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#363B43",
+        "PrimitiveType": 0,
+        "Color": "#514C43",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "hips_0004",
-      "ObjectId": 5,
+      "Name": "shin_0005",
+      "ObjectId": 6,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.1525,
+        "y": 0.295,
+        "z": -0.0275
+      },
+      "Rotation": {
+        "x": -80.74878,
+        "y": 164.74488,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.135,
+        "y": 0.135,
+        "z": 0.50311
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#514C43",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "thigh_0006",
+      "ObjectId": 7,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.14,
+        "y": 0.68,
+        "z": -0.0575
+      },
+      "Rotation": {
+        "x": -84.51759,
+        "y": -97.12502,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.18,
+        "y": 0.18,
+        "z": 0.61993
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#514C43",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "hips_0007",
+      "ObjectId": 8,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
         "y": 0.88,
-        "z": 0.04
+        "z": -0.065
       },
       "Rotation": {
         "x": 0.0,
@@ -126,54 +210,26 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.54,
+        "x": 0.39,
         "y": 0.3,
-        "z": 0.4
+        "z": 0.29
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#363B43",
+        "PrimitiveType": 0,
+        "Color": "#514C43",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "torso_0005",
-      "ObjectId": 6,
+      "Name": "abdomen_0008",
+      "ObjectId": 9,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 1.2,
-        "z": 0.16
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.58,
-        "y": 0.7,
-        "z": 0.42
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#363B43",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "back_hunch_0006",
-      "ObjectId": 7,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": 0.0,
-        "y": 1.52,
+        "y": 1.095,
         "z": -0.04
       },
       "Rotation": {
@@ -182,83 +238,27 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.72,
-        "y": 0.46,
-        "z": 0.48
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#242930",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "head_0007",
-      "ObjectId": 8,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": 0.0,
-        "y": 1.39,
-        "z": 0.48
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.42,
+        "x": 0.31,
         "y": 0.38,
-        "z": 0.38
+        "z": 0.27
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#41464E",
+        "PrimitiveType": 0,
+        "Color": "#726B5D",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "eye_0008",
-      "ObjectId": 9,
-      "ParentId": 0,
-      "AnimatorName": "",
-      "Position": {
-        "x": -0.1,
-        "y": 1.43,
-        "z": 0.69
-      },
-      "Rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "Scale": {
-        "x": 0.1,
-        "y": 0.11,
-        "z": 0.06
-      },
-      "BlockType": 1,
-      "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#0B0D10",
-        "PrimitiveFlags": 2,
-        "Static": false
-      }
-    },
-    {
-      "Name": "eye_0009",
+      "Name": "chest_0009",
       "ObjectId": 10,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.1,
-        "y": 1.43,
-        "z": 0.69
+        "x": 0.0,
+        "y": 1.34,
+        "z": -0.03
       },
       "Rotation": {
         "x": 0.0,
@@ -266,55 +266,279 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.1,
-        "y": 0.11,
-        "z": 0.06
+        "x": 0.52,
+        "y": 0.42,
+        "z": 0.32
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#0B0D10",
+        "PrimitiveType": 0,
+        "Color": "#514C43",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "arm_0010",
+      "Name": "vest_0010",
       "ObjectId": 11,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": -0.44,
-        "y": 0.91,
-        "z": 0.18
+        "x": -0.19,
+        "y": 1.385,
+        "z": 0.04
       },
       "Rotation": {
-        "x": 0.0,
+        "x": 12,
         "y": 0.0,
-        "z": 0.0
+        "z": -10
       },
       "Scale": {
-        "x": 0.18,
-        "y": 0.88,
-        "z": 0.18
+        "x": 0.19,
+        "y": 0.33,
+        "z": 0.29
       },
       "BlockType": 1,
       "Properties": {
         "PrimitiveType": 3,
-        "Color": "#363B43",
+        "Color": "#202320",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
-      "Name": "arm_0011",
+      "Name": "upper_arm_0011",
       "ObjectId": 12,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
-        "x": 0.44,
-        "y": 0.91,
-        "z": 0.18
+        "x": -0.3225,
+        "y": 1.23,
+        "z": 0.025
+      },
+      "Rotation": {
+        "x": 70.69179,
+        "y": -34.28688,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.15,
+        "y": 0.15,
+        "z": 0.56765
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#514C43",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "forearm_0012",
+      "ObjectId": 13,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.345,
+        "y": 0.885,
+        "z": 0.17
+      },
+      "Rotation": {
+        "x": 59.51662,
+        "y": 9.46232,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.12,
+        "y": 0.12,
+        "z": 0.49172
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#726B5D",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "hand_0013",
+      "ObjectId": 14,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.33,
+        "y": 0.665,
+        "z": 0.3
+      },
+      "Rotation": {
+        "x": -24,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.14,
+        "y": 0.22,
+        "z": 0.14
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#514C43",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "vest_0014",
+      "ObjectId": 15,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.19,
+        "y": 1.385,
+        "z": 0.04
+      },
+      "Rotation": {
+        "x": 12,
+        "y": 0.0,
+        "z": 10
+      },
+      "Scale": {
+        "x": 0.19,
+        "y": 0.33,
+        "z": 0.29
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 3,
+        "Color": "#202320",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "upper_arm_0015",
+      "ObjectId": 16,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.3225,
+        "y": 1.23,
+        "z": 0.025
+      },
+      "Rotation": {
+        "x": 70.69179,
+        "y": 34.28688,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.15,
+        "y": 0.15,
+        "z": 0.56765
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#514C43",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "forearm_0016",
+      "ObjectId": 17,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.345,
+        "y": 0.885,
+        "z": 0.17
+      },
+      "Rotation": {
+        "x": 59.51662,
+        "y": -9.46232,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.12,
+        "y": 0.12,
+        "z": 0.49172
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#726B5D",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "hand_0017",
+      "ObjectId": 18,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.33,
+        "y": 0.665,
+        "z": 0.3
+      },
+      "Rotation": {
+        "x": -24,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.14,
+        "y": 0.22,
+        "z": 0.14
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#514C43",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "head_0018",
+      "ObjectId": 19,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.67,
+        "z": 0.15
+      },
+      "Rotation": {
+        "x": 10,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.27,
+        "y": 0.39,
+        "z": 0.29
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#726B5D",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "eye_0019",
+      "ObjectId": 20,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": -0.071,
+        "y": 1.699,
+        "z": 0.286
       },
       "Rotation": {
         "x": 0.0,
@@ -322,21 +546,77 @@
         "z": 0.0
       },
       "Scale": {
-        "x": 0.18,
-        "y": 0.88,
-        "z": 0.18
+        "x": 0.056,
+        "y": 0.048,
+        "z": 0.035
       },
       "BlockType": 1,
       "Properties": {
-        "PrimitiveType": 3,
-        "Color": "#363B43",
+        "PrimitiveType": 0,
+        "Color": "#B0AB8B",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "eye_0020",
+      "ObjectId": 21,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.071,
+        "y": 1.699,
+        "z": 0.286
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.056,
+        "y": 0.048,
+        "z": 0.035
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#B0AB8B",
+        "PrimitiveFlags": 2,
+        "Static": false
+      }
+    },
+    {
+      "Name": "grin_0021",
+      "ObjectId": 22,
+      "ParentId": 0,
+      "AnimatorName": "",
+      "Position": {
+        "x": 0.0,
+        "y": 1.565,
+        "z": 0.29
+      },
+      "Rotation": {
+        "x": 0.0,
+        "y": 0.0,
+        "z": 0.0
+      },
+      "Scale": {
+        "x": 0.17,
+        "y": 0.063,
+        "z": 0.04
+      },
+      "BlockType": 1,
+      "Properties": {
+        "PrimitiveType": 0,
+        "Color": "#BBB393",
         "PrimitiveFlags": 2,
         "Static": false
       }
     },
     {
       "Name": "marker_pivot",
-      "ObjectId": 13,
+      "ObjectId": 23,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
@@ -364,13 +644,13 @@
     },
     {
       "Name": "marker_head",
-      "ObjectId": 14,
+      "ObjectId": 24,
       "ParentId": 0,
       "AnimatorName": "",
       "Position": {
         "x": 0.0,
-        "y": 1.39,
-        "z": 0.48
+        "y": 1.67,
+        "z": 0.15
       },
       "Rotation": {
         "x": 0.0,

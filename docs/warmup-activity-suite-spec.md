@@ -1,7 +1,7 @@
 # WarmupScpSelector — Warmup Activity Suite Specification
 ### "The Seam": one instrument, four lanes
 
-> Grounded against the shipped code: `WarmupText.cs` palette constants, `HsmHintDisplayProvider` (stable-ID hints, `ForceFastUpdates=false`, ~0.1 s Fast coalescing), the `_lastStatusText` change-skip cache and `HintLoop` in `SelectorController.cs`, the `OnBeforeVanillaRoleAssignment` synchronous teardown, the `MusicFadeOutBeforeStartSeconds` countdown-threshold hook, `SelectorRoom`'s primitive/light/text pipeline and the `LogoHdrColor` HDR-albedo + single-bloom-light trick, and `Config.Language` (single server-wide `cn`/`en` flag).
+> Grounded against the shipped code: `WarmupText.cs` palette constants, `HsmHintDisplayProvider` (stable-ID hints, `ForceFastUpdates=false`, ~0.1 s Fast coalescing), the `_lastStatusText` change-skip cache and `HintLoop` in `SelectorController.cs`, the `OnBeforeVanillaRoleAssignment` synchronous teardown, the `MusicFadeOutBeforeStartSeconds` countdown-threshold hook, `SelectorRoom`'s primitive/light/text pipeline with a few very bright ordinary non-HDR point lights, and `Config.Language` (single server-wide `cn`/`en` flag).
 
 ---
 
@@ -64,7 +64,7 @@ Extend `HsmHintDisplayProvider`. Each active lane owns **three stable HSM IDs** 
 
 ### 1.6 World vs text; light budget
 
-Persistent lane/danger/phase state lives in **world objects** (`PrimitiveObjectToy` + `LightSourceToy` + `TextToy`, pooled and despawned exactly like `SelectorRoom`); hints carry only live numbers and event verdicts. **Every lit cell uses the shipped HDR-emissive-albedo + one shared bloom light trick (`LogoHdrColor`), not one real point light per cell** — literal per-cell lights across simultaneous lanes will exceed SCP:SL's real-time light limit. Cap real point lights per lane. The hub logo + QQ `860705092` stay central and are never repeated inside a lane.
+Persistent lane/danger/phase state lives in **world objects** (`PrimitiveObjectToy` + `LightSourceToy` + `TextToy`, pooled and despawned exactly like `SelectorRoom`); hints carry only live numbers and event verdicts. Deferred lit-cell designs may use HDR-emissive albedo with a shared bloom light rather than one real point light per cell — literal per-cell lights across simultaneous lanes will exceed SCP:SL's real-time light limit. The current combined Aim/selector hall uses only a few very bright ordinary point lights. The hub logo retains its HDR albedo boost and shares the selector center light for bloom, so it does not consume another real-time light. Cap real point lights per lane. The hub logo + QQ `860705092` stay central and are never repeated inside a lane.
 
 ### 1.7 State machine every lane implements identically
 
@@ -139,22 +139,34 @@ Four parallel forward-facing lanes sharing the navy shell (`#161B26` floor, `#33
 ### 2.6 Exact tech (lightweight targets, perf)
 
 > **Current implementation override (2026-07-26):** the shipped/default-off warmup range intentionally supersedes
-> the original four-lane/no-dummy concept. It is one widened 19.2 m × 22 m room with three 6.4 m lanes: tactical native
+> the original four-lane/no-dummy concept. The selector gallery and training area form one uninterrupted, full-gallery-width
+> rectangular hall with no doorway or choke point. Its centered 19.2 m × 22 m zone has three 6.4 m lanes: tactical native
 > cover bots, three persistent parallel sliding `ShootingTargetToy`s, and deterministic pop/respawn primitive spheres.
 > The deeper drill catalog, PB/race system, and four independent player lanes below remain deferred design material.
+> Its six weapon presets are persistent dispenser pickups on top of the shooting counter, with symmetric native attachment workstations at both side walls; interacting grants a separately
+> owned inventory copy without consuming the displayed pickup. The hall contains no rack or shelf geometry, and its
+> activity/session bounds cover the whole rectangle rather than a former rear-range subdivision. The shooting-counter
+> wall spans `ShellWidth - 0.6 m`. The training half uses exactly three intensity-24/range-16 point lights and the
+> selector half uses exactly three intensity-24/range-18 point lights, all with ordinary non-HDR light colors. The logo
+> retains its HDR albedo boost under the shared center selector light without adding a fourth point light. The former
+> seam is UI-only: the selector side keeps only the original SCP panel, the training side shows only Aim UI, and
+> shooting/damage/bot mechanics remain active throughout the full hall.
 
 - **Native RA dummies are allowed only in the isolated bot lane** — canonical-human filtering, owned live identity,
   temporary solo lobby locking, native motor steps, native firearm actions, and synchronous teardown keep them out of
-  draft counts and round assignment. Each spawn selects only E11-SR/Logicer/AK. Bots patrol and combat-strafe without
-  authored dwell, jump on bounded native-input cooldowns, ADS at 10 m+, and lock the first genuine tracked-firearm
-  attacker at the head for one non-refreshing 12-second lease. Automatic retaliation uses native `Shoot->Hold` /
+  draft counts and round assignment. Each spawn uses Crossvec only. Bots patrol and combat-strafe without
+  authored dwell, jump on bounded native-input cooldowns, hold ADS throughout retaliation, and lock the first genuine tracked-firearm
+  attacker after a 0.5–0.6 second reaction delay for one non-refreshing 12-second lease. Retaliation aims inside the upper portion of a non-head
+  body collider so the low counter does not suppress fire. Automatic retaliation uses native `Shoot->Hold` /
   `Release` and requires `ShotWeapon` plus ammo consumption; low ammo routes behind slot-owned 2.2 m cover before a
   native reload. Primitive sphere hits use the native hitscan obstacle result; sliding targets use cancellable native
   shooting-target pre-damage so they remain persistent.
 - **Every event guarded by lane token + run ID + target generation ID + active window** — a shot arriving during expiry/recycle can never score against the next pooled target.
 - **Budget:** normally 1 shoot target + ≤1 HOLD target per occupied lane; ≤4 lanes; reuse objects across spawns. One scheduler, not one coroutine per target/player. Motion 15 Hz (configurable 10–20 after live test); repaint the rail only when the lit-cell count changes, ≤5–10 Hz through the change-skip cache; ◆ steps in quantized pace bands while exact PACE prints beneath.
-- **World glow** via HDR-emissive cells + shared bloom light; ≤ a small cap of real point lights per lane.
-- **Weapon isolation (P0):** grant an activity-owned preset (semi-auto pistol for click/peek/switch; low-recoil auto for track), infinite reserve + auto-refill, **cancel all PvP damage in warmup**, contain shots to the lane, and **own + destroy every issued/dropped weapon/ammo** on exit, leave, reset, disable, and handoff. A later role change is not sufficient cleanup for networked pickups.
+- **World glow (deferred lane designs only)** via HDR-emissive cells + shared bloom light; ≤ a small cap of real point
+  lights per lane. The current combined hall uses only three very bright point lights per half; only the logo keeps an
+  HDR albedo boost, sharing the selector center light rather than owning an extra one.
+- **Weapon isolation (P0):** grant an activity-owned preset (semi-auto pistol for click/peek/switch; low-recoil auto for track), infinite reserve + auto-refill, **cancel all PvP damage in warmup**, and contain shots to the hall. The current counter-armoury override keeps an issued copy throughout the full-room activity and destroys it on replacement/drop, disconnect, disable, and handoff. Valid issued-gun hits always damage owned dummies; retaliation setup is best-effort and cannot make a dummy immune. A later role change is not sufficient cleanup for networked pickups.
 
 ### 2.7 Interruption / reset
 
@@ -417,6 +429,12 @@ CN label: `高危`
 ---
 
 ## 4. SPEC C — PARKOUR SPEEDRUN · "Pulse Line" / 脉冲路线
+
+> **Implemented compact pass (2026-08-12).** The live product currently uses one folded 17-landing route in the
+> otherwise-empty far-left wing of the widened Aim hall, isolated by a full-height divider. It implements the start
+> hold/countdown, ordered swept-segment gates, continuous timer, four-sector spine, floor recovery to the last landing,
+> in-warmup PB, reusable RESET coin, exclusive ActivityManager session, and synchronous teardown described below.
+> The two mirrored lanes, tier selection, persistent PB ghost, and 3–4-player heat queue remain deferred.
 
 ### 4.1 Core loop
 

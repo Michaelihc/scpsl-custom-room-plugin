@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using AdminToys;
+using InventorySystem.Items.Firearms.Attachments;
 using LabApi.Events.Handlers;
 using LabApi.Features;
 using LabApi.Features.Wrappers;
 using LabApi.Loader.Features.Plugins;
 using MEC;
+using MapGeneration.Distributors;
 using Mirror;
 using NetworkManagerUtils.Dummies;
 using PlayerRoles;
@@ -148,7 +150,7 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             yield return Timing.WaitForOneFrame;
         }
 
-        Require(probe != null && probe.IsReady, "range-startup", "Aim lane running with widened world, shelves, three sliding targets, sphere drill, and scheduler", probe?.Describe() ?? "product/lane unavailable");
+        Require(probe != null && probe.IsReady, "range-startup", "full-room Aim lane running with counter guns, three sliding targets, sphere drill, and scheduler", probe?.Describe() ?? "product/lane unavailable");
         probe = LiveRangeProbe.Capture();
         ValidateStartup(probe);
 
@@ -167,10 +169,10 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             yield return botRoutine.Current;
         }
 
-        IEnumerator<float> doorRoutine = WaitForPhysicalDoorway(probe);
-        while (doorRoutine.MoveNext())
+        IEnumerator<float> seamRoutine = WaitForOpenFullWidthSeam(probe);
+        while (seamRoutine.MoveNext())
         {
-            yield return doorRoutine.Current;
+            yield return seamRoutine.Current;
         }
 
         ValidateRaycasts(probe.Layout);
@@ -218,7 +220,7 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
                 yield return Timing.WaitForOneFrame;
             }
 
-            Require(probe.IsReady, "manual-qa-restart", "Aim lane restarted with door open and six shelf slots", probe.Describe());
+            Require(probe.IsReady, "manual-qa-restart", "full-room Aim lane restarted with open seam and six counter slots", probe.Describe());
         }
 
         RestoreLobbyLock();
@@ -233,11 +235,35 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             "config", "product + activities + Aim enabled", $"product={productConfig.IsEnabled} activities={productConfig.ActivitiesEnabled} aim={productConfig.Activities?.Aim?.Enabled}");
         Require(probe.ControllerActive, "controller-active", "selector controller active", $"active={probe.ControllerActive}");
         Require(probe.Room.IsSpawned && probe.Room.AimRangeDoorPrepared && probe.DoorOpen,
-            "door-open", "selector spawned, doorway prepared, gate removed", $"room={probe.Room.IsSpawned} prepared={probe.Room.AimRangeDoorPrepared} gateOpen={probe.DoorOpen}");
+            "seam-open", "selector spawned, full-width setup gate removed", $"room={probe.Room.IsSpawned} prepared={probe.Room.AimRangeDoorPrepared} gateOpen={probe.DoorOpen}");
         Require(probe.World.IsSpawned && probe.World.Layout != null && probe.World.ShelfAnchors.Count == 6,
-            "world-layout", "world/layout spawned with six shelf anchors", $"spawned={probe.World.IsSpawned} anchors={probe.World.ShelfAnchors.Count}");
+            "world-layout", "continuous full-width world/layout spawned with six counter anchors", $"spawned={probe.World.IsSpawned} shellWidth={probe.Layout.ShellWidth:0.##} galleryWidth={probe.Room.Width:0.##} anchors={probe.World.ShelfAnchors.Count}");
+        Require(Math.Abs(probe.Layout.ShellWidth - probe.Room.Width) <= 0.01f &&
+                probe.Layout.ContainsVerified(probe.Room.Origin + new Vector3(0f, 0.5f, 4f)) &&
+                probe.Layout.ContainsVerified(probe.Room.Origin + new Vector3(probe.Room.Width / 2f - 0.5f, 0.5f, -4f)),
+            "full-room-bounds", "activity bounds cover the entire combined rectangle", $"bounds={F(probe.Layout.VerifiedBounds.center)}/{F(probe.Layout.VerifiedBounds.size)}");
+        Vector3 selectorUiPoint = new Vector3(probe.Layout.GalleryOrigin.x, probe.Layout.GalleryOrigin.y + 0.5f, probe.Layout.DoorPlaneZ + 0.5f);
+        Vector3 aimUiPoint = new Vector3(probe.Layout.GalleryOrigin.x, probe.Layout.GalleryOrigin.y + 0.5f, probe.Layout.DoorPlaneZ - 0.5f);
+        Require(probe.Layout.ContainsVerified(selectorUiPoint) && probe.Layout.ContainsVerified(aimUiPoint) &&
+                !probe.Layout.ContainsAimUi(selectorUiPoint) && probe.Layout.ContainsAimUi(aimUiPoint),
+            "ui-only-seam", "both sides stay playable while only the training side owns Aim UI",
+            $"selectorSession={probe.Layout.ContainsVerified(selectorUiPoint)} selectorAimUi={probe.Layout.ContainsAimUi(selectorUiPoint)} aimSession={probe.Layout.ContainsVerified(aimUiPoint)} aimAimUi={probe.Layout.ContainsAimUi(aimUiPoint)}");
         Require(probe.ShelfRunning && probe.ShelfState.Slots.Count() == 6 && probe.ShelfState.Slots.All(slot => slot.Phase == ShelfSlotPhase.Available),
-            "shelf-start", "six available shelf slots", $"running={probe.ShelfRunning} slots={probe.ShelfState.Slots.Count()} phases={string.Join(",", probe.ShelfState.Slots.OrderBy(slot => slot.SlotId).Select(slot => slot.Phase))}");
+            "armoury-start", "six available persistent counter gun slots", $"running={probe.ShelfRunning} slots={probe.ShelfState.Slots.Count()} phases={string.Join(",", probe.ShelfState.Slots.OrderBy(slot => slot.SlotId).Select(slot => slot.Phase))}");
+        List<GameObject> workstations = ReflectionAccess.Items(ReflectionAccess.Field(probe.World, "_structures"))
+            .OfType<GameObject>()
+            .ToList();
+        bool workstationLayoutValid = workstations.Count == 2 && probe.Layout.AttachmentWorkstationAnchors.All(anchor =>
+            workstations.Any(instance => instance != null &&
+                Vector3.Distance(instance.transform.position, anchor.Position) <= 0.05f &&
+                Quaternion.Angle(instance.transform.rotation, anchor.Rotation) <= 0.5f &&
+                instance.TryGetComponent(out SpawnableStructure structure) &&
+                structure.StructureType == StructureType.Workstation &&
+                instance.GetComponentInChildren<WorkstationController>(true) != null &&
+                instance.TryGetComponent(out NetworkIdentity identity) && identity.netId != 0));
+        Require(workstationLayoutValid,
+            "attachment-workstations", "two networked native attachment workstations mirrored at the side walls",
+            $"count={workstations.Count} positions={string.Join(",", workstations.Where(value => value != null).Select(value => F(value.transform.position)))}");
         Require(probe.SlidingTargetCount == 3 && probe.SphereTargetCount == probe.Product.Config.Activities.Aim.SphereActiveCount,
             "three-lane-targets", "three persistent sliding targets plus configured active sphere targets", $"sliding={probe.SlidingTargetCount} spheres={probe.SphereTargetCount}");
         Require(probe.SchedulerRunning, "scheduler-start", "MEC scheduler handle running", $"running={probe.SchedulerRunning}");
@@ -245,28 +271,40 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
         List<LabApi.Features.Wrappers.LightSourceToy> rangeLights = ReflectionAccess.Items(ReflectionAccess.Field(probe.World, "_toys"))
             .OfType<LabApi.Features.Wrappers.LightSourceToy>()
             .ToList();
-        Vector3[] expectedLights = new[] { 3.0f, 10.5f, 18.2f }
-            .SelectMany(depth => new[]
-            {
-                new Vector3(probe.Layout.GalleryOrigin.x - AimRangeLayout.LaneWidth, probe.Layout.GalleryOrigin.y + 3.9f, probe.Layout.DoorPlaneZ - depth),
-                new Vector3(probe.Layout.GalleryOrigin.x, probe.Layout.GalleryOrigin.y + 3.9f, probe.Layout.DoorPlaneZ - depth),
-                new Vector3(probe.Layout.GalleryOrigin.x + AimRangeLayout.LaneWidth, probe.Layout.GalleryOrigin.y + 3.9f, probe.Layout.DoorPlaneZ - depth),
-            })
+        Vector3[] expectedLights = new[] { -AimRangeLayout.LaneWidth, 0f, AimRangeLayout.LaneWidth }
+            .Select(x => new Vector3(
+                probe.Layout.GalleryOrigin.x + x,
+                probe.Layout.GalleryOrigin.y + 3.8f,
+                probe.Layout.DoorPlaneZ - AimRangeLayout.ShootingCounterDepth + 0.7f))
             .ToArray();
-        bool lightingValid = rangeLights.Count == 9 && rangeLights.All(light =>
+        bool lightingValid = rangeLights.Count == 3 && rangeLights.All(light =>
             !light.IsDestroyed && AdminToy.List.Contains(light) && light.Type == UnityEngine.LightType.Point &&
-            light.Intensity >= 5f && light.Range >= 10.5f &&
+            light.Intensity >= 23.5f && light.Range >= 15.5f &&
             light.Color.r >= 0.9f && light.Color.g >= 0.9f && light.Color.b >= 0.85f) &&
             expectedLights.All(expected => rangeLights.Any(light => Vector3.Distance(light.Position, expected) <= 0.05f));
         Require(lightingValid,
-            "range-lighting", "nine live bright near-white point lights covering all three widened lanes", $"count={rangeLights.Count} values={string.Join(",", rangeLights.Select(light => $"{F(light.Position)}:{light.Type}/{light.Intensity:0.##}/{light.Range:0.##}"))}");
+            "range-lighting", "three extremely bright non-HDR point lights focused on the counter guns", $"count={rangeLights.Count} values={string.Join(",", rangeLights.Select(light => $"{F(light.Position)}:{light.Type}/{light.Intensity:0.##}/{light.Range:0.##}"))}");
 
-        List<object> instances = probe.MerInstances;
-        int staticInstances = instances.Count(instance => ReflectionAccess.Field<bool>(instance, "_isStatic"));
-        int staticVisualToys = instances.Where(instance => ReflectionAccess.Field<bool>(instance, "_isStatic"))
-            .Sum(instance => ReflectionAccess.Count(ReflectionAccess.Field(instance, "_toys")));
-        Require(staticInstances == 2 && staticVisualToys > 0,
-            "rack-visuals", "exactly two static MER rack instances with visible primitives", $"staticInstances={staticInstances} toys={staticVisualToys}");
+        List<LabApi.Features.Wrappers.LightSourceToy> selectorLights = ReflectionAccess.Items(ReflectionAccess.Field(probe.Room, "_toys"))
+            .OfType<LabApi.Features.Wrappers.LightSourceToy>()
+            .ToList();
+        bool selectorLightingValid = selectorLights.Count == 3 && selectorLights.All(light =>
+            !light.IsDestroyed && AdminToy.List.Contains(light) && light.Type == UnityEngine.LightType.Point &&
+            light.Intensity >= 23.5f && light.Range >= 17.5f &&
+            light.Color.r >= 0.9f && light.Color.g >= 0.9f && light.Color.b >= 0.85f);
+        Require(selectorLightingValid,
+            "selector-lighting", "selector half uses only three extremely bright non-HDR point lights",
+            $"count={selectorLights.Count} values={string.Join(",", selectorLights.Select(light => $"{F(light.Position)}:{light.Type}/{light.Intensity:0.##}/{light.Range:0.##}"))}");
+
+        List<LabApi.Features.Wrappers.PrimitiveObjectToy> hdrLogoPrimitives = ReflectionAccess.Items(ReflectionAccess.Field(probe.Room, "_toys"))
+            .OfType<LabApi.Features.Wrappers.PrimitiveObjectToy>()
+            .Where(toy => !toy.IsDestroyed && toy.Flags != AdminToys.PrimitiveFlags.None &&
+                (toy.Color.r > 1f || toy.Color.g > 1f || toy.Color.b > 1f) &&
+                Math.Abs(toy.Color.a - 0.65f) <= 0.01f)
+            .ToList();
+        Require(hdrLogoPrimitives.Count > 0,
+            "selector-logo-bloom", "logo retains HDR albedo while sharing the selector center light",
+            $"hdrPrimitives={hdrLogoPrimitives.Count} maxRgb={hdrLogoPrimitives.Max(toy => Math.Max(toy.Color.r, Math.Max(toy.Color.g, toy.Color.b))):0.##}");
 
         int canonicalHumans = Player.ReadyList.Count(IsCanonicalHuman);
         int productBots = probe.ProductOwnedBotCount;
@@ -275,29 +313,27 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             "zero-human-bot-policy", "zero canonical humans and zero product-owned bots", $"canonicalHumans={canonicalHumans} registryBots={productBots} namedBots={namedProductBots}");
     }
 
-    private IEnumerator<float> WaitForPhysicalDoorway(LiveRangeProbe probe)
+    private IEnumerator<float> WaitForOpenFullWidthSeam(LiveRangeProbe probe)
     {
         AimRangeLayout layout = probe.Layout;
         Vector3 origin = new Vector3(layout.GalleryOrigin.x, layout.GalleryOrigin.y + 1.8f, layout.DoorPlaneZ + 0.8f);
         const float expectedDistance = 22.5f;
-        const float tolerance = 0.22f;
         double deadline = Now + 3d;
         RaycastHit observed = default;
         bool cleared = false;
         while (Now < deadline)
         {
-            if (TryRay(origin, Vector3.back, expectedDistance + 5f, _dummyHub, out observed) &&
-                Math.Abs(observed.distance - expectedDistance) <= tolerance)
+            if (TryRay(origin, Vector3.back, expectedDistance + 5f, _dummyHub, out observed) && observed.distance >= 2f)
             {
                 cleared = true;
                 break;
             }
 
-            RequireRoundStillWaiting("door-physics-poll");
+            RequireRoundStillWaiting("seam-physics-poll");
             yield return Timing.WaitForOneFrame;
         }
 
-        Require(cleared, "door-physics-open", $"center doorway physically clear to backstop at {expectedDistance:0.###}+/-{tolerance:0.###}m",
+        Require(cleared, "seam-physics-open", "center of full-width room seam clear for at least 2m",
             observed.collider == null
                 ? $"origin={F(origin)} rayMiss=true {DescribeRangeColliders(probe)}"
                 : $"origin={F(origin)} distance={observed.distance:0.###} hit={F(observed.point)} collider={observed.collider.name} {DescribeRangeColliders(probe)}");
@@ -345,7 +381,7 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
         float door = layout.DoorPlaneZ;
         List<Vector3> floorPoints = new List<Vector3>();
 
-        AddGrid(floorPoints, new[] { -1f, 0f, 1f }, new[] { door + 0.40f, door + 0.05f, door - 0.05f, door - 0.40f }, layout);
+        AddGrid(floorPoints, new[] { -layout.ShellWidth / 2f + 0.5f, -8f, 0f, 8f, layout.ShellWidth / 2f - 0.5f }, new[] { door + 0.40f, door + 0.05f, door - 0.05f, door - 0.40f }, layout);
         AddGrid(floorPoints, new[] { -1f, 0f, 1f }, new[] { door - 1.60f }, layout);
         AddGrid(floorPoints, new[] { -8.4f, 8.4f }, new[] { door - 1.6f, door - 2.8f, door - 4.0f }, layout);
         AddGrid(floorPoints, new[] { -8f, -6.4f, -4f, 0f, 4f, 6.4f, 8f }, new[] { door - 5.5f, door - 6.5f }, layout);
@@ -353,6 +389,7 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
         AddGrid(floorPoints, new[] { -2.4f, 0f, 2.4f }, new[] { door - 10.2f, door - 14.7f, door - 19f }, layout);
         AddGrid(floorPoints, new[] { 4f, 6.4f, 8.5f }, new[] { door - 10f, door - 14f, door - 19f }, layout);
         AddGrid(floorPoints, new[] { -8f, -2f, 2f, 8f }, new[] { door - 21.2f }, layout);
+        AddGrid(floorPoints, new[] { -layout.ShellWidth / 2f + 0.5f, 0f, layout.ShellWidth / 2f - 0.5f }, new[] { door + 8.2f }, layout);
 
         foreach (Vector3 point in floorPoints)
         {
@@ -362,21 +399,23 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
                 throw Failure("raycast-down-grid", "floor hit distance 3.00m +/-0.16 and floor Y +/-0.12", $"point={F(point)} distance={hit.distance:0.###} hit={F(hit.point)} collider={hit.collider?.name}");
             }
         }
-        Pass("raycast-down-grid", $"rays={floorPoints.Count} regions=gallery-doorway,entrance,shelves,shooting-line,bots,sliding,spheres,backstop");
+        Pass("raycast-down-grid", $"rays={floorPoints.Count} regions=fullGalleryWidth,seam,counter,bots,sliding,spheres,backstop");
 
-        AssertRay("doorway-open", new Vector3(layout.GalleryOrigin.x, y + 1.8f, door + 0.8f), Vector3.back, 22.5f, 0.22f);
-        AssertRay("door-stub-left", new Vector3(layout.GalleryOrigin.x - 3f, y + 1.8f, door + 0.8f), Vector3.back, 0.65f, 0.16f);
-        AssertRay("door-stub-right", new Vector3(layout.GalleryOrigin.x + 3f, y + 1.8f, door + 0.8f), Vector3.back, 0.65f, 0.16f);
-        AssertRay("door-lintel", new Vector3(layout.GalleryOrigin.x, y + 4f, door + 0.8f), Vector3.back, 0.65f, 0.16f);
-        AssertRay("side-wall-left", new Vector3(layout.GalleryOrigin.x, y + 3.5f, door - 8f), Vector3.left, 9.45f, 0.18f);
-        AssertRay("side-wall-right", new Vector3(layout.GalleryOrigin.x, y + 3.5f, door - 8f), Vector3.right, 9.45f, 0.18f);
+        AssertRayClearFor("seam-open-center", new Vector3(layout.GalleryOrigin.x, y + 1.8f, door + 0.8f), Vector3.back, 2f);
+        AssertRay("seam-open-left", new Vector3(layout.GalleryOrigin.x - layout.ShellWidth / 2f + 0.8f, y + 1.8f, door + 0.8f), Vector3.back, 22.5f, 0.22f);
+        AssertRay("seam-open-right", new Vector3(layout.GalleryOrigin.x + layout.ShellWidth / 2f - 0.8f, y + 1.8f, door + 0.8f), Vector3.back, 22.5f, 0.22f);
+        float outerWingToWall = layout.ShellWidth / 2f - AimRangeLayout.LaneWidth - 0.15f;
+        AssertRay("side-wall-left", new Vector3(layout.GalleryOrigin.x - AimRangeLayout.LaneWidth, y + 3.5f, door - 8f), Vector3.left, outerWingToWall, 0.18f);
+        AssertRay("side-wall-right", new Vector3(layout.GalleryOrigin.x + AimRangeLayout.LaneWidth, y + 3.5f, door - 8f), Vector3.right, outerWingToWall, 0.18f);
         AssertRay("divider-left", new Vector3(layout.GalleryOrigin.x, y + 1.4f, door - 12f), Vector3.left, 3.075f, 0.16f);
         AssertRay("divider-right", new Vector3(layout.GalleryOrigin.x, y + 1.4f, door - 12f), Vector3.right, 3.075f, 0.16f);
-        AssertRay("shelf-collider-left", new Vector3(layout.GalleryOrigin.x, y + 1.65f, door - 2.8f), Vector3.left, 8.705f, 0.18f);
-        AssertRay("shelf-collider-right", new Vector3(layout.GalleryOrigin.x, y + 1.65f, door - 2.8f), Vector3.right, 8.705f, 0.18f);
-        AssertRay("shooting-line", new Vector3(layout.GalleryOrigin.x, y + 0.55f, door - 5f), Vector3.back, 1.675f, 0.16f);
+        AssertRay("divider-left-ceiling", new Vector3(layout.GalleryOrigin.x, y + 4.35f, door - 12f), Vector3.left, 3.075f, 0.16f);
+        AssertRay("divider-right-ceiling", new Vector3(layout.GalleryOrigin.x, y + 4.35f, door - 12f), Vector3.right, 3.075f, 0.16f);
+        AssertRay("counter-center", new Vector3(layout.GalleryOrigin.x, y + 0.55f, door - 5f), Vector3.back, 1.675f, 0.16f);
+        AssertRay("counter-left-edge", new Vector3(layout.GalleryOrigin.x - layout.ShellWidth / 2f + 3.5f, y + 0.55f, door - 5f), Vector3.back, 1.675f, 0.16f);
+        AssertRay("counter-right-edge", new Vector3(layout.GalleryOrigin.x + layout.ShellWidth / 2f - 3.5f, y + 0.55f, door - 5f), Vector3.back, 1.675f, 0.16f);
         AssertRay("backstop", new Vector3(layout.GalleryOrigin.x, y + 1.5f, door - 20f), Vector3.back, 1.70f, 0.18f);
-        Pass("raycast-horizontal-suite", "rays=12 doorwayStubs=true sideWalls=true dividers=true shelves=true shootingLine=true backstop=true");
+        Pass("raycast-horizontal-suite", "rays=14 fullWidthSeam=true sideWallsAligned=true ceilingDividers=true fullWidthCounter=true backstop=true");
     }
 
     private IEnumerator<float> ValidateHarnessDummy(LiveRangeProbe probe)
@@ -474,12 +513,6 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
 
             Dictionary<int, Vector3> starts = new Dictionary<int, Vector3>();
             Dictionary<int, int> initialJumpOrdinals = new Dictionary<int, int>();
-            HashSet<ItemType> allowedBotGuns = new HashSet<ItemType>
-            {
-                ItemType.GunE11SR,
-                ItemType.GunLogicer,
-                ItemType.GunAK,
-            };
             string[] requiredPassiveActions = { "Shoot->Hold", "Reload->Click", "Zoom->Hold", "Jump" };
             foreach (object slot in slots)
             {
@@ -490,11 +523,11 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
                 Require(hub != null && hub.gameObject != null && lifecycle.State == RangeBotState.PassivePatrol,
                     $"product-bot-{lifecycle.SlotId}-ready", "live passive native bot", $"state={lifecycle.State} hub={(hub == null ? "null" : hub.GetInstanceID())}");
                 string[] actions = DummyActionCollector.ServerGetActions(hub!).Where(action => action.Action != null).Select(action => action.Name).ToArray();
-                Require(firearm != null && preset != null && allowedBotGuns.Contains(firearm.Type) &&
+                Require(firearm != null && preset != null && firearm.Type == ItemType.GunCrossvec &&
                         AimWeaponPresetRules.IsBotAutomatic(preset) && requiredPassiveActions.All(required =>
                             actions.Any(actual => string.Equals(actual, required, StringComparison.OrdinalIgnoreCase))),
                     $"product-bot-{lifecycle.SlotId}-native-actions",
-                    "E11-SR/Logicer/AK equipped with Shoot->Hold, Reload->Click, Zoom->Hold, and Jump",
+                    "Crossvec equipped with Shoot->Hold, Reload->Click, Zoom->Hold, and Jump",
                     $"firearm={firearm?.Type} preset={preset?.Id} current={hub?.inventory.CurInstance?.ItemTypeId} actions={string.Join(",", actions)}");
                 Require(!ReflectionAccess.Property<bool>(slot, "ShootHeld") && !ReflectionAccess.Property<bool>(slot, "ZoomHeld"),
                     $"product-bot-{lifecycle.SlotId}-passive-released", "passive bot has no held Shoot/Zoom input",
@@ -534,10 +567,21 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             sessionAdded = hasSession;
             Require(token > 0 && sessionAdded && activities.IsCurrent(userKey, LaneHintIds.Aim, token),
                 "product-bot-session", "current synthetic Aim session for native retaliation", $"token={token} transition={transition}");
-            attackerWeapon = _dummy.AddItem(ItemType.GunCOM15, InventorySystem.Items.ItemAddReason.PickedUp);
-            Require(attackerWeapon != null, "product-bot-attacker-weapon", "real native verifier firearm", "AddItem returned null");
-            ushort ownedWeaponSerial = attackerWeapon!.Serial;
-            sessions.TrackWeapon(userKey, "verifier", ownedWeaponSerial, 0);
+            AimWeaponPresetConfig participantPreset = probe.Product.Config.Activities.Aim.WeaponPresets.First();
+            ReflectionAccess.Invoke(probe.Shelves, "Grant", _dummy, participantPreset);
+            Require(sessions.TryGet(userKey, out session) && session.OwnedItemSerial != 0 &&
+                    Item.TryGet(session.OwnedItemSerial, out attackerWeapon) && attackerWeapon is FirearmItem,
+                "product-bot-attacker-weapon", "real counter-grant route creates and tracks the verifier firearm",
+                $"preset={participantPreset.Id} serial={session?.OwnedItemSerial ?? 0} item={attackerWeapon?.GetType().Name ?? "null"}");
+            FirearmItem participantFirearm = (FirearmItem)attackerWeapon!;
+            bool issuedOwned = (bool)(ReflectionAccess.Invoke(probe.Shelves, "IsIssuedWeapon", _dummy, participantFirearm.Serial) ?? false);
+            Require(issuedOwned && participantFirearm.StoredAmmo == participantFirearm.MaxAmmo && participantFirearm.Cocked,
+                "product-bot-attacker-preload", "counter-granted participant firearm is authoritative and natively ready",
+                $"issued={issuedOwned} ammo={participantFirearm.StoredAmmo}/{participantFirearm.MaxAmmo} chamber={participantFirearm.ChamberedAmmo} cocked={participantFirearm.Cocked}");
+            ushort ownedWeaponSerial = participantFirearm.Serial;
+            _dummy.CurrentItem = participantFirearm;
+            yield return Timing.WaitForSeconds(1f);
+            Require(_dummy.CurrentItem?.Serial == ownedWeaponSerial, "product-bot-attacker-equipped", "participant firearm selected after native draw time", $"current={_dummy.CurrentItem?.Serial} expected={ownedWeaponSerial}");
             _dummy.MaxHealth = 1000f;
             _dummy.Health = 1000f;
 
@@ -547,51 +591,81 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             Player attackBot = Player.Get(attackHub) ?? throw Failure("product-bot-retaliation-wrap", "live bot wrapper", "null");
             FirearmItem attackFirearm = (FirearmItem)(ReflectionAccess.Property(attackSlot, "Firearm") ?? throw Failure("product-bot-retaliation-gun", "live bot firearm", "null"));
 
-            Vector3 botPosition = attackHub.transform.position;
-            Vector3[] offsets = { Vector3.back * 3f, Vector3.right * 3f, Vector3.left * 3f, Vector3.forward * 3f };
             Type nativeType = typeof(WarmupScpSelectorPlugin).Assembly.GetType("WarmupScpSelector.Activities.AimRange.RangeBotNative")
                 ?? throw Failure("product-bot-native-type", "RangeBotNative type", "missing");
+            Vector3 firingLine = new Vector3(
+                probe.Layout.GalleryOrigin.x - AimRangeLayout.LaneWidth,
+                probe.Layout.GalleryOrigin.y + 0.5f,
+                probe.Layout.DoorPlaneZ - AimRangeLayout.ShootingCounterDepth + 1.6f);
+            _dummy.Position = firingLine;
+            yield return Timing.WaitForOneFrame;
             bool clear = false;
-            foreach (Vector3 offset in offsets)
+            double clearDeadline = Now + 6d;
+            while (Now < clearDeadline)
             {
-                Vector3 candidate = botPosition + offset;
-                candidate.y = probe.Layout.GalleryOrigin.y + 0.5f;
-                if (!probe.Layout.ContainsVerified(candidate))
-                {
-                    continue;
-                }
-
-                _dummy.Position = candidate;
-                yield return Timing.WaitForOneFrame;
-                Vector3 aimPoint = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", _dummy.ReferenceHub) ?? candidate + Vector3.up);
-                clear = (bool)(ReflectionAccess.InvokeStatic(nativeType, "HasLineOfSight", attackHub, _dummy.ReferenceHub, aimPoint) ?? false);
+                Vector3 participantAim = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", _dummy.ReferenceHub) ?? firingLine + Vector3.up);
+                Vector3 botAim = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", attackHub) ?? attackHub.transform.position + Vector3.up);
+                bool botToParticipant = (bool)(ReflectionAccess.InvokeStatic(nativeType, "HasLineOfSight", attackHub, _dummy.ReferenceHub, participantAim) ?? false);
+                bool participantToBot = (bool)(ReflectionAccess.InvokeStatic(nativeType, "HasLineOfSight", _dummy.ReferenceHub, attackHub, botAim) ?? false);
+                clear = botToParticipant && participantToBot;
                 if (clear)
                 {
                     break;
                 }
+
+                RequireRoundStillWaiting("product-bot-counter-los-poll");
+                yield return Timing.WaitForOneFrame;
             }
 
-            Require(clear, "product-bot-retaliation-los", "one clear verifier position around the live bot", $"bot={F(botPosition)} target={F(_dummy.Position)}");
+            Require(clear, "product-bot-retaliation-los", "bilateral upper-body LOS from the real player side of the full-width counter", $"bot={F(attackHub.transform.position)} target={F(_dummy.Position)} counterZ={probe.Layout.DoorPlaneZ - AimRangeLayout.ShootingCounterDepth:0.###}");
             Vector3 selectedAimPoint = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", _dummy.ReferenceHub) ?? _dummy.Position + Vector3.up);
             HitboxIdentity? headshot = HitboxIdentity.Instances.FirstOrDefault(hitbox =>
                 hitbox != null && hitbox.TargetHub == _dummy.ReferenceHub && hitbox.HitboxType == HitboxType.Headshot);
-            Require(headshot == null || Vector3.Distance(selectedAimPoint, headshot.CenterOfMass) <= 0.02f,
-                "product-bot-head-aim", "native aim point selects the attacker's Headshot hitbox when available",
-                $"headshot={(headshot == null ? "unavailable-camera-fallback" : F(headshot.CenterOfMass))} selected={F(selectedAimPoint)}");
+            bool insideHeadCollider = headshot?.TargetColliders != null && headshot.TargetColliders.Any(collider =>
+                collider != null && collider.enabled && collider.bounds.Contains(selectedAimPoint));
+            Require(!insideHeadCollider,
+                "product-bot-body-aim", "upper-chest aim point remains outside every Headshot collider",
+                $"headshot={(headshot == null ? "unavailable-camera-fallback" : F(headshot.CenterOfMass))} selected={F(selectedAimPoint)} insideHead={insideHeadCollider}");
             bool stillHasSession = sessions.TryGet(userKey, out AimRangeSessions.Session currentSession);
-            bool activityCurrent = activities.IsCurrent(userKey, LaneHintIds.Aim, session.Token);
-            Require(stillHasSession && currentSession.Token == session.Token && currentSession.OwnedItemSerial == ownedWeaponSerial && activityCurrent && probeOnly(_dummy),
+            bool activityCurrent = activities.IsCurrent(userKey, LaneHintIds.Aim, token);
+            Require(stillHasSession && currentSession.Token == token && currentSession.OwnedItemSerial == ownedWeaponSerial && activityCurrent && probeOnly(_dummy),
                 "product-bot-provoke-preconditions", "current session, real owned serial, activity token, and eligible attacker",
-                $"hasSession={stillHasSession} token={currentSession?.Token}/{session.Token} serial={currentSession?.OwnedItemSerial}/{ownedWeaponSerial} activity={activityCurrent} eligible={probeOnly(_dummy)}");
+                $"hasSession={stillHasSession} token={currentSession?.Token}/{token} serial={currentSession?.OwnedItemSerial}/{ownedWeaponSerial} activity={activityCurrent} eligible={probeOnly(_dummy)}");
+            Vector3 botAimPoint = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", attackHub) ?? attackBot.Position + Vector3.up);
+            ReflectionAccess.InvokeStatic(nativeType, "ApplyLook", _dummy.ReferenceHub, botAimPoint);
+            yield return Timing.WaitForOneFrame;
+            ReflectionAccess.InvokeStatic(nativeType, "ApplyLook", _dummy.ReferenceHub, botAimPoint);
+            float attackerAimError = (float)(ReflectionAccess.InvokeStatic(nativeType, "AimErrorDegrees", _dummy.ReferenceHub, botAimPoint) ?? float.PositiveInfinity);
+            float botHealthBefore = attackBot.Health;
+            int participantAmmoBefore = participantFirearm.StoredAmmo + participantFirearm.ChamberedAmmo;
+            bool participantFired = false;
+            double nextParticipantShotAt = Now;
+            double hitDeadline = Now + 3d;
+            while (Now < hitDeadline && attackBot.Health >= botHealthBefore)
+            {
+                botAimPoint = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", attackHub) ?? attackBot.Position + Vector3.up);
+                ReflectionAccess.InvokeStatic(nativeType, "ApplyLook", _dummy.ReferenceHub, botAimPoint);
+                if (Now >= nextParticipantShotAt)
+                {
+                    participantFired |= (bool)(ReflectionAccess.InvokeStatic(nativeType, "TryInvokeDummyAction", _dummy.ReferenceHub, "Shoot->Click") ?? false);
+                    nextParticipantShotAt = Now + 0.25d;
+                }
+
+                yield return Timing.WaitForOneFrame;
+            }
+
+            int participantAmmoAfter = participantFirearm.StoredAmmo + participantFirearm.ChamberedAmmo;
+            Require(participantFired && participantAmmoAfter < participantAmmoBefore && attackBot.Health < botHealthBefore && attackLifecycle.HasAggressor,
+                "product-bot-real-hit-aggro", "native participant shot damages bot and enters retaliation through the real Hurting route",
+                $"fired={participantFired} aimError={attackerAimError:0.###} ammo={participantAmmoBefore}->{participantAmmoAfter} health={botHealthBefore:0.##}->{attackBot.Health:0.##} state={attackLifecycle.State} aggressor={attackLifecycle.HasAggressor}");
             int ammoBefore = attackFirearm.StoredAmmo + attackFirearm.ChamberedAmmo;
             double provokeAt = probe.LaneNow;
-            bool provoked = (bool)(ReflectionAccess.Invoke(probe.Bots, "TryProvoke", attackBot, _dummy, session.Token, ownedWeaponSerial, provokeAt) ?? false);
             double leaseExpiry = attackLifecycle.AggroExpiresAt;
-            Require(provoked && Math.Abs(leaseExpiry - provokeAt - 12d) <= 0.05d,
-                "product-bot-provoke", "current session provokes a fixed 12-second first-attacker lease",
-                $"slot={attackLifecycle.SlotId} token={session.Token} lease={leaseExpiry - provokeAt:0.###}s");
+            Require(leaseExpiry > provokeAt && leaseExpiry - provokeAt <= 12.05d,
+                "product-bot-provoke", "real firearm hit provokes the fixed first-attacker lease",
+                $"slot={attackLifecycle.SlotId} token={token} remainingLease={leaseExpiry - provokeAt:0.###}s");
             yield return Timing.WaitForOneFrame;
-            bool repeated = (bool)(ReflectionAccess.Invoke(probe.Bots, "TryProvoke", attackBot, _dummy, session.Token, ownedWeaponSerial, probe.LaneNow) ?? false);
+            bool repeated = (bool)(ReflectionAccess.Invoke(probe.Bots, "TryProvoke", attackBot, _dummy, token, ownedWeaponSerial, probe.LaneNow) ?? false);
             Require(repeated && Math.Abs(attackLifecycle.AggroExpiresAt - leaseExpiry) <= 0.001d,
                 "product-bot-lease-no-refresh", "same attacker repeat hit does not refresh the active lease",
                 $"expiry={leaseExpiry:0.###}->{attackLifecycle.AggroExpiresAt:0.###}");
@@ -605,16 +679,16 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             int resolvedAggressorTicks = 0;
             int lineOfSightTicks = 0;
             float minimumAimError = float.PositiveInfinity;
-            string lastAimStage = "unknown";
+            double firstReturnShotAt = 0d;
             HashSet<string> observedStates = new HashSet<string>(StringComparer.Ordinal);
-            HashSet<string> observedAimStages = new HashSet<string>(StringComparer.Ordinal);
             while (Now < fireDeadline)
             {
                 ammoAfter = attackFirearm.StoredAmmo + attackFirearm.ChamberedAmmo;
+                if (firstReturnShotAt <= 0d && ammoAfter < ammoBefore)
+                {
+                    firstReturnShotAt = probe.LaneNow;
+                }
                 observedStates.Add(attackLifecycle.State.ToString());
-                object? aimStage = ReflectionAccess.Property(attackSlot, "AimStage");
-                lastAimStage = aimStage?.ToString() ?? "null";
-                observedAimStages.Add(lastAimStage);
                 if (ReflectionAccess.Invoke(probe.Bots, "ResolveCurrentAggressor", attackSlot) is Player)
                 {
                     resolvedAggressorTicks++;
@@ -644,7 +718,16 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
 
             Require(ammoAfter <= ammoBefore - 2 && sawShootHeld && sawShootReleaseAction,
                 "product-bot-native-held-fire", "native Shoot->Hold consumes multiple rounds and exposes Shoot->Release",
-                $"ammo={ammoBefore}->{ammoAfter} held={sawShootHeld} releaseAction={sawShootReleaseAction} state={attackLifecycle.State} states={string.Join(",", observedStates)} stages={string.Join(",", observedAimStages)} lastStage={lastAimStage} resolvedTicks={resolvedAggressorTicks} losTicks={lineOfSightTicks} minAimError={minimumAimError:0.###}");
+                $"ammo={ammoBefore}->{ammoAfter} held={sawShootHeld} releaseAction={sawShootReleaseAction} state={attackLifecycle.State} states={string.Join(",", observedStates)} resolvedTicks={resolvedAggressorTicks} losTicks={lineOfSightTicks} minAimError={minimumAimError:0.###}");
+            Require(firstReturnShotAt > 0d && firstReturnShotAt - provokeAt >= 0.45d && firstReturnShotAt - provokeAt <= 0.7d,
+                "product-bot-response-window", "first native return shot lands within the 0.5-0.6 second configured reaction window plus one scheduler tick",
+                $"elapsed={firstReturnShotAt - provokeAt:0.###}s acquireAt={attackLifecycle.AcquireAt:0.###} provokeAt={provokeAt:0.###}");
+            double strafeDeadline = Now + 2d;
+            while (Now < strafeDeadline && attackLifecycle.HasAggressor && maximumEngagedMovement < 0.15f)
+            {
+                maximumEngagedMovement = Math.Max(maximumEngagedMovement, HorizontalDistance(engagementStart, attackHub.transform.position));
+                yield return Timing.WaitForOneFrame;
+            }
             Require(maximumEngagedMovement >= 0.15f,
                 "product-bot-engaged-strafe", "bot keeps moving laterally while aiming/firing",
                 $"maxMovement={maximumEngagedMovement:0.###} start={F(engagementStart)} current={F(attackHub.transform.position)}");
@@ -729,7 +812,94 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
                     !ReflectionAccess.Property<bool>(attackSlot, "ShootHeld") && !ReflectionAccess.Property<bool>(attackSlot, "ZoomHeld"),
                 "product-bot-lease-release", "12-second lease clears to passive with Shoot/Zoom released",
                 $"hasAggressor={attackLifecycle.HasAggressor} state={attackLifecycle.State} shoot={ReflectionAccess.Property<bool>(attackSlot, "ShootHeld")} zoom={ReflectionAccess.Property<bool>(attackSlot, "ZoomHeld")} now={probe.LaneNow:0.###} expiry={leaseExpiry:0.###}");
-            Pass("product-bot-suite", $"bots=2 passiveWalk=true engagedStrafe=true nativeJump=true heldFireAmmo={ammoBefore}->{ammoAfter} reloadCover=true adsObserved={adsObserved} lease=12s");
+
+            // Player-facing accuracy contract: after one real counter-gun hit, a stationary 100 HP participant
+            // must reach the product's no-spectator lethal reset in roughly two seconds from that shot. This
+            // observes actual native bot bullets through Hurting/Dying; ammo consumption alone is insufficient.
+            _dummy.Position = firingLine;
+            _dummy.MaxHealth = 100f;
+            _dummy.Health = 100f;
+            Require(sessions.TryGet(userKey, out AimRangeSessions.Session lethalSession) &&
+                    (bool)(ReflectionAccess.Invoke(probe.Shelves, "EnsureOwnedWeapon", _dummy, lethalSession) ?? false),
+                "product-bot-lethal-weapon-restore", "counter-issued weapon equipped before stationary lethality trial",
+                $"session={lethalSession != null} serial={lethalSession?.OwnedItemSerial ?? 0} current={_dummy.CurrentItem?.Serial ?? 0}");
+            AimRangeSessions.Session confirmedLethalSession = lethalSession!;
+            participantFirearm = (FirearmItem)(_dummy.CurrentItem ?? throw Failure("product-bot-lethal-current", "counter firearm selected", "null"));
+            object lethalBotSlot = slots[1];
+            RangeBotLifecycle lethalBotLifecycle = ReflectionAccess.Property<RangeBotLifecycle>(lethalBotSlot, "Lifecycle");
+            ReferenceHub lethalBotHub = (ReferenceHub)(ReflectionAccess.Property(lethalBotSlot, "Hub") ?? throw Failure("product-bot-lethal-hub", "second live bot hub", "null"));
+            Player lethalBot = Player.Get(lethalBotHub) ?? throw Failure("product-bot-lethal-wrap", "second live bot wrapper", "null");
+            FirearmItem lethalBotFirearm = (FirearmItem)(ReflectionAccess.Property(lethalBotSlot, "Firearm") ?? throw Failure("product-bot-lethal-gun", "second live Crossvec", "null"));
+            bool botRearmed = (bool)(ReflectionAccess.InvokeStatic(probe.Shelves.GetType(), "TryPreload", lethalBotFirearm) ?? false);
+            Require(botRearmed && lethalBotFirearm.StoredAmmo == lethalBotFirearm.MaxAmmo,
+                "product-bot-lethal-rearm", "untouched second Crossvec is full and ready for the lethality trial",
+                $"ammo={lethalBotFirearm.StoredAmmo}/{lethalBotFirearm.MaxAmmo} cocked={lethalBotFirearm.Cocked} boltLocked={lethalBotFirearm.BoltLocked}");
+            lethalBot.Position = new Vector3(
+                probe.Layout.GalleryOrigin.x - AimRangeLayout.LaneWidth,
+                probe.Layout.GalleryOrigin.y + 0.5f,
+                probe.Layout.DoorPlaneZ - 13f);
+            yield return Timing.WaitForOneFrame;
+            int lifeBeforeLethal = _dummy.LifeId;
+            int incomingBeforeLethal = confirmedLethalSession.IncomingHits;
+            double lethalShotAt = 0d;
+            double lethalLosDeadline = Now + 4d;
+            bool lethalLos = false;
+            while (Now < lethalLosDeadline)
+            {
+                Vector3 participantAim = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", _dummy.ReferenceHub) ?? firingLine + Vector3.up);
+                Vector3 liveBotAim = (Vector3)(ReflectionAccess.InvokeStatic(nativeType, "AimPoint", lethalBotHub) ?? lethalBotHub.transform.position + Vector3.up);
+                lethalLos = (bool)(ReflectionAccess.InvokeStatic(nativeType, "HasLineOfSight", lethalBotHub, _dummy.ReferenceHub, participantAim) ?? false) &&
+                    (bool)(ReflectionAccess.InvokeStatic(nativeType, "HasLineOfSight", _dummy.ReferenceHub, lethalBotHub, liveBotAim) ?? false);
+                if (lethalLos)
+                {
+                    ReflectionAccess.InvokeStatic(nativeType, "ApplyLook", _dummy.ReferenceHub, liveBotAim);
+                    yield return Timing.WaitForOneFrame;
+                    ReflectionAccess.InvokeStatic(nativeType, "ApplyLook", _dummy.ReferenceHub, liveBotAim);
+                    break;
+                }
+
+                yield return Timing.WaitForOneFrame;
+            }
+            int lethalAmmoBefore = participantFirearm.StoredAmmo + participantFirearm.ChamberedAmmo;
+            bool nativeLethalTrigger = lethalLos && (bool)(ReflectionAccess.InvokeStatic(
+                nativeType,
+                "TryInvokeDummyAction",
+                _dummy.ReferenceHub,
+                "Shoot->Click") ?? false);
+            // The earlier trial already proves a genuine native participant hit routes through Hurting. Route this
+            // second, stationary-lethality phase directly after consuming a real round so it measures the bot's
+            // return-fire accuracy instead of adding another spread-dependent provocation check.
+            bool lethalTrigger = nativeLethalTrigger && (bool)(ReflectionAccess.Invoke(
+                probe.Bots,
+                "TryProvoke",
+                lethalBot,
+                _dummy,
+                token,
+                ownedWeaponSerial,
+                probe.LaneNow) ?? false);
+
+            lethalShotAt = Now;
+            bool lethalAggroObserved = lethalBotLifecycle.HasAggressor;
+            double lethalDeadline = lethalShotAt + 2.5d;
+            float lowestHealth = _dummy.Health;
+            bool participantRoundConsumed = participantFirearm.StoredAmmo + participantFirearm.ChamberedAmmo < lethalAmmoBefore;
+            bool lethalAdsObserved = false;
+            while (_dummy.LifeId == lifeBeforeLethal && Now < lethalDeadline)
+            {
+                participantRoundConsumed |= participantFirearm.StoredAmmo + participantFirearm.ChamberedAmmo < lethalAmmoBefore;
+                lethalAdsObserved |= ReflectionAccess.Property<bool>(lethalBotSlot, "ZoomHeld");
+                lowestHealth = Math.Min(lowestHealth, _dummy.Health);
+                yield return Timing.WaitForOneFrame;
+            }
+
+            double lethalElapsed = Now - lethalShotAt;
+            int lethalAmmoAfter = participantFirearm.StoredAmmo + participantFirearm.ChamberedAmmo;
+            Require(lethalTrigger && participantRoundConsumed && lethalAggroObserved && _dummy.LifeId != lifeBeforeLethal &&
+                    confirmedLethalSession.IncomingHits > incomingBeforeLethal && lethalElapsed <= 2.5d &&
+                    lethalAdsObserved && _dummy.Role == RoleTypeId.Tutorial && _dummy.Health > 0f,
+                "product-bot-stationary-lethality", "one provocation leads native bot bullets to lethal-reset a stationary 100 HP participant within about two seconds",
+                $"trigger={lethalTrigger} roundConsumed={participantRoundConsumed} ammoObjectAfterReset={lethalAmmoAfter} life={lifeBeforeLethal}->{_dummy.LifeId} incoming={incomingBeforeLethal}->{confirmedLethalSession.IncomingHits} lowestHealth={lowestHealth:0.##} elapsed={lethalElapsed:0.###} ads={lethalAdsObserved} role={_dummy.Role} health={_dummy.Health:0.##}");
+            Pass("product-bot-suite", $"bots=2 passiveWalk=true engagedStrafe=true nativeJump=true heldFireAmmo={ammoBefore}->{ammoAfter} stationaryLethal={lethalElapsed:0.###}s reloadCover=true adsObserved={adsObserved} lease=12s");
         }
         finally
         {
@@ -865,9 +1035,9 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
 
     private void ValidateShelves(LiveRangeProbe probe)
     {
-        ItemType[] expected = probe.Product.Config.Activities.Aim.WeaponPresets.Take(6).Select(preset => preset.Firearm).ToArray();
+        ItemType[] configured = probe.Product.Config.Activities.Aim.WeaponPresets.Take(6).Select(preset => preset.Firearm).ToArray();
         WeaponShelfState.Slot[] slots = probe.ShelfState.Slots.OrderBy(slot => slot.SlotId).ToArray();
-        Require(slots.Length == 6, "shelf-count", "six shelf state slots", $"count={slots.Length}");
+        Require(configured.Length == 6 && slots.Length == 6, "armoury-count", "six counter state slots", $"configured={configured.Length} count={slots.Length}");
         HashSet<ushort> serials = new HashSet<ushort>();
         for (int i = 0; i < slots.Length; i++)
         {
@@ -876,18 +1046,22 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
                 $"shelf-{i}-available", "available slot with nonzero serial", $"phase={slot.Phase} serial={slot.PickupSerial}");
             Require(Pickup.TryGet(slot.PickupSerial, out Pickup? pickup) && pickup != null && !pickup.IsDestroyed,
                 $"shelf-{i}-pickup", "live pickup wrapper", $"serial={slot.PickupSerial}");
-            Require(pickup!.Type == expected[i] && AimWeaponPresetRules.IsConventional(probe.Product.Config.Activities.Aim.WeaponPresets[i]),
-                $"shelf-{i}-type", $"conventional {expected[i]}", $"actual={pickup.Type}");
+            Require(pickup!.Type == configured[i] && AimWeaponPresetRules.IsConventional(probe.Product.Config.Activities.Aim.WeaponPresets[i]),
+                $"shelf-{i}-type", $"conventional {configured[i]}", $"actual={pickup.Type}");
             Require(pickup.Rigidbody != null && pickup.Rigidbody.isKinematic,
                 $"shelf-{i}-kinematic", "standard kinematic rigidbody", $"rigidbody={(pickup.Rigidbody == null ? "null" : "present")} kinematic={pickup.Rigidbody?.isKinematic}");
             AimShelfAnchor anchor = probe.World.ShelfAnchors.Single(value => value.SlotId == slot.SlotId);
             Require(Vector3.Distance(pickup.Position, anchor.LocalPosition) <= 0.12f,
-                $"shelf-{i}-anchor", "pickup within 0.12m of authored/marker anchor", $"pickup={F(pickup.Position)} anchor={F(anchor.LocalPosition)} distance={Vector3.Distance(pickup.Position, anchor.LocalPosition):0.###}");
+                $"counter-{i}-anchor", "pickup within 0.12m of authored counter anchor", $"pickup={F(pickup.Position)} anchor={F(anchor.LocalPosition)} distance={Vector3.Distance(pickup.Position, anchor.LocalPosition):0.###}");
+            bool expectedPlacement = Math.Abs(pickup.Position.y - (probe.Layout.GalleryOrigin.y + AimRangeLayout.ShootingCounterHeight + 0.28f)) <= 0.04f &&
+                Math.Abs(pickup.Position.z - (probe.Layout.DoorPlaneZ - AimRangeLayout.ShootingCounterDepth)) <= 0.04f;
+            Require(expectedPlacement,
+                $"armoury-{i}-placement", "pickup visible above the shooting counter", $"pickup={F(pickup.Position)}");
             Require(serials.Add(slot.PickupSerial), $"shelf-{i}-serial", "serial distinct from previous shelf pickups", $"serial={slot.PickupSerial}");
             Require(!probe.Room.CoinRoles.ContainsKey(slot.PickupSerial),
                 $"shelf-{i}-coin-isolation", "shelf serial absent from selector CoinRoles", $"serial={slot.PickupSerial} coinRoles={probe.Room.CoinRoles.Count}");
         }
-        Pass("shelf-suite", $"pickups=6 distinctSerials={serials.Count} coinContamination=0");
+        Pass("armoury-gun-suite", $"pickups=6 distinctSerials={serials.Count} persistent=true coinContamination=0");
     }
 
     private IEnumerator<float> ValidateTargetsAndSpheres(LiveRangeProbe probe)
@@ -936,12 +1110,19 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             float span = samples[motion.Track.SlotId].Max(point => point.x) - samples[motion.Track.SlotId].Min(point => point.x);
             Require(leftFace && centerFace && rightFace,
                 $"sliding-{motion.Track.SlotId}-broad-face", "three firing-line rays hit the persistent target face", $"hits={leftFace}/{centerFace}/{rightFace} bounds={F(colliderBounds.size)}");
-            Require(span >= 0.15f, $"sliding-{motion.Track.SlotId}-motion", "sampled target moves laterally", $"xSpan={span:0.###} speed={motion.Speed:0.###}");
+            float sampledMinimumSpeed = Enumerable.Range(0, 80).Min(index => motion.EvaluateSpeed(index * 0.1d));
+            float sampledMaximumSpeed = Enumerable.Range(0, 80).Max(index => motion.EvaluateSpeed(index * 0.1d));
+            Require(span >= 0.15f && sampledMaximumSpeed - sampledMinimumSpeed > motion.Speed * 0.3f,
+                $"sliding-{motion.Track.SlotId}-motion", "sampled target moves laterally with varying speed",
+                $"xSpan={span:0.###} speed={motion.Speed:0.###} varying={sampledMinimumSpeed:0.###}..{sampledMaximumSpeed:0.###}");
         }
         Pass("sliding-target-suite", $"targets={slidingSlots.Count} persistent=true varyingSpeeds={string.Join(",", slidingSlots.Select(slot => ReflectionAccess.Property<SlidingTargetMotion>(slot, "Motion").Speed.ToString("0.###", CultureInfo.InvariantCulture)))}");
 
         List<object> sphereSlots = DictionaryValues(ReflectionAccess.Field(probe.SphereTargets, "_slots"));
-        SphereTargetLayout authored = SphereTargetLayout.CreateWidenedThirdLane(probe.Layout.SphereLaneOrigin, probe.Layout.SphereLaneRotation);
+        SphereTargetLayout authored = SphereTargetLayout.CreateWidenedThirdLane(
+            probe.Layout.SphereLaneOrigin,
+            probe.Layout.SphereLaneRotation,
+            probe.Layout.SphereBayWidth);
         HashSet<int> sphereToyIds = new HashSet<int>();
         foreach (object slot in sphereSlots)
         {
@@ -957,7 +1138,38 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
         }
         Require(sphereSlots.Count == probe.Product.Config.Activities.Aim.SphereActiveCount,
             "sphere-active-count", "configured number of simultaneous sphere targets", $"count={sphereSlots.Count}");
-        Pass("sphere-target-suite", $"active={sphereSlots.Count} authoredPoints={authored.Points.Count} popRespawnControllerRunning={probe.SphereTargetsRunning}");
+        Pass("sphere-target-suite", $"active={sphereSlots.Count} authoredPoints={authored.Points.Count} relocationControllerRunning={probe.SphereTargetsRunning}");
+
+        object pooledSlot = sphereSlots.OrderBy(slot => ReflectionAccess.Property<int>(slot, "SlotId")).First();
+        LabApi.Features.Wrappers.PrimitiveObjectToy pooledToy = ReflectionAccess.Property<LabApi.Features.Wrappers.PrimitiveObjectToy>(pooledSlot, "Toy");
+        int pooledToyId = pooledToy.Base.GetInstanceID();
+        int oldPointIndex = ReflectionAccess.Property<int>(pooledSlot, "PointIndex");
+        Vector3 oldPosition = pooledToy.Position;
+        int nextPointIndex = authored.Points
+            .Select((point, index) => new { point, index })
+            .First(entry => entry.index != oldPointIndex && sphereSlots.All(slot =>
+                ReferenceEquals(slot, pooledSlot) || ReflectionAccess.Property<int>(slot, "PointIndex") != entry.index))
+            .index;
+        bool moved = (bool)(ReflectionAccess.Invoke(probe.SphereTargets, "TryRelocate", pooledSlot, nextPointIndex) ?? false);
+        LabApi.Features.Wrappers.PrimitiveObjectToy relocatedToy = ReflectionAccess.Property<LabApi.Features.Wrappers.PrimitiveObjectToy>(pooledSlot, "Toy");
+        int newPointIndex = ReflectionAccess.Property<int>(pooledSlot, "PointIndex");
+        Physics.SyncTransforms();
+        Vector3 rayDirection = (relocatedToy.Position - probe.Layout.EntranceSpawn).normalized;
+        Ray relocatedRay = new Ray(relocatedToy.Position - rayDirection * 2f, rayDirection);
+        bool relocatedColliderHit = relocatedToy.Base.GetComponentsInChildren<Collider>(includeInactive: true)
+            .Any(collider => collider != null && collider.enabled && !collider.isTrigger &&
+                             collider.Raycast(relocatedRay, out _, 4f));
+        bool reusedAtNewPoint = moved &&
+                                ReferenceEquals(pooledToy, relocatedToy) && relocatedToy.Base.GetInstanceID() == pooledToyId &&
+                                !relocatedToy.IsDestroyed && newPointIndex >= 0 && newPointIndex != oldPointIndex &&
+                                Vector3.Distance(oldPosition, relocatedToy.Position) > 0.05f &&
+                                !relocatedToy.IsStatic && relocatedColliderHit &&
+                                (relocatedToy.Flags & AdminToys.PrimitiveFlags.Visible) != 0 &&
+                                (relocatedToy.Flags & AdminToys.PrimitiveFlags.Collidable) != 0 &&
+                                authored.Points.Any(point => Vector3.Distance(point, relocatedToy.Position) <= 0.05f);
+        Require(reusedAtNewPoint,
+            "sphere-pool-reposition", "same always-hittable network toy teleports directly to the next authored point",
+            $"toyId={relocatedToy.Base.GetInstanceID()} point={oldPointIndex}->{newPointIndex} position={F(oldPosition)}->{F(relocatedToy.Position)} static={relocatedToy.IsStatic} rayHit={relocatedColliderHit} flags={relocatedToy.Flags}");
     }
 
     private void ValidateCleanup(LiveRangeProbe probe, RangeOwnershipSnapshot ownership)
@@ -972,6 +1184,8 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             "cleanup-targets", "all exact range target toys absent", $"owned={ownership.TargetIds.Count}");
         Require(ownership.ToyIds.All(id => AdminToy.List.All(toy => toy.Base.GetInstanceID() != id)),
             "cleanup-world-toys", "all exact range-owned world/rack/carrier toys absent", $"owned={ownership.ToyIds.Count} remaining={ownership.ToyIds.Count(id => AdminToy.List.Any(toy => toy.Base.GetInstanceID() == id))}");
+        Require(ownership.StructureIds.All(id => UnityEngine.Object.FindObjectsByType<SpawnableStructure>(FindObjectsSortMode.None).All(structure => structure.gameObject.GetInstanceID() != id)),
+            "cleanup-workstations", "both exact range-owned attachment workstations absent", $"owned={ownership.StructureIds.Count}");
         Require(ownership.BotHubIds.All(id => Player.DummyList.All(player => player.ReferenceHub.GetInstanceID() != id)) && ReflectionAccess.Property<int>(probe.Bots, "OwnedBotCount") == 0,
             "cleanup-bots", "all exact range-owned bots absent and registry empty", $"owned={ownership.BotHubIds.Count} registry={ReflectionAccess.Property<int>(probe.Bots, "OwnedBotCount")}");
         Require(ownership.AmbientPickupSerials.All(serial => Pickup.TryGet(serial, out _)) &&
@@ -982,7 +1196,7 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
         Require(probe.RangeSessionCount == 0 && probe.RangeHintEntryCount == 0,
             "cleanup-hints", "zero range sessions and zero provider aim hint/cache entries", $"sessions={probe.RangeSessionCount} aimHintEntries={probe.RangeHintEntryCount}");
         Require(!probe.DoorOpen, "cleanup-door", "range gate restored after StopForRoundStart", $"gateOpen={probe.DoorOpen}");
-        Pass("cleanup-suite", $"pickups={ownership.PickupSerials.Count} targets={ownership.TargetIds.Count} carriersAndWorldToys={ownership.ToyIds.Count} bots={ownership.BotHubIds.Count} hints=0");
+        Pass("cleanup-suite", $"pickups={ownership.PickupSerials.Count} targets={ownership.TargetIds.Count} worldToys={ownership.ToyIds.Count} workstations={ownership.StructureIds.Count} bots={ownership.BotHubIds.Count} hints=0");
     }
 
     private static List<object> DictionaryValues(object dictionary)
@@ -1017,6 +1231,15 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
         if (Math.Abs(hit.distance - expected) > tolerance)
         {
             throw Failure(check, $"distance={expected:0.###}+/-{tolerance:0.###}", $"origin={F(origin)} direction={F(direction)} distance={hit.distance:0.###} hit={F(hit.point)} collider={hit.collider?.name}");
+        }
+    }
+
+    private void AssertRayClearFor(string check, Vector3 origin, Vector3 direction, float minimumDistance)
+    {
+        RaycastHit hit = Ray(origin, direction, minimumDistance + 25f, _dummyHub);
+        if (hit.distance < minimumDistance)
+        {
+            throw Failure(check, $"first hit >= {minimumDistance:0.###}m", $"origin={F(origin)} direction={F(direction)} distance={hit.distance:0.###} hit={F(hit.point)} collider={hit.collider?.name}");
         }
     }
 
@@ -1304,14 +1527,6 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
                 return handle.IsRunning;
             }
         }
-        public List<object> MerInstances
-        {
-            get
-            {
-                object spawner = ReflectionAccess.Field(World, "_merSpawner");
-                return ReflectionAccess.Items(ReflectionAccess.Field(spawner, "_instances"));
-            }
-        }
         public int RangeSessionCount
         {
             get
@@ -1398,6 +1613,7 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
         public HashSet<ushort> PickupSerials { get; } = new HashSet<ushort>();
         public HashSet<int> TargetIds { get; } = new HashSet<int>();
         public HashSet<int> ToyIds { get; } = new HashSet<int>();
+        public HashSet<int> StructureIds { get; } = new HashSet<int>();
         public HashSet<int> BotHubIds { get; } = new HashSet<int>();
         public HashSet<ushort> AmbientPickupSerials { get; } = new HashSet<ushort>();
         public HashSet<int> AmbientToyIds { get; } = new HashSet<int>();
@@ -1430,9 +1646,12 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             }
 
             AddToys(snapshot.ToyIds, ReflectionAccess.Field(probe.World, "_toys"));
-            foreach (object instance in probe.MerInstances)
+            foreach (object item in ReflectionAccess.Items(ReflectionAccess.Field(probe.World, "_structures")))
             {
-                AddToys(snapshot.ToyIds, ReflectionAccess.Field(instance, "_toys"));
+                if (item is GameObject structure && structure != null)
+                {
+                    snapshot.StructureIds.Add(structure.GetInstanceID());
+                }
             }
 
             object ownedHubs = ReflectionAccess.Field(probe.Bots, "_ownedHubs");
@@ -1486,6 +1705,7 @@ public sealed class WarmupRangeVerifierPlugin : Plugin<RangeVerifierConfig>
             return PickupSerials.All(serial => !Pickup.TryGet(serial, out _)) &&
                 TargetIds.All(id => ShootingTargetToy.List.All(target => target.Base.GetInstanceID() != id)) &&
                 ToyIds.All(id => AdminToy.List.All(toy => toy.Base.GetInstanceID() != id)) &&
+                StructureIds.All(id => UnityEngine.Object.FindObjectsByType<SpawnableStructure>(FindObjectsSortMode.None).All(structure => structure.gameObject.GetInstanceID() != id)) &&
                 BotHubIds.All(id => Player.DummyList.All(player => player.ReferenceHub.GetInstanceID() != id)) &&
                 !ReflectionAccess.Field<bool>(probe.Lane, "_running") && !probe.World.IsSpawned;
         }

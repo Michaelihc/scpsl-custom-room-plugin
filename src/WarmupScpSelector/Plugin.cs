@@ -6,6 +6,8 @@ using LabApi.Features.Wrappers;
 using LabApi.Loader.Features.Plugins;
 using PlayerRoles;
 using PlayerRoles.RoleAssign;
+using WarmupScpSelector.Replacement;
+using WarmupScpSelector.Roles;
 using WarmupScpSelector.Services;
 using WarmupScpSelector.Warmup;
 using Logger = LabApi.Features.Console.Logger;
@@ -15,24 +17,37 @@ namespace WarmupScpSelector;
 /// <summary>
 /// Warmup SCP draft. During waiting-for-players the plugin builds one room holding a model of every
 /// offered SCP, each with a big coin. Players walk up and grab a coin to pick that SCP. When the round
-/// starts, the plugin lets the game assign vanilla roles, then swaps the selected SCP slots over to the
-/// players who picked them (the displaced holder inherits the picker's original role). It never creates
-/// extra SCPs: a pick is honoured only if vanilla actually spawned that SCP this round.
+/// starts, vanilla still chooses the SCP role multiset; the plugin buffers those pending assignments and
+/// remaps their recipients before any SCP role is initialized or sent. Displaced holders remain eligible for
+/// vanilla human assignment. The optional SCP-3114 carve-out replaces one picker's human assignment
+/// once the configured player threshold is met; other SCP picks require a vanilla slot.
 /// </summary>
 public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 {
     private SelectorController _controller = null!;
     private HsmHintDisplayProvider _hints = null!;
+    private ScpReplacementService _replacement = null!;
 
     public static WarmupScpSelectorPlugin Instance { get; private set; } = null!;
 
+    internal ScpReplacementService? ReplacementService => _replacement;
+
+    /// <summary>
+    /// The warmup station currently standing, or null outside warmup. Exposed so live verification and
+    /// companion plugins can anchor on the real room instead of hardcoding world coordinates.
+    /// </summary>
+    public SelectorRoom? WarmupRoom => _controller?.Room;
+
+    /// <summary>Warmup orchestrator, for in-assembly tooling such as the schematic export command.</summary>
+    internal SelectorController? Controller => _controller;
+
     public override string Name => "WarmupScpSelector";
 
-    public override string Description => "Warmup room where players pick their SCP from a gallery of models; selected SCPs are swapped into the vanilla round assignment at round start.";
+    public override string Description => "Warmup SCP draft plus early-round replacement for healthy SCP disconnects.";
 
     public override string Author => "Michael";
 
-    public override Version Version => new(1, 0, 0);
+    public override Version Version => new(1, 2, 0);
 
     public override Version RequiredApiVersion => new(LabApiProperties.CompiledVersion);
 
@@ -46,42 +61,76 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
         _hints.Enable();
 
         _controller = new SelectorController(this, _hints);
+        _replacement = new ScpReplacementService(this);
 
+        // Register replacement first so its Left handler snapshots an SCP's role/health before any other
+        // plugin-owned per-player teardown runs. Its round state is otherwise independent of warmup.
+        ServerEvents.RoundStarted += _replacement.OnRoundStarted;
+        ServerEvents.RoundEnded += _replacement.OnRoundEnded;
         ServerEvents.WaitingForPlayers += _controller.OnWaitingForPlayers;
+        ServerEvents.RoundRestarted += _replacement.OnRoundRestarted;
         ServerEvents.RoundRestarted += _controller.OnRoundRestarted;
         PlayerEvents.Joined += _controller.OnPlayerJoined;
+        PlayerEvents.Left += _replacement.OnPlayerLeft;
         PlayerEvents.Left += _controller.OnPlayerLeft;
+        PlayerEvents.ChangingRole += _controller.OnPlayerChangingRole;
         PlayerEvents.Spawning += _controller.OnPlayerSpawning;
         // SearchingPickup (not PickingUpItem) so the selector works for ANY configured pickup type:
         // ammo/armor route through their own pickup events, but all of them fire SearchingPickup.
         PlayerEvents.SearchingPickup += _controller.OnSearchingPickup;
 
-        // These two fire INSIDE the vanilla round-start, in a deterministic order within the same call:
-        // OnBeforePlayersSpawned (before assignment) hands warmup players back to vanilla; OnPlayersSpawned
-        // (after assignment) is where we schedule the SCP swaps. Using OnPlayersSpawned instead of LabAPI's
-        // RoundStarted avoids depending on cross-subscriber event ordering (RoundStarted may fire first).
+        // These fire INSIDE vanilla round-start in a deterministic order. OnBeforePlayersSpawned hands warmup
+        // players back and arms pending-role interception; ChangingRole buffers vanilla's SCP calls and applies
+        // only the final permutation before HumanSpawner; OnPlayersSpawned clears state or runs the fail-safe.
         RoleAssigner.OnBeforePlayersSpawned += _controller.OnBeforeVanillaRoleAssignment;
         RoleAssigner.OnPlayersSpawned += _controller.OnVanillaRolesAssigned;
+
+        // The special-role draft runs after the SCP coin draft: subscribed after the controller so its
+        // compatibility-swap decision is already made when this handler reads it.
+        RoundRoles.EnableHost();
+        RoleAssigner.OnPlayersSpawned += OnNativeRolesAssigned;
 
         Logger.Info($"{Name} {Version} enabled.");
     }
 
     public override void Disable()
     {
+        ServerEvents.RoundStarted -= _replacement.OnRoundStarted;
+        ServerEvents.RoundEnded -= _replacement.OnRoundEnded;
         ServerEvents.WaitingForPlayers -= _controller.OnWaitingForPlayers;
+        ServerEvents.RoundRestarted -= _replacement.OnRoundRestarted;
         ServerEvents.RoundRestarted -= _controller.OnRoundRestarted;
         PlayerEvents.Joined -= _controller.OnPlayerJoined;
+        PlayerEvents.Left -= _replacement.OnPlayerLeft;
         PlayerEvents.Left -= _controller.OnPlayerLeft;
+        PlayerEvents.ChangingRole -= _controller.OnPlayerChangingRole;
         PlayerEvents.Spawning -= _controller.OnPlayerSpawning;
         PlayerEvents.SearchingPickup -= _controller.OnSearchingPickup;
         RoleAssigner.OnBeforePlayersSpawned -= _controller.OnBeforeVanillaRoleAssignment;
         RoleAssigner.OnPlayersSpawned -= _controller.OnVanillaRolesAssigned;
+        RoleAssigner.OnPlayersSpawned -= OnNativeRolesAssigned;
+        RoundRoles.DisableHost();
 
+        _replacement.Cleanup();
         _controller.Cleanup();
         _hints?.Disable();
+        _replacement = null!;
         _hints = null!;
         Instance = null!;
         Logger.Info($"{Name} disabled.");
+    }
+
+    private void OnNativeRolesAssigned()
+    {
+        try
+        {
+            RoundRoles.OnNativeRolesAssigned(_controller?.ScpSwapPending == true);
+        }
+        catch (Exception ex)
+        {
+            // Runs inside the native round start; never let it abort.
+            Logger.Error($"[WarmupScpSelector] Could not schedule the role draft: {ex}");
+        }
     }
 
     public void LogDebug(string message)

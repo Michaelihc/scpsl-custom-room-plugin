@@ -12,14 +12,20 @@
        types), so the headless test compiles those source files directly instead of referencing the plugin. -->
   <ItemGroup>
     <Compile Include="..\..\src\WarmupScpSelector\Selection\SelectionSwapPlanner.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Roles\RoleDraftPlanner.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\AtomicRoleDispatchPlanner.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\VanillaScpSlotCounter.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Selection\VanillaRoleAssignmentResolver.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Selection\Scp3114DraftPolicy.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\WarmupText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\AimRangeText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Text\ActivityGlyphs.cs" />
-    <Compile Include="..\..\src\WarmupScpSelector\Services\HintChangeCache.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Text\ScpReplacementText.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementConfig.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementPolicy.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementState.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\IActivityLane.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\ActivityManager.cs" />
-    <Compile Include="..\..\src\WarmupScpSelector\Activities\LaneFlashTracker.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\LaneHintIds.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\AimRangeSessions.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\AimRangeDeterminism.cs" />
@@ -35,15 +41,27 @@
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotValidatedSettings.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\RangeBotLobbyPolicy.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\WeaponShelfState.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\Parkour\ParkourRunState.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\Parkour\ParkourJumpModel.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Activities\Parkour\ParkourLayout.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Text\ParkourText.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\ParticipantIdentity.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Models\MerWorldTransform.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Warmup\WarmupHandoffPolicy.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Warmup\WarmupHallLayout.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeLayout.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Warmup\AimRangeMarkerAlignment.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Models\MerModelLoader.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Export\StationSchematic.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Import\StationAsset.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\Import\AuthoredGalleryAnchors.cs" />
+    <Compile Include="..\..\src\WarmupScpSelector\ScpOption.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp" HintPath="$(ServerManagedPath)\Assembly-CSharp.dll" Private="true" />
     <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ServerManagedPath)\Assembly-CSharp-firstpass.dll" Private="true" />
+    <Reference Include="LabApi" HintPath="$(ServerManagedPath)\LabApi.dll" Private="true" />
     <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="true" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="true" />
   </ItemGroup>

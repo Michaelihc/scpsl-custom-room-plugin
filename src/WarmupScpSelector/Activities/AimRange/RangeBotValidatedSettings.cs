@@ -34,14 +34,21 @@ namespace WarmupScpSelector.Activities.AimRange
                 }
             }
 
+            // Existing YAML files may still contain the former E11/Logicer/AK deck. The gameplay contract now
+            // requires both authored bot slots to use Crossvec, so migrate such configs safely in memory.
+            if (presets.Count == 0)
+            {
+                presets.Add(new AimWeaponPresetConfig("bot-crossvec", ItemType.GunCrossvec, ItemType.Ammo9x19, 240));
+            }
+
             return new RangeBotValidatedSettings
             {
                 Count = Clamp(config.BotCount, 0, 2),
                 Health = Sanitize(config.BotHealth, 1f, 10000f, 250f),
                 InitializeSeconds = Sanitize(config.BotInitializeSeconds, 0.05f, 5f, 0.35f),
                 AssociationTimeoutSeconds = Sanitize(config.BotAssociationTimeoutSeconds, 0.1f, 10f, 1.5f),
-                AcquireDelaySeconds = Sanitize(config.BotAcquireDelaySeconds, 0f, 10f, 0.45f),
-                ShotCadenceSeconds = Sanitize(config.BotShotCadenceSeconds, 0.1f, 10f, 0.8f),
+                AcquireDelaySeconds = Sanitize(config.BotAcquireDelaySeconds, 0.5f, 0.55f, 0.5f),
+                ShotCadenceSeconds = Sanitize(config.BotShotCadenceSeconds, 0.5f, 0.6f, 0.55f),
                 ShotVerificationSeconds = Sanitize(config.BotShotVerificationSeconds, 0.1f, 3f, 0.65f),
                 MaxRetaliationDistance = Sanitize(config.BotMaxRetaliationDistance, 1f, 100f, 24f),
                 AimToleranceDegrees = Sanitize(config.BotAimToleranceDegrees, 0.25f, 30f, 3f),

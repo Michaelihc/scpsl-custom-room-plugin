@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AssemblyName>WarmupPlaytestScenarios</AssemblyName>
+    <RootNamespace>WarmupScpSelector.PlaytestScenarios</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <ServerManagedPath Condition="'$(ServerManagedPath)' == ''">C:\Program Files (x86)\Steam\steamapps\common\SCP Secret Laboratory Dedicated Server\SCPSL_Data\Managed</ServerManagedPath>
+    <PlaytestHarnessPath Condition="'$(PlaytestHarnessPath)' == ''">$(MSBuildProjectDirectory)\..\..\..\.tests\Playtest\bin\Release</PlaytestHarnessPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="PlaytestHarness" HintPath="$(PlaytestHarnessPath)\PlaytestHarness.dll" Private="false" />
+    <ProjectReference Include="..\..\src\WarmupScpSelector\WarmupScpSelector.csproj" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(ServerManagedPath)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="Assembly-CSharp-firstpass" HintPath="$(ServerManagedPath)\Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="LabApi" HintPath="$(ServerManagedPath)\LabApi.dll" Private="false" />
+    <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(ServerManagedPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(ServerManagedPath)\UnityEngine.PhysicsModule.dll" Private="false" />
+  </ItemGroup>
+</Project>

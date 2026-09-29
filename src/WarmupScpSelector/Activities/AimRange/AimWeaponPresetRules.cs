@@ -34,9 +34,7 @@ namespace WarmupScpSelector.Activities.AimRange
 
             switch (preset.Firearm)
             {
-                case ItemType.GunE11SR: return preset.Ammo == ItemType.Ammo556x45;
-                case ItemType.GunLogicer: return preset.Ammo == ItemType.Ammo762x39;
-                case ItemType.GunAK: return preset.Ammo == ItemType.Ammo762x39;
+                case ItemType.GunCrossvec: return preset.Ammo == ItemType.Ammo9x19;
                 default: return false;
             }
         }
