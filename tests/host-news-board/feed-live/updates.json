@@ -1,0 +1,83 @@
+{
+ "version": 1,
+ "link": "https://scpslservers.com/sr/wiki/updates.html",
+ "entries": [
+  {
+   "id": "2026-09-30-scp999-joy",
+   "date": "2026-09-30",
+   "title": "SCP-999 欢乐值与新技能",
+   "summary": "SCP-999 可积攒欢乐值释放「挠痒痒」，新增「果冻弹跳」；连续治疗同一目标的效果会递减。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-30-scp999-joy"
+  },
+  {
+   "id": "2026-09-29-terminal-manager-card",
+   "date": "2026-09-29",
+   "title": "增援终端只认设施经理卡",
+   "summary": "对讲室的增援终端换了新模型，只接受本局设施经理的专属卡，O5 卡和其他小队的卡都会被拒绝。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-29-terminal-manager-card"
+  },
+  {
+   "id": "2026-09-29-civilian-truce-lcz",
+   "date": "2026-09-29",
+   "title": "D 级与科学家休战只在轻收容区",
+   "summary": "D 级人员与科学家只在任一方身处轻收容区时互不伤害；双方都离开后按原版规则交战。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-29-civilian-truce-lcz"
+  },
+  {
+   "id": "2026-09-28-info-command",
+   "date": "2026-09-28",
+   "title": "新增 .info 角色说明",
+   "summary": "在控制台输入 .info，可查看你当前的特殊支援角色或 SCP 的按键、技能和数值说明。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-28-info-command"
+  },
+  {
+   "id": "2026-09-27-scp999-return",
+   "date": "2026-09-27",
+   "title": "SCP-999 回归与开局抽选",
+   "summary": "SCP-999 以友好果冻的身份回归，射击和光环都能治疗；开局时与设施经理、GOC 特工统一抽选。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-27-scp999-return"
+  },
+  {
+   "id": "2026-09-27-scp-balance",
+   "date": "2026-09-27",
+   "title": "SCP 升级平衡调整",
+   "summary": "SCP-173 击杀加血减半、三阶削弱；SCP-049 升阶更快；SCP-939 冲刺消耗的体力逐阶降低。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-27-scp-balance"
+  },
+  {
+   "id": "2026-09-27-goc-landing-protection",
+   "date": "2026-09-27",
+   "title": "GOC 落地出生保护",
+   "summary": "GOC 主力与空降小队在入场动画结束、交还操作时，获得完整时长的原版出生保护。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-27-goc-landing-protection"
+  },
+  {
+   "id": "2026-09-26-scp3114-ability-items",
+   "date": "2026-09-26",
+   "title": "SCP-3114 伪装调整",
+   "summary": "伪装中的 SCP-3114 无法使用捡到的支援小队能力道具，例如拘束器和 SCP-355 酸草。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-26-scp3114-ability-items"
+  },
+  {
+   "id": "2026-09-20-scp106-elevator",
+   "date": "2026-09-20",
+   "title": "SCP-106 收容室升降梯",
+   "summary": "SCP-106 收容室新增升降梯，可在外侧走道和底层收容间之间往返；底层的致死机关已关闭。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-20-scp106-elevator"
+  },
+  {
+   "id": "2026-09-19-music-box",
+   "date": "2026-09-19",
+   "title": "大厅音乐盒与音量设置",
+   "summary": "等待开局时可用 .music 点播已解锁的曲目；每位玩家都能在服务器设置里单独调节插件音乐音量。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-19-music-box"
+  },
+  {
+   "id": "2026-09-12-class-d-surrender",
+   "date": "2026-09-12",
+   "title": "D 级投降与地表警告",
+   "summary": "D 级可用 .surrender 向基金会投降；地表平民遭袭时先有 10 秒警告；开局 15 分钟后平民保护结束。",
+   "url": "https://scpslservers.com/sr/wiki/updates.html#2026-09-12-class-d-surrender"
+  }
+ ]
+}

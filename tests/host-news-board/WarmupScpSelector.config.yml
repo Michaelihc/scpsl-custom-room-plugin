@@ -1,0 +1,175 @@
+is_enabled: true
+debug: false
+activities_enabled: true
+activities:
+  use_ascii_glyph_fallback: false
+  flash_duration_seconds: 0.699999988
+  aim:
+    enabled: true
+    scheduler_rate_hz: 20
+    occupancy_rate_hz: 5
+    seed_salt: 17031
+    shelf_replenish_seconds: 1.5
+    weapon_presets:
+    - id: com15
+      firearm: GunCOM15
+      ammo: Ammo9x19
+      reserve_ammo: 60
+      attachments_code: 0
+    - id: com18
+      firearm: GunCOM18
+      ammo: Ammo9x19
+      reserve_ammo: 90
+      attachments_code: 0
+    - id: fsp9
+      firearm: GunFSP9
+      ammo: Ammo9x19
+      reserve_ammo: 120
+      attachments_code: 0
+    - id: crossvec
+      firearm: GunCrossvec
+      ammo: Ammo9x19
+      reserve_ammo: 120
+      attachments_code: 0
+    - id: ak
+      firearm: GunAK
+      ammo: Ammo762x39
+      reserve_ammo: 120
+      attachments_code: 0
+    - id: e11sr
+      firearm: GunE11SR
+      ammo: Ammo556x45
+      reserve_ammo: 120
+      attachments_code: 0
+    target_live_seconds: 3
+    target_cooldown_seconds: 0.800000012
+    target_sequence_size: 24
+    sphere_active_count: 20
+    sphere_diameter: 0.720000029
+    bot_count: 2
+    bot_role: NtfPrivate
+    bot_health: 250
+    bot_initialize_seconds: 0.349999994
+    bot_association_timeout_seconds: 1.5
+    bot_acquire_delay_seconds: 0.5
+    bot_shot_cadence_seconds: 0.550000012
+    bot_shot_verification_seconds: 0.649999976
+    bot_max_retaliation_distance: 24
+    bot_aim_tolerance_degrees: 3
+    bot_respawn_seconds: 4
+    bot_aggro_lease_seconds: 12
+    bot_weapon_presets:
+    - id: bot-crossvec
+      firearm: GunCrossvec
+      ammo: Ammo9x19
+      reserve_ammo: 240
+      attachments_code: 0
+    human_reset_health: 100
+    hud_x: -1077
+    flash_y: 592
+    hero_y: 700
+    footer_y: 805
+    collapsed_status_y: 900
+    firearm: GunCOM15
+    ammo: Ammo9x19
+    ammo_amount: 60
+  parkour:
+    enabled: true
+    scheduler_rate_hz: 20
+    start_hold_seconds: 0.150000006
+    countdown_seconds: 0
+    recovery_grace_seconds: 0.349999994
+    hud_x: -1077
+    flash_y: 592
+    hero_y: 700
+    footer_y: 805
+scp_replacement:
+  is_enabled: true
+  departure_cutoff_seconds: 60
+  volunteer_cutoff_seconds: 90
+  required_health_percentage: 95
+  lottery_seconds: 10
+  command_cooldown_seconds: 3
+  allow_alive_volunteers: true
+  allow_human_command: true
+  max_replacements_per_round: 0
+  ignored_roles:
+  - Scp0492
+  human_command_roles:
+    ClassD: 45
+    Scientist: 45
+    FacilityGuard: 10
+  class_d_bonus_items:
+  - Flashlight
+  - Coin
+  announce_in_console: true
+  announce_broadcast_seconds: 16
+  result_broadcast_seconds: 5
+  human_hint_seconds: 8
+news_board:
+  enabled: true
+  feed_url: http://127.0.0.1:18931/updates.json
+  fetch_timeout_seconds: 8
+  max_entries: 4
+  position:
+    x: 7.75
+    y: 2.65
+    z: -25.65
+  facing_yaw: 180
+authored_station_asset: warmup_station_stars_lit
+export_schematic_name: ''
+language: cn
+surface_clearance: 30
+room_origin:
+  x: 0
+  y: 1015
+  z: 0
+pedestal_spacing: 4
+model_scale: 1
+selector_item: Coin
+selector_coin_scale: 6
+hint_interval_seconds: 1
+status_hint_y: 840
+hint_display:
+  tag_prefix: warmupscp.
+  default_x: 0
+  prompt_text_size: 20
+  line_height: 0
+  force_fast_updates: false
+role_swap_delay_seconds: 1.5
+scp3114_draft_enabled: true
+scp3114_min_players: 26
+hide_waiting_ui: true
+music_enabled: false
+music_file_path: lobby.f32le
+music_controller_id: 73
+music_volume: 0.349999994
+music_spatial: false
+music_min_distance: 2
+music_max_distance: 35
+music_fade_in_seconds: 2.5
+music_fade_out_seconds: 5
+music_fade_out_before_start_seconds: 5
+music_max_seconds: 240
+scp_options:
+- role: Scp049
+  label: SCP-049
+  model: scp-049
+- role: Scp079
+  label: SCP-079
+  model: scp-079
+- role: Scp096
+  label: SCP-096
+  model: scp-096
+- role: Scp106
+  label: SCP-106
+  model: scp-106
+- role: Scp173
+  label: SCP-173
+  model: scp-173
+- role: Scp939
+  label: SCP-939
+  model: scp-939
+- role: Scp3114
+  label: SCP-3114
+  model: scp-3114
