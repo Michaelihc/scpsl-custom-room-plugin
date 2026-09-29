@@ -24,10 +24,8 @@
     <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementConfig.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementPolicy.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Replacement\ScpReplacementState.cs" />
-    <Compile Include="..\..\src\WarmupScpSelector\Services\HintChangeCache.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\IActivityLane.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\ActivityManager.cs" />
-    <Compile Include="..\..\src\WarmupScpSelector\Activities\LaneFlashTracker.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\LaneHintIds.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\AimRangeSessions.cs" />
     <Compile Include="..\..\src\WarmupScpSelector\Activities\AimRange\AimRangeDeterminism.cs" />

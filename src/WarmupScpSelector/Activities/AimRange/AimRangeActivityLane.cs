@@ -537,7 +537,6 @@ namespace WarmupScpSelector.Activities.AimRange
             session.PendingRangeResetSpawn = false;
             session.PendingResetOriginalLifeId = 0;
             _hudCounters.Remove(userKey);
-            _hints.ForgetLane(userKey, LaneId);
             Player? player = ResolveHuman(userKey);
             try
             {

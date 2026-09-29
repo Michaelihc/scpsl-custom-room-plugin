@@ -389,7 +389,7 @@ namespace WarmupScpSelector.Activities.Parkour
 
             _sessions.Remove(userKey);
             Player? player = ResolvePlayer(userKey);
-            try { if (player != null) _hints.RemoveLane(player, LaneId); else _hints.ForgetLane(userKey, LaneId); }
+            try { if (player != null) _hints.RemoveLane(player, LaneId); }
             catch (Exception ex) { Logger.Warn($"[WarmupScpSelector] Parkour hint cleanup failed: {ex.Message}"); }
             try
             {

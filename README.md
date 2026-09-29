@@ -175,14 +175,15 @@ References SCP:SL managed assemblies from a dedicated-server install. If yours i
 dotnet build -c Release
 # or:
 dotnet build -c Release -p:ServerManagedPath="C:\path\to\SCPSL_Data\Managed"
+# in a standalone checkout, also pass -p:HsmAdapterProject="C:\path\to\HsmAdapter\HsmAdapter.csproj"
 ```
 
 Output: `src/WarmupScpSelector/bin/Release/net48/WarmupScpSelector.dll`. The 7 SCP models are embedded
-in the DLL. HintServiceMeow must also be installed for the plugin to load.
+in the DLL. Install `HsmAdapter.dll` as a LabAPI plugin and `HintServiceMeow.dll` for the HUD.
 
 ### Install
 
-Copy `WarmupScpSelector.dll` into the LabAPI plugins folder for your port, e.g.:
+Copy `WarmupScpSelector.dll` and `HsmAdapter.dll` into the LabAPI plugins folder for your port, e.g.:
 
 ```text
 %AppData%\SCP Secret Laboratory\LabAPI\plugins\<port>\
@@ -467,11 +468,11 @@ dotnet build -c Release
 dotnet build -c Release -p:ServerManagedPath="C:\path\to\SCPSL_Data\Managed"
 ```
 
-输出：`src/WarmupScpSelector/bin/Release/net48/WarmupScpSelector.dll`。7 个 SCP 模型已嵌入 DLL。服务器也必须安装 HintServiceMeow。
+Build output: `src/WarmupScpSelector/bin/Release/net48/WarmupScpSelector.dll`. Install `HsmAdapter.dll` as a LabAPI plugin and `HintServiceMeow.dll` for the HUD.
 
 ### 安装
 
-把 `WarmupScpSelector.dll` 复制到对应端口的 LabAPI 插件目录：
+Copy `WarmupScpSelector.dll` and `HsmAdapter.dll` to the port's LabAPI plugins folder:
 
 ```text
 %AppData%\SCP Secret Laboratory\LabAPI\plugins\<端口>\
