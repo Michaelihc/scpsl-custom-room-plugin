@@ -73,7 +73,34 @@ internal sealed class HsmHintDisplayProvider
             fontSize: Math.Max(6, _config.PromptTextSize), anchor: VerticalAnchor.Middle,
             syncSpeed: HsmSyncSpeed.Fast, fastUpdate: _config.ForceFastUpdates,
             lineHeight: Math.Max(0f, _config.LineHeight), forceUpdate: _config.ForceFastUpdates);
-        _scope.ShowHsm(player, NormalizeTagId(tagId), layout, duration);
+        _scope.ShowHsmReserved(player, NormalizeTagId(tagId), layout,
+            OccupiedRegion(tagId, layout), duration);
+    }
+
+    private static ScreenRect OccupiedRegion(string tagId, HsmHintLayout layout)
+    {
+        // HSM's horizontal coordinate is twice the offset from the reference canvas center.
+        // The selection card contains a 165% title and several rows; activity heroes have
+        // multiple sized lines, while their flash and footer are single-line bands.
+        bool status = string.Equals(tagId, "status", StringComparison.Ordinal);
+        bool fullStatus = status && layout.RichText.Contains("\n");
+        bool hero = tagId?.EndsWith(".hero", StringComparison.Ordinal) == true;
+        float scale = Math.Max(1f, layout.FontSize / 20f);
+        float width = (fullStatus ? 660f : status ? 440f : hero ? 360f : 340f) * scale;
+        float above = (fullStatus ? 145f : hero ? 80f : 38f) * scale;
+        float below = (fullStatus ? 145f : hero ? 80f : 38f) * scale;
+        if (fullStatus || hero)
+        {
+            above += layout.LineHeight * (fullStatus ? 8f : 3f);
+            below += layout.LineHeight * (fullStatus ? 8f : 3f);
+        }
+        width = Math.Min(1920f, width);
+        float centerX = Math.Max(0f, Math.Min(1920f, 960f + layout.X / 2f));
+        float left = Math.Max(0f, centerX - width / 2f);
+        float right = Math.Min(1920f, centerX + width / 2f);
+        float top = Math.Max(0f, layout.Y - above);
+        float bottom = Math.Min(1080f, layout.Y + below);
+        return new ScreenRect(left, top, Math.Max(1f, right - left), Math.Max(1f, bottom - top));
     }
 
     private string NormalizeTagId(string tagId)
