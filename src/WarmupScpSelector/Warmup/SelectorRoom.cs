@@ -61,12 +61,14 @@ public sealed class SelectorRoom
     private readonly List<Pickup> _pickups = new();
     private readonly List<ScpOption> _offered = new();
     private readonly Import.AuthoredStationSpawner _authored = new();
+    private readonly NewsBoard _newsBoard;
     private PrimitiveObjectToy? _aimDoorGate;
     private PrimitiveObjectToy? _parkourDoorGate;
 
     public SelectorRoom(WarmupScpSelectorPlugin plugin)
     {
         _plugin = plugin;
+        _newsBoard = new NewsBoard(plugin);
     }
 
     private Config Config => _plugin.Config;
@@ -104,6 +106,9 @@ public sealed class SelectorRoom
     public bool ParkourDoorPrepared { get; private set; }
 
     public bool IsSpawned { get; private set; }
+
+    /// <summary>The recent-updates board, whose toys the schematic export leaves out.</summary>
+    internal NewsBoard NewsBoard => _newsBoard;
 
     public void Build()
     {
@@ -164,6 +169,7 @@ public sealed class SelectorRoom
         }
 
         PrepareHatchGates(hall);
+        _newsBoard.Spawn(hall);
 
         IsSpawned = true;
         _plugin.LogDebug($"Built warmup station at {origin}: {_toys.Count} toys, {_pickups.Count} coins, {slots.Count} stands.");
@@ -500,6 +506,7 @@ public sealed class SelectorRoom
 
     public void Despawn()
     {
+        _newsBoard.Despawn();
         foreach (Pickup pickup in _pickups)
         {
             try

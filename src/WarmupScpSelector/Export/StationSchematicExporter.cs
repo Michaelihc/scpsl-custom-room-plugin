@@ -65,6 +65,7 @@ internal static class StationSchematicExporter
         WarmupHallLayout hall,
         ParkourLayout? parkour,
         AimRangeLayout? aim,
+        Predicate<AdminToy> skip,
         string schematicName,
         string schematicsDirectory,
         out StationExportResult result,
@@ -79,7 +80,7 @@ internal static class StationSchematicExporter
 
             // Map every captured toy to its block id first, so a child can resolve its parent's id
             // regardless of the order the world hands them to us.
-            List<AdminToy> captured = CaptureToys(hall);
+            List<AdminToy> captured = CaptureToys(hall, skip);
             Dictionary<Transform, AdminToy> byTransform = new();
             foreach (AdminToy toy in captured)
             {
@@ -119,15 +120,18 @@ internal static class StationSchematicExporter
         }
     }
 
-    /// <summary>Every admin toy standing inside the station, plus a little slack for wall thickness.</summary>
-    private static List<AdminToy> CaptureToys(WarmupHallLayout hall)
+    /// <summary>
+    /// Every admin toy standing inside the station, plus a little slack for wall thickness, except those
+    /// <paramref name="skip"/> claims: live content such as the news board must not be baked into the file.
+    /// </summary>
+    private static List<AdminToy> CaptureToys(WarmupHallLayout hall, Predicate<AdminToy> skip)
     {
         List<AdminToy> captured = new();
         foreach (AdminToy toy in AdminToy.List)
         {
             try
             {
-                if (toy == null || toy.IsDestroyed || toy.Transform == null)
+                if (toy == null || toy.IsDestroyed || toy.Transform == null || skip(toy))
                 {
                     continue;
                 }

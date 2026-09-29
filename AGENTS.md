@@ -72,6 +72,12 @@
   aisle is deliberately left empty so the logo reads straight down it from the arrival point. Per-lane
   **hatch gates** replace the old full-width seam: each activity compartment is sealed during setup and its
   panel removed only once that lane started successfully.
+- `Warmup/NewsBoard.cs` + `News/` + `Text/NewsBoardText.cs` — the recent-updates board. Its text is runtime
+  data from the wiki's `updates.json` (contract owned by `scpsl-wiki/build.py` `update_feed`), never compiled
+  in. The cache is shown first. The fetch runs in a worker `Task` with a timeout and size cap, never throws,
+  and a generation-bound MEC poll applies it on the main thread. Feed text is flattened and `<`/`>` are
+  neutralised before TMP. Lines are fitted with `TextAdvance` inside `nobr`, and entries are added only while
+  the height budget fits. The board owns its toys, so `StationSchematicExporter` skips them.
 - `Models/MerModelLoader.cs` — vendored reader: parses embedded `.mer.json` primitives and one-level
   ProjectMER empty-parent hierarchies into `PrimitiveObjectToy` data (+ MiniJson). `Models/MerWorldSpawner.cs`
   composes those transforms at arbitrary world roots, returns named markers without spawning marker geometry,
