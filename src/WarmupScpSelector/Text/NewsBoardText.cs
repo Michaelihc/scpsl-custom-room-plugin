@@ -16,7 +16,7 @@ public static class NewsBoardText
     public const float DisplayWidth = 480f;
 
     /// <summary>Height budget in display units for heading, entries and footer together.</summary>
-    public const float DisplayHeight = 300f;
+    public const float DisplayHeight = 340f;
 
     private const float SafeWidth = DisplayWidth - 12f;
 
@@ -28,8 +28,8 @@ public static class NewsBoardText
     private const int GapSize = 9;
     private const int SummaryLines = 2;
 
-    /// <summary>Line advance per unit of font size. Liberation Sans sets about 1.2; 1.25 keeps the budget safe.</summary>
-    private const float LineAdvance = 1.25f;
+    /// <summary>Line advance per unit of font size: about 1.37 measured in game, rounded up to keep the budget safe.</summary>
+    private const float LineAdvance = 1.4f;
 
     private const string HeadingColor = "#FF9228";
     private const string DateColor = "#B6A4E8";

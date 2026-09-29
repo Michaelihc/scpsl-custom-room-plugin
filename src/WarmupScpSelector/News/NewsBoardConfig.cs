@@ -19,7 +19,7 @@ public sealed class NewsBoardConfig
     public int MaxEntries { get; set; } = 4;
 
     [Description("Board centre on its wall, in station-local metres from the deck centre. The default is the gallery's north wall east of the hatch, behind the spawn and facing the SCP aisle.")]
-    public Vector3 Position { get; set; } = new(7.75f, 2.65f, -25.65f);
+    public Vector3 Position { get; set; } = new(7.75f, 2.85f, -25.65f);
 
     [Description("Compass direction the board faces, in degrees around the vertical axis: 0 faces +Z (north), 180 faces -Z (south, into the gallery).")]
     public float FacingYaw { get; set; } = 180f;

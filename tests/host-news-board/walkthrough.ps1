@@ -27,7 +27,7 @@ function Feed-Titles([string]$Path) { @((Get-Content $Path -Raw -Encoding utf8 |
 function Ready-Actor { @(Observe | Where-Object { $_.ready -and $_.role -eq 'Tutorial' })[0] }
 # Board centre in station-local metres (NewsBoardConfig.Position), and the spawn's local offset.
 function Board-Target($Actor) {
-    @{x=$Actor.position.x+7.75; y=$Actor.camera.y+0.8; z=$Actor.position.z+31.5-25.65}
+    @{x=$Actor.position.x+7.75; y=$Actor.camera.y+1.0; z=$Actor.position.z+31.5-25.65}
 }
 
 if (!(Test-Path $pluginConfig)) { throw "Plugin config folder not found: $pluginConfig" }

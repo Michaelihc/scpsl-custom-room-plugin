@@ -113,7 +113,7 @@ news_board:
   max_entries: 4
   position:
     x: 7.75
-    y: 2.65
+    y: 2.85
     z: -25.65
   facing_yaw: 180
 authored_station_asset: warmup_station_stars_lit

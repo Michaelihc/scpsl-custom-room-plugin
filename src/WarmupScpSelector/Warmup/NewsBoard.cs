@@ -24,7 +24,7 @@ namespace WarmupScpSelector.Warmup;
 internal sealed class NewsBoard
 {
     private const float PanelWidth = 5.2f;
-    private const float PanelHeight = 3.3f;
+    private const float PanelHeight = 3.7f;
     private const float FrameBorder = 0.12f;
     private const float PlateThickness = 0.04f;
     private const float StripHeight = 0.06f;
