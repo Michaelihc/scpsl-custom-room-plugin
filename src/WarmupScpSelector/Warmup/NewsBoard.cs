@@ -146,7 +146,9 @@ internal sealed class NewsBoard
         {
             string outcome = result.Feed != null ? "showing it anyway" :
                 _shown != null ? "showing the cached copy" : "the board stays hidden";
-            Logger.Warn($"[WarmupScpSelector] News board feed '{feedUrl}': {result.Error}; {outcome}.");
+            // Mono socket errors carry a line break and NUL padding; keep the warning on one log line.
+            string error = NewsFeed.Flatten(result.Error).TrimEnd('.');
+            Logger.Warn($"[WarmupScpSelector] News board feed '{feedUrl}': {error}; {outcome}.");
         }
 
         if (result.Feed != null)
