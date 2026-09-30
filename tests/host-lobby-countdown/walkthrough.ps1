@@ -36,9 +36,9 @@ $ox=$spawn.position.x; $oz=$spawn.position.z+31.5
 Start-Sleep -Seconds 3
 $panel=Invoke-LabScreenshot -Name 'panel-gallery'
 
-# 2. Aim bay (local x 11..36): the lane HUD replaces the panel; the compact countdown strip remains.
+# 2. Aim bay (local x 11..36; the shooting counter stops walkers near x 14): the lane HUD replaces the panel; the compact countdown strip remains.
 $null=Walk-Until 0 { param($a) $a.position.z -ge $oz-3 } 'the hub'
-$aim=Walk-Until 90 { param($a) $a.position.x -ge $ox+14 } 'the Aim bay'
+$aim=Walk-Until 90 { param($a) $a.position.x -ge $ox+12.5 } 'the Aim bay'
 Start-Sleep -Seconds 2
 $aimShot=Invoke-LabScreenshot -Name 'strip-aim'
 
