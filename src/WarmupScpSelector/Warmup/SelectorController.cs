@@ -802,7 +802,7 @@ internal sealed class SelectorController
         {
             string directory = Export.ExportStationCommand.ResolveSchematicsDirectory(_plugin);
             if (Export.StationSchematicExporter.TryExport(
-                    _room.Hall, ParkourLayout, AimLayout, name, directory,
+                    _room.Hall, ParkourLayout, AimLayout, _room.NewsBoard.Owns, name, directory,
                     out Export.StationExportResult result, out string error))
             {
                 Logger.Info($"[WarmupScpSelector] Exported station schematic: {result} -> {result.Path}");

@@ -62,7 +62,7 @@ public sealed class ExportStationCommand : ICommand
         ParkourLayout? parkour = plugin.Controller?.ParkourLayout;
         AimRangeLayout? aim = plugin.Controller?.AimLayout;
 
-        if (!StationSchematicExporter.TryExport(room.Hall, parkour, aim, name, ResolveSchematicsDirectory(plugin), out StationExportResult result, out string error))
+        if (!StationSchematicExporter.TryExport(room.Hall, parkour, aim, room.NewsBoard.Owns, name, ResolveSchematicsDirectory(plugin), out StationExportResult result, out string error))
         {
             response = $"Export failed: {error}";
             return false;

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using PlayerRoles;
 using UnityEngine;
 using WarmupScpSelector.Activities;
+using WarmupScpSelector.News;
 using WarmupScpSelector.Replacement;
 using WarmupScpSelector.Services;
 
@@ -24,6 +25,9 @@ public sealed class Config
 
     [Description("Early-round SCP disconnect replacement and optional .human opt-out settings. This system is independent of the waiting-for-players draft.")]
     public ScpReplacementConfig ScpReplacement { get; set; } = new();
+
+    [Description("Recent-updates board in the station. Its entries come from the wiki's update log at runtime, so a new update needs no plugin release.")]
+    public NewsBoardConfig NewsBoard { get; set; } = new();
 
     [Description("Filename of an authored ProjectMER station schematic to spawn INSTEAD of the generated shell, decor, and gallery exhibits. Empty (default) generates the station in code. Looked up in this plugin's config folder under Schematics/<name>/<name>.json, then ProjectMER's own Schematics folder. Gameplay stays code-driven: selection coins, counter guns, hatch gates, targets, and bots are still spawned at the code anchors, and the Aim Bay is always built by code so its furniture is not spawned twice. An authored parkour shaft IS used, and the Pulse Line reads its gates back off those landings. Keep the exported marker_* blocks in the file - they are the anchor contract.")]
     public string AuthoredStationAsset { get; set; } = string.Empty;

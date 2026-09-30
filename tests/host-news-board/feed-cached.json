@@ -1,0 +1,18 @@
+{
+ "version": 1,
+ "link": "https://scpslservers.com/sr/wiki/updates.html",
+ "entries": [
+  {
+   "id": "2026-09-02-cached-copy",
+   "date": "2026-09-02",
+   "title": "缓存副本测试",
+   "summary": "网站暂时无法访问时，公告板显示上一次成功读取的内容。"
+  },
+  {
+   "id": "2026-09-01-cached-older",
+   "date": "2026-09-01",
+   "title": "较早的缓存条目",
+   "summary": "第二条缓存内容，用来确认列表按日期倒序排列。"
+  }
+ ]
+}

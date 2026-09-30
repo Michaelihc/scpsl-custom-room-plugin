@@ -67,6 +67,11 @@ only once that activity's world, props, and scheduler have all started successfu
   (e.g. `SCP-096　·　5 picks`) and a tiny `·N` tally on each chip in the offered-role row. You can change
   your pick any time before the round starts. (The panel is only re-sent when its text changes, so it does
   not spam the network.)
+- A **recent-updates board** hangs on the gallery's north wall beside the exit hatch, behind the spawn. It lists
+  the newest entries of the Star River wiki's update log (date, title and a one- or two-line summary) and the
+  address of the full log. The text is not part of the plugin: every station build shows the cached copy, then
+  fetches the wiki's `updates.json` off the main thread and swaps the text when it arrives. Publishing the wiki
+  is enough to change the board at the next lobby. Until a feed has been read once, the board stays hidden.
 - The plugin never forces the native lobby countdown. The only exception is an ownership-safe temporary lobby lock
   while one human is using configured native bots, preventing counted dummies from falsely starting the round; it is
   released synchronously when another human joins, the last human leaves, or Aim stops.
@@ -250,6 +255,17 @@ ffmpeg -i lobby.mp3 -ac 1 -ar 48000 -f f32le lobby.f32le
   cannot match by label falls back to this grid. Keep the `SCP-xxx` labels in the schematic and the coins
   follow the models wherever you move them.
 - `SurfaceClearance` and `RoomOrigin` — where the station floats. The origin is the hub's deck centre.
+- `NewsBoard.Enabled` and `NewsBoard.FeedUrl` — the recent-updates board and where its entries come from
+  (default `https://scpslservers.com/sr/wiki/updates.json`; how entries are written is in the wiki's
+  `AUTHORING.md`). A non-http value is read as a file path, relative to the plugin config folder, with the same
+  format. The last good http copy is kept in `news-board-cache.json` in that folder and shown whenever the site
+  cannot be reached; a failed fetch logs one warning per lobby.
+- `NewsBoard.FetchTimeoutSeconds` and `NewsBoard.MaxEntries` — fetch deadline (default `8`) and the most
+  entries shown (default `4`). Long summaries wrap to two lines, and the board drops older entries rather than
+  overflow.
+- `NewsBoard.Position` and `NewsBoard.FacingYaw` — the board's centre on its wall in station-local metres and the
+  direction it faces. The default sits on the gallery's north wall east of the hatch, facing into the gallery
+  (`180`). Move it here if a re-authored station puts something on that wall.
 
 ### Handing the room to someone else
 
@@ -274,6 +290,8 @@ What the export contains, and why:
   logo, the parkour landings, the range furniture, lights, and text. It reads the live world rather than
   re-describing the geometry from the layout code, because a second description would drift from the
   builders and the drift would only surface when someone spawned the export and found it different.
+  The recent-updates board is the exception: it is live content placed by config, so it is left out
+  rather than baked in as stale text.
 - **The logo's parenting.** Its ~200 quads get their shear from a non-uniformly scaled invisible parent
   times a rotated child. Those are exported with `ParentId` and local transforms; flattened to world
   space the emblem comes back subtly wrong rather than obviously broken.

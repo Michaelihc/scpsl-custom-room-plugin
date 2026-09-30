@@ -23,6 +23,7 @@
     <Reference Include="Mirror" HintPath="$(ServerManagedPath)\Mirror.dll" Private="false" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(ServerManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
     <Reference Include="UnityEngine.PhysicsModule" HintPath="$(ServerManagedPath)\UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="System.Net.Http" />
   </ItemGroup>
 
   <ItemGroup>
