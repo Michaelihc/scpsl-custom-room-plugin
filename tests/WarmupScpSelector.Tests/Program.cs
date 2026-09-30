@@ -97,7 +97,7 @@ namespace WarmupScpSelector.Tests
                 SlidingTargetMotionIsDeterministicAndAbsolute,
                 SphereTargetStateCreditsOnceAndRelocates,
                 SphereTargetLayoutFitsThirdLane,
-                CollapsedStatusStripIsOneLineOneLanguageAndSafe,
+                CompactCountdownStripIsOneLineOneLanguageAndQuieterThanFull,
                 AimRangeHeroRendersStateInOneLanguage,
                 AimRangeFooterIsStateSpecificAndActiveVoice,
                 AimRangeFlashRendersEveryEventInOneLanguage,
@@ -1647,41 +1647,47 @@ namespace WarmupScpSelector.Tests
 
         // ---- Aim Range HSM UI (Task #9) ------------------------------------------------------------------
 
-        private static void CollapsedStatusStripIsOneLineOneLanguageAndSafe()
+        private static void CompactCountdownStripIsOneLineOneLanguageAndQuieterThanFull()
         {
-            // EN: single line, English words, pick + count + countdown, no CJK.
-            string en = WarmupText.BuildCollapsedStatusStrip(12, RoleTypeId.Scp096, 3, false, false);
-            AssertEqual(false, en.Contains("\n"), "collapsed strip is one line (en)");
-            AssertContains(en, "PICK", "collapsed pick label en");
-            AssertContains(en, "SCP-096", "collapsed selected name");
-            AssertContains(en, "·3", "collapsed pick count");
-            AssertContains(en, "<size=88%>", "collapsed strip wraps in one outer size span (fits the narrow lane)");
-            AssertContains(en, ">12<", "collapsed countdown seconds");
-            AssertContains(en, ">s<", "collapsed countdown unit en");
-            AssertOmits(en, "已选", "collapsed strip renders exactly one language (no CN in en)");
-            AssertNoCjk(en, "collapsed strip en has no CJK");
-            AssertMarkupSafe(en, "collapsed strip en markup");
-            AssertNoNestedSize(en, "collapsed strip has no nested size (en)");
+            // EN: single line, countdown only (no title / pick / players), one small outer size span, no CJK.
+            string en = WarmupText.BuildCompactCountdownStrip(12, false, false);
+            AssertEqual(false, en.Contains("\n"), "compact countdown is one line (en)");
+            AssertContains(en, "Starts in ", "compact countdown label en");
+            AssertContains(en, ">12<", "compact countdown seconds");
+            AssertContains(en, ">s<", "compact countdown unit en");
+            AssertContains(en, "<size=78%>", "compact countdown wraps in one small outer size span (fits the narrow lane)");
+            AssertOmits(en, "SELECTION", "compact countdown omits the title");
+            AssertOmits(en, "Players", "compact countdown omits the player count");
+            AssertOmits(en, "PICK", "compact countdown omits the pick");
+            AssertOmits(en, "倒计时", "compact countdown renders exactly one language (no CN in en)");
+            AssertNoCjk(en, "compact countdown en has no CJK");
+            AssertMarkupSafe(en, "compact countdown en markup");
+            AssertNoNestedSize(en, "compact countdown has no nested size (en)");
 
             // CN: single line, Chinese words, no English label words.
-            string cn = WarmupText.BuildCollapsedStatusStrip(12, RoleTypeId.Scp096, 3, true, false);
-            AssertEqual(false, cn.Contains("\n"), "collapsed strip is one line (cn)");
-            AssertContains(cn, "已选", "collapsed pick label cn");
-            AssertContains(cn, "SCP-096", "collapsed selected name cn");
-            AssertContains(cn, "·3", "collapsed pick count cn");
-            AssertContains(cn, ">12<", "collapsed countdown seconds cn");
-            AssertContains(cn, ">秒<", "collapsed countdown unit cn");
-            AssertOmits(cn, "PICK", "collapsed strip renders exactly one language (no en in cn)");
-            AssertOmits(cn, "Starts", "collapsed strip renders exactly one language (no en countdown in cn)");
-            AssertMarkupSafe(cn, "collapsed strip cn markup");
-            AssertNoNestedSize(cn, "collapsed strip has no nested size (cn)");
+            string cn = WarmupText.BuildCompactCountdownStrip(12, true, false);
+            AssertEqual(false, cn.Contains("\n"), "compact countdown is one line (cn)");
+            AssertContains(cn, "倒计时 ", "compact countdown label cn");
+            AssertContains(cn, ">12<", "compact countdown seconds cn");
+            AssertContains(cn, ">秒<", "compact countdown unit cn");
+            AssertOmits(cn, "Starts", "compact countdown renders exactly one language (no en in cn)");
+            AssertMarkupSafe(cn, "compact countdown cn markup");
+            AssertNoNestedSize(cn, "compact countdown has no nested size (cn)");
 
-            // Waiting / starting states and the empty-selection form.
-            AssertContains(WarmupText.BuildCollapsedStatusStrip(-2, null, 0, true, false), "等待", "collapsed waiting cn");
-            AssertContains(WarmupText.BuildCollapsedStatusStrip(0, null, 0, false, false), "Start", "collapsed starting en");
-            string none = WarmupText.BuildCollapsedStatusStrip(30, null, 0, false, false);
-            AssertContains(none, "none yet", "collapsed empty selection en");
-            AssertOmits(none, "·", "collapsed strip omits the count badge with no selection");
+            // Waiting / starting / urgent states.
+            AssertContains(WarmupText.BuildCompactCountdownStrip(-2, true, false), "等待玩家中", "compact waiting cn");
+            AssertContains(WarmupText.BuildCompactCountdownStrip(0, false, false), "Starting", "compact starting en");
+            AssertContains(WarmupText.BuildCompactCountdownStrip(3, false, false), "<color=#FF5555>3</color>", "compact urgent color");
+
+            // The full panel's seconds are the enlarged element; the lane strip must stay smaller than the body text
+            // so it reads as secondary to the lane hero/footer while never disappearing.
+            string full = WarmupText.BuildWarmupStatusHint(12, 3, 50, SampleOptions, RoleTypeId.Scp173, null, false);
+            AssertContains(full, "<size=150%><b><color=#FF9228>12</color></b></size>", "full panel enlarges the seconds");
+            AssertContains(
+                WarmupText.BuildWarmupStatusHint(-2, 1, 50, SampleOptions, null, null, false),
+                "<size=120%><color=#8B95A6>● Waiting for players</color></size>",
+                "full panel bumps the waiting state");
+            AssertOmits(en, "150%", "compact countdown never uses the full-panel seconds size");
         }
 
         private static void AimRangeHeroRendersStateInOneLanguage()
