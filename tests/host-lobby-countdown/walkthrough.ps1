@@ -42,9 +42,9 @@ $aim=Walk-Until 90 { param($a) $a.position.x -ge $ox+12.5 } 'the Aim bay'
 Start-Sleep -Seconds 2
 $aimShot=Invoke-LabScreenshot -Name 'strip-aim'
 
-# 3. Parkour shaft (local x -4.5..4.5, z 17.5..71): same strip beside the Pulse Line HUD.
+# 3. Parkour shaft (local x -4.5..4.5, z 17.5..71; the start pad stops walkers near z 18.2): same strip beside the Pulse Line HUD.
 $null=Walk-Until 270 { param($a) $a.position.x -le $ox+1 } 'the hub centre line'
-$shaft=Walk-Until 0 { param($a) $a.position.z -ge $oz+19.5 } 'the parkour shaft'
+$shaft=Walk-Until 0 { param($a) $a.position.z -ge $oz+18 } 'the parkour shaft'
 Start-Sleep -Seconds 2
 $shaftShot=Invoke-LabScreenshot -Name 'strip-parkour'
 
