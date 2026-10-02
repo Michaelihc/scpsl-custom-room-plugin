@@ -14,7 +14,11 @@ __pycache__/
 .venv/
 .playwright-mcp/
 CLAUDE.md
-generated/*.log
+generated/**/*.log
+tests/**/*.log
+
+# Local task worktrees
+.worktrees/
 
 # Local SCP:SL / LabAPI server artifacts
 LabApi/
