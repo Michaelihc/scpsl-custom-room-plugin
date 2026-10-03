@@ -28,11 +28,49 @@ namespace WarmupScpSelector.Tests
             RoleTypeId.Scp3114,
         };
 
+        // One live round cannot cover every combination of forced recipients holding each other's vanilla
+        // slots and competing coin pools. Check the reservation and capacity invariants across those cases.
+        private static void ForcedRecipientsSurviveCompetingCoinPools()
+        {
+            System.Random random = new System.Random(1733114);
+            for (int iteration = 0; iteration < 1000; iteration++)
+            {
+                Dictionary<int, RoleTypeId> vanilla = new Dictionary<int, RoleTypeId>();
+                Dictionary<int, RoleTypeId> forced = new Dictionary<int, RoleTypeId>();
+                Dictionary<RoleTypeId, IReadOnlyList<int>> pools = new Dictionary<RoleTypeId, IReadOnlyList<int>>();
+                foreach (int player in Enumerable.Range(0, 10))
+                {
+                    vanilla[player] = random.Next(3) == 0 ? ScpOrder[random.Next(ScpOrder.Length)] : RoleTypeId.None;
+                    if (random.Next(2) == 0)
+                        forced[player] = ScpOrder[random.Next(ScpOrder.Length)];
+                }
+                foreach (RoleTypeId role in ScpOrder)
+                    pools[role] = vanilla.Keys.Where(player => random.Next(2) == 0).ToList();
+
+                Dictionary<int, RoleTypeId> reserved = ForcedScpSelectionPlanner.Build(vanilla, forced);
+                var plan = SelectionSwapPlanner.BuildPlan(ScpOrder, reserved, pools, candidates => candidates[0], forced.Keys);
+                foreach (var request in forced)
+                {
+                    if (plan.FinalRoles[request.Key] != request.Value)
+                        throw new Exception("A competing coin pool displaced a forced recipient.");
+                }
+                int expectedScps = Math.Max(vanilla.Values.Count(ScpOption.IsScpRole), forced.Count);
+                if (plan.FinalRoles.Values.Count(ScpOption.IsScpRole) != expectedScps)
+                    throw new Exception("Forced assignments failed to reuse available SCP slots.");
+                foreach (RoleTypeId role in ScpOrder)
+                {
+                    if (reserved.Values.Count(value => value == role) != plan.FinalRoles.Values.Count(value => value == role))
+                        throw new Exception("Ordinary coin picks changed the reserved SCP multiset.");
+                }
+            }
+        }
+
         private static int Main()
         {
             List<Action> tests = new List<Action>
             {
                 RoleDraftFillsSlotsInPriorityOrderWithoutSharingPlayers,
+                ForcedRecipientsSurviveCompetingCoinPools,
                 SelectedPlayerSwapsWithVanillaScpHolderAndPreservesOriginalClass,
                 UnspawnedSelectionIsSkipped,
                 NaturalHolderKeepsRole,

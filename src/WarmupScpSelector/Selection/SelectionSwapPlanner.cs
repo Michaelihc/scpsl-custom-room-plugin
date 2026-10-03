@@ -87,8 +87,15 @@ namespace WarmupScpSelector.Selection
             IEnumerable<RoleTypeId> roleOrder,
             IReadOnlyDictionary<TPlayer, RoleTypeId> originalRoles,
             IReadOnlyDictionary<RoleTypeId, IReadOnlyList<TPlayer>> selectedPools,
+            Func<IReadOnlyList<TPlayer>, TPlayer> choosePlayer)
+            where TPlayer : notnull => BuildPlan(roleOrder, originalRoles, selectedPools, choosePlayer, null);
+
+        public static SelectionSwapPlan<TPlayer> BuildPlan<TPlayer>(
+            IEnumerable<RoleTypeId> roleOrder,
+            IReadOnlyDictionary<TPlayer, RoleTypeId> originalRoles,
+            IReadOnlyDictionary<RoleTypeId, IReadOnlyList<TPlayer>> selectedPools,
             Func<IReadOnlyList<TPlayer>, TPlayer> choosePlayer,
-            IEnumerable<TPlayer>? reservedPlayers = null)
+            IEnumerable<TPlayer>? reservedPlayers)
             where TPlayer : notnull
         {
             Dictionary<TPlayer, RoleTypeId> finalRoles = originalRoles.ToDictionary(pair => pair.Key, pair => pair.Value);

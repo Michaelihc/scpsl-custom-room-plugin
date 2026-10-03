@@ -15,6 +15,16 @@ $forceActors=@($Context.Actors)
 if ($forceActors.Count -ne 2) { throw 'Run with --clients 2' }
 $firstId=$forceActors[0].id; $secondId=$forceActors[1].id
 Require-Reply '/roundtime' 'not started'
+# Exercise the actual LabAPI config switch and reload on this runner-owned server only.
+$forceConfig=Join-Path $Context.Root "Server/AppData/SCP Secret Laboratory/LabAPI/configs/$($Context.Port)/WarmupScpSelector/config.yml"
+$enabledConfig=Get-Content $forceConfig -Raw -Encoding utf8
+if ($enabledConfig -notmatch '(?m)^admin_force_selection_enabled: true\s*$') { throw 'Enabled config fixture is missing' }
+$disabledConfig=$enabledConfig -replace '(?m)^admin_force_selection_enabled: true\s*$', 'admin_force_selection_enabled: false'
+$disabledConfig | Set-Content $forceConfig -Encoding utf8
+Require-Reply '/labapi reload configs' 'Successfully reloaded'
+Require-Reply "/warmupforce $firstId 173" '已关闭'
+$enabledConfig | Set-Content $forceConfig -Encoding utf8
+Require-Reply '/labapi reload configs' 'Successfully reloaded'
 Require-Reply "/warmupforce $firstId 049-2" '请选择'
 Require-Reply '/warmupforce 99999 173' '目标玩家'
 Require-Reply "/warmupforce $firstId 096" '已预定'
