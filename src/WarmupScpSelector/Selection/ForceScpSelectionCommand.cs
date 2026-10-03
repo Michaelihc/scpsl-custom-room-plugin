@@ -43,8 +43,9 @@ public sealed class ForceScpSelectionCommand : ICommand
         }
 
         RoleTypeId role = Enum.GetValues(typeof(RoleTypeId)).Cast<RoleTypeId>()
-            .FirstOrDefault(candidate => ScpReplacementPolicy.IsMainScp(candidate) &&
-                ScpReplacementPolicy.MatchesScpArgument(candidate, arguments.At(1)));
+            .Where(candidate => ScpReplacementPolicy.IsMainScp(candidate) &&
+                ScpReplacementPolicy.MatchesScpArgument(candidate, arguments.At(1)))
+            .DefaultIfEmpty(RoleTypeId.None).First();
         if (!ScpReplacementPolicy.IsMainScp(role))
         {
             response = "请选择 SCP：049、079、096、106、173、939 或 3114。";
