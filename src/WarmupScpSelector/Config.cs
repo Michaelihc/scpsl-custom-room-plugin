@@ -17,6 +17,9 @@ public sealed class Config
     [Description("Whether debug logging is enabled.")]
     public bool Debug { get; set; } = false;
 
+    [Description("Enable the permission-gated warmupforce RA/server-console command. Forced next-round SCP assignments override coin lotteries and SCP-3114 thresholds. Existing SCP slots are reused where possible; excess forced assignments add SCPs. Reservations expire on round start, disconnect, restart or unload.")]
+    public bool AdminForceSelectionEnabled { get; set; } = false;
+
     [Description("Master switch for the optional warmup activity suite. Default OFF: the SCP draft behaves exactly as before. Turning it on only enables lanes that are also gated on under Activities. Each lane owns one station compartment: Aim fits out the east Aim Bay with persistent counter guns, deterministic native targets, owned native RA bots, lethal human reset, and a bilingual HSM HUD; Parkour generates the Pulse Line in the north shaft. Persistence/scoring remain separate work.")]
     public bool ActivitiesEnabled { get; set; } = false;
 

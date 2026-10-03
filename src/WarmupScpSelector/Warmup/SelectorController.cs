@@ -48,6 +48,57 @@ internal sealed class SelectorController
     // Folded only into the test display overlay; never admitted to SelectorParticipantState or round-start swaps.
     private readonly Dictionary<string, RoleTypeId> _externalSelections = new();
 
+    // Player wrappers bind reservations to this connection, never to a reconnecting account.
+    private readonly Dictionary<Player, RoleTypeId> _forcedSelections = new();
+
+    internal bool TryForceSelection(Player? player, RoleTypeId role, out string response)
+    {
+        if (!_active || _handedOff)
+        {
+            response = "只能在等待玩家阶段强制选择 SCP。";
+            return false;
+        }
+        if (player == null || !player.IsReady || player.IsHost || player.ReferenceHub == null ||
+            (!IsOwnedWarmupHuman(player) && !RoleAssigner.CheckPlayer(player.ReferenceHub)))
+        {
+            response = "目标玩家不存在或不参与本轮角色分配。";
+            return false;
+        }
+        _forcedSelections[player] = role;
+        response = $"已预定：{player.PlayerId} {player.Nickname} → {role}。本轮开始时必定获得该 SCP。";
+        Logger.Info($"[WarmupScpSelector] Reserved forced SCP {role} for {player.PlayerId} ({player.UserId}).");
+        return true;
+    }
+
+    internal string ListForcedSelections() => _forcedSelections.Count == 0 ? "没有强制选择预定。" :
+        string.Join("\n", _forcedSelections.Select(pair => $"{pair.Key.PlayerId} {pair.Key.Nickname} → {pair.Value}"));
+
+    internal bool ClearForcedSelection(string target, out string response)
+    {
+        if (!_active || _handedOff)
+        {
+            response = "只能在等待玩家阶段取消预定。";
+            return false;
+        }
+        if (target.Equals("all", StringComparison.OrdinalIgnoreCase))
+        {
+            _forcedSelections.Clear();
+            response = "已取消全部强制选择预定。";
+            return true;
+        }
+        if (int.TryParse(target, out int id))
+        {
+            Player? player = _forcedSelections.Keys.FirstOrDefault(candidate => candidate.PlayerId == id);
+            if (player != null && _forcedSelections.Remove(player))
+            {
+                response = "已取消该玩家的强制选择预定。";
+                return true;
+            }
+        }
+        response = "未找到该玩家的强制选择预定。";
+        return false;
+    }
+
     private readonly System.Random _random = new();
 
     // Snapshot of the SCPs actually on offer this warmup, used to draw the live chip row in the status panel.
@@ -239,6 +290,7 @@ internal sealed class SelectorController
 
         if (_atomicDraftCompleted && callbackApplied)
         {
+            ApplyForcedSelectionsAfterSpawn();
             _plugin.LogDebug("Applied the SCP draft atomically before vanilla roles were sent.");
             ResetState();
             return;
@@ -430,6 +482,7 @@ internal sealed class SelectorController
     {
         if (ev.Player != null)
         {
+            _forcedSelections.Remove(ev.Player);
             string key = Key(ev.Player);
             bool wasCanonicalHuman = IsCanonicalHuman(ev.Player) || _participantState.IsMovedIn(key);
 
@@ -529,6 +582,17 @@ internal sealed class SelectorController
     // in place but must never be cancelled (someone would end the pass with no role at all).
     private void OnScp3114HumanAssignment(PlayerChangingRoleEventArgs? ev)
     {
+        if (_handedOff && Config.AdminForceSelectionEnabled && ev != null &&
+            ev.ChangeReason == RoleChangeReason.RoundStart && Scp3114DraftPolicy.IsHumanRoundRole(ev.NewRole) &&
+            _forcedSelections.TryGetValue(ev.Player, out RoleTypeId forcedRole))
+        {
+            // With no native SCP slots there is no atomic SCP callback. Rewrite only this player's human
+            // assignment; HumanSpawner must receive a completed role change, never a cancelled callback.
+            ev.NewRole = forcedRole;
+            ev.SpawnFlags = RoleSpawnFlags.All;
+            return;
+        }
+
         if (!_scp3114Armed || ev == null || ev.ChangeReason != RoleChangeReason.RoundStart ||
             !Scp3114DraftPolicy.IsHumanRoundRole(ev.NewRole))
         {
@@ -860,7 +924,15 @@ internal sealed class SelectorController
         _scp3114Armed = false;
         _scp3114Draft = null;
 
-        if (_participantState.SelectionCount == 0)
+        if (!Config.AdminForceSelectionEnabled)
+            _forcedSelections.Clear();
+        foreach (Player player in _forcedSelections.Keys.ToList())
+        {
+            if (player.ReferenceHub == null || !player.IsReady || !RoleAssigner.CheckPlayer(player.ReferenceHub))
+                _forcedSelections.Remove(player);
+        }
+
+        if (_participantState.SelectionCount == 0 && _forcedSelections.Count == 0)
         {
             return;
         }
@@ -927,6 +999,17 @@ internal sealed class SelectorController
                 }
             }
 
+            foreach (Player player in _forcedSelections.Keys)
+            {
+                if (!originalRoles.ContainsKey(player) && player.ReferenceHub != null &&
+                    player.IsReady && RoleAssigner.CheckPlayer(player.ReferenceHub))
+                    originalRoles[player] = RoleTypeId.None;
+            }
+            Dictionary<Player, RoleTypeId> forcedRoles = _forcedSelections
+                .Where(pair => originalRoles.ContainsKey(pair.Key))
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
+            originalRoles = ForcedScpSelectionPlanner.Build(originalRoles, forcedRoles);
+
             Dictionary<RoleTypeId, List<Player>> pools = new();
             foreach (Player player in originalRoles.Keys.ToList())
             {
@@ -952,15 +1035,16 @@ internal sealed class SelectorController
                 roleOrder,
                 originalRoles,
                 plannerPools,
-                candidates => candidates[_random.Next(candidates.Count)]);
+                candidates => candidates[_random.Next(candidates.Count)],
+                forcedRoles.Keys);
 
             List<KeyValuePair<Player, RoleTypeId>> finalScps = plan.FinalRoles
                 .Where(pair => ScpOption.IsScpRole(pair.Value))
                 .ToList();
-            if (!HasSameScpMultiset(_pendingScpAssignments.Select(assignment => assignment.Role),
+            if (!HasSameScpMultiset(originalRoles.Values.Where(ScpOption.IsScpRole),
                     finalScps.Select(pair => pair.Value)))
             {
-                throw new InvalidOperationException("atomic draft plan changed the vanilla SCP role multiset");
+                throw new InvalidOperationException("coin draft changed the reserved SCP role multiset");
             }
 
             // Validate the whole plan before sending any role. A disconnect or conflicting plugin change takes
@@ -1228,6 +1312,7 @@ internal sealed class SelectorController
 
     private void ResetState()
     {
+        _forcedSelections.Clear();
         // Cancel any pending swap so a stale callback from a prior round can never run against a new one.
         Timing.KillCoroutines(_swapDelay);
         _swapScheduled = false;
@@ -1543,7 +1628,66 @@ internal sealed class SelectorController
         }
         finally
         {
+            ApplyForcedSelectionsAfterSpawn();
             ResetState();
+        }
+    }
+
+    private void ApplyForcedSelectionsAfterSpawn()
+    {
+        if (!Config.AdminForceSelectionEnabled || _forcedSelections.Count == 0)
+            return;
+
+        // Exceptional compatibility path and final verification after the native callback completes.
+        // Replan each pair against live roles so an earlier failure cannot poison subsequent reservations.
+        foreach (var forced in _forcedSelections.ToList())
+        {
+            Player player = forced.Key;
+            if (!player.IsReady || player.ReferenceHub == null || player.Role == forced.Value)
+                continue;
+            RoleTypeId previous = player.Role;
+            Player? donor = null;
+            RoleTypeId donorRole = RoleTypeId.None;
+            try
+            {
+                Dictionary<Player, RoleTypeId> live = Player.ReadyList
+                    .Where(candidate => !candidate.IsHost && candidate.ReferenceHub != null)
+                    .ToDictionary(candidate => candidate, candidate => candidate.Role);
+                // Reserve other force recipients, but plan just this pair against the current state.
+                Dictionary<Player, RoleTypeId> requests = _forcedSelections.Keys
+                    .Where(live.ContainsKey).ToDictionary(candidate => candidate, candidate => live[candidate]);
+                requests[player] = forced.Value;
+                Dictionary<Player, RoleTypeId> final = ForcedScpSelectionPlanner.Build(live, requests);
+                donor = live.Keys.FirstOrDefault(candidate => candidate != player && live[candidate] != final[candidate]);
+                if (donor != null)
+                    donorRole = live[donor];
+
+                player.SetRole(forced.Value, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.All);
+                if (player.Role != forced.Value)
+                    throw new InvalidOperationException("forced SCP promotion was blocked");
+                if (donor != null)
+                {
+                    donor.SetRole(final[donor], RoleChangeReason.RemoteAdmin, RoleSpawnFlags.All);
+                    if (donor.Role != final[donor])
+                        throw new InvalidOperationException("forced SCP donor role change was blocked");
+                }
+                Logger.Info($"[WarmupScpSelector] Applied forced SCP {forced.Value} to {player.PlayerId}.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[WarmupScpSelector] Forced SCP {forced.Value} for {player.PlayerId} failed: {ex.Message}");
+                try
+                {
+                    if (player.IsReady && player.Role != previous)
+                        player.SetRole(previous, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.All);
+                    if (donor != null && donor.IsReady && donor.Role != donorRole)
+                        donor.SetRole(donorRole, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.All);
+                }
+                catch (Exception rollback)
+                {
+                    Logger.Error($"[WarmupScpSelector] Forced SCP rollback failed: {rollback.Message}");
+                }
+            }
         }
     }
 

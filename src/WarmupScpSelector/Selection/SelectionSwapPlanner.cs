@@ -87,7 +87,8 @@ namespace WarmupScpSelector.Selection
             IEnumerable<RoleTypeId> roleOrder,
             IReadOnlyDictionary<TPlayer, RoleTypeId> originalRoles,
             IReadOnlyDictionary<RoleTypeId, IReadOnlyList<TPlayer>> selectedPools,
-            Func<IReadOnlyList<TPlayer>, TPlayer> choosePlayer)
+            Func<IReadOnlyList<TPlayer>, TPlayer> choosePlayer,
+            IEnumerable<TPlayer>? reservedPlayers = null)
             where TPlayer : notnull
         {
             Dictionary<TPlayer, RoleTypeId> finalRoles = originalRoles.ToDictionary(pair => pair.Key, pair => pair.Value);
@@ -95,7 +96,8 @@ namespace WarmupScpSelector.Selection
             List<SelectionNatural<TPlayer>> naturalSelections = new List<SelectionNatural<TPlayer>>();
             List<SelectionSwap<TPlayer>> swaps = new List<SelectionSwap<TPlayer>>();
             List<SelectionUnresolved<TPlayer>> unresolvedSelections = new List<SelectionUnresolved<TPlayer>>();
-            HashSet<TPlayer> alreadyChosen = new HashSet<TPlayer>();
+            HashSet<TPlayer> alreadyChosen = reservedPlayers == null
+                ? new HashSet<TPlayer>() : new HashSet<TPlayer>(reservedPlayers);
 
             foreach (RoleTypeId targetRole in roleOrder)
             {

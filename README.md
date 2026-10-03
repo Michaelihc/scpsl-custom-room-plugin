@@ -167,6 +167,36 @@ The plugin hosts a shared **round role draft** for special roles other plugins o
   (300) from SCP999. Consumers compile against this project and keep their own round-start pick only when
   this plugin is not loaded.
 
+### Admin force selection
+
+Set `admin_force_selection_enabled: true` in the LabAPI configuration (default `false`).
+Remote Admin and the server console provide:
+
+```text
+warmupforce <playerId> <scp>    # e.g. warmupforce 4 173 or warmupforce 4 SCP-3114
+warmupforce list
+warmupforce clear <playerId>
+warmupforce clear all
+```
+
+Requires the native `ForceclassWithoutRestrictions` permission. Queue or cancel reservations during
+waiting-for-players. Each player has one reservation; another command replaces it. The chosen SCP is
+guaranteed against the coin lottery, including roles vanilla did not select and SCP-3114 below its
+normal threshold. Multiple players may be forced into the same SCP. Forced recipients are claimed
+as SCPs before other plugins' round role draft runs.
+
+The draft reuses an existing SCP slot where possible, changing its role if needed. If all slots belong
+to other forced recipients, additional reservations turn humans into extra SCPs. Ordinary coin picks
+retain their normal slot-preserving behavior. Disconnect, round start, restart and unload clear
+reservations. A disconnected player's reservation does not transfer to their next connection.
+Other plugins can still veto role changes; failures are logged and the compatibility path rolls back
+an incomplete swap.
+
+Native reference (local dedicated-server decompile):
+`.references/Decompiled/DedicatedServer/Assembly-CSharp/CommandSystem/Commands/RemoteAdmin/ForceRoleCommand.cs`,
+`HasPerms`; round assignment uses `PlayerRoles/RoleAssign/RoleAssigner.cs`, `OnRoundStarted`, and
+`PlayerRoles/RoleAssign/HumanSpawner.cs`, `SpawnHumans`, under that same source root.
+
 ### Replacement commands
 
 - `.volunteer` / `.v` — list SCP roles currently awaiting replacement.

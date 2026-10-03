@@ -1,0 +1,10 @@
+is_enabled: true
+debug: true
+admin_force_selection_enabled: true
+language: cn
+activities_enabled: false
+news_board:
+  enabled: false
+scp3114_draft_enabled: false
+scp3114_min_players: 26
+music_enabled: false

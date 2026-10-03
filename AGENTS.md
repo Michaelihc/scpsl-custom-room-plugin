@@ -6,7 +6,9 @@
 - Purpose: a **warmup SCP draft** plus early-round SCP disconnect replacement. During waiting-for-players, players are moved into one floating
   **space station** whose south gallery shows a model of each offered SCP with a big coin; grabbing a coin picks that SCP. At round start
   vanilla still chooses the SCP role multiset, but the plugin remaps the pending SCP recipients before
-  role initialization/networking. It never creates extra SCPs — it only rearranges vanilla's assignment.
+  role initialization/networking. Ordinary coin picks only rearrange vanilla's assignment. The optional
+  `AdminForceSelectionEnabled` command may change SCP types or add slots to guarantee reservations;
+  see [admin force selection](README.md#admin-force-selection).
   After round start, a healthy early-disconnecting SCP can open that exact vacant role to a short
   UserId-backed `.volunteer` lottery; spectators and living non-SCP humans are both eligible by default.
 - The station + models **despawn on round start**.
