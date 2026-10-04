@@ -16,9 +16,18 @@ $forceActors=@($Context.Actors)
 if ($forceActors.Count -ne 1) { throw 'Run with --clients 1' }
 $firstId=$forceActors[0].id
 # The native RoleAssigner consumes this queue: six SCP slots then one Class-D.
-$gameConfig=Join-Path $Context.Root "server-state/$($Context.Port)/config/config_gameplay.txt"
-Add-Content $gameConfig "`nteam_respawn_queue: 0000004" -Encoding utf8
+$configPathReply=Server '/config path'
+if ($configPathReply -notmatch 'Configuration file path: <i>([^<]+)</i>') { throw 'Native gameplay config path was not reported' }
+$gameConfig=[IO.Path]::GetFullPath((Join-Path $Matches[1] 'config_gameplay.txt'))
+$ownedPrefix=[IO.Path]::GetFullPath($Context.Root)+[IO.Path]::DirectorySeparatorChar
+if (!$gameConfig.StartsWith($ownedPrefix,[StringComparison]::OrdinalIgnoreCase)) { throw 'Gameplay config is outside the owned runtime slot' }
+$gameplay=Get-Content $gameConfig -Raw -Encoding utf8
+if ($gameplay -match '(?m)^team_respawn_queue:') {
+    $gameplay=$gameplay -replace '(?m)^team_respawn_queue:.*$', 'team_respawn_queue: 0000004'
+} else { $gameplay+="`nteam_respawn_queue: 0000004`n" }
+$gameplay | Set-Content $gameConfig -Encoding utf8
 Require-Reply '/reloadconfig' 'Reloaded all configs'
+Require-Reply '/config value team_respawn_queue' 'is: 0000004'
 foreach ($n in 1..6) { Require-Reply "/dummies spawn LotteryDummy$n" 'dummy has been spawned' }
 $deadline=(Get-Date).AddSeconds(15)
 do {
