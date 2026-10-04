@@ -13,7 +13,7 @@ public sealed class ForceScpSelectionCommand : ICommand
 {
     public string Command => "warmupforce";
     public string[] Aliases => Array.Empty<string>();
-    public string Description => "Force a player's next-round SCP: warmupforce <playerId> <scp> | list | clear <playerId|all>.";
+    public string Description => "Reserve a lottery win for an SCP vanilla spawns: warmupforce <playerId> <scp> | list | clear <playerId|all>.";
 
     public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
     {

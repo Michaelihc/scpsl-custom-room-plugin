@@ -180,14 +180,15 @@ warmupforce clear all
 ```
 
 Requires the native `ForceclassWithoutRestrictions` permission. Queue or cancel reservations during
-waiting-for-players. Each player has one reservation; another command replaces it. The chosen SCP is
-guaranteed against the coin lottery, including roles vanilla did not select and SCP-3114 below its
-normal threshold. Multiple players may be forced into the same SCP. Forced recipients are claimed
-as SCPs before other plugins' round role draft runs.
+waiting-for-players. Each player has one reservation; another command replaces it and moves it to the
+end of the reservation queue. Reserved players win existing vanilla slots before ordinary coin picks,
+including an ordinary picker who naturally received that role. If vanilla did not spawn the requested
+SCP, the reservation is skipped. Requests for the same role are filled in reservation order up to the
+number of slots vanilla spawned. Winning recipients are claimed as SCPs before other plugins' round
+role draft runs.
 
-The draft reuses an existing SCP slot where possible, changing its role if needed. If all slots belong
-to other forced recipients, additional reservations turn humans into extra SCPs. Ordinary coin picks
-retain their normal slot-preserving behavior. Disconnect, round start, restart and unload clear
+Admin reservations preserve every vanilla SCP type and count, and do not use the optional SCP-3114
+coin carve-out: a reserved SCP-3114 must also have spawned naturally. Disconnect, round start, restart and unload clear
 reservations. A disconnected player's reservation does not transfer to their next connection.
 Other plugins can still veto role changes; failures are logged and the compatibility path rolls back
 an incomplete swap.

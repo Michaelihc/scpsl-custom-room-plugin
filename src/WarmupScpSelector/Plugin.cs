@@ -47,7 +47,7 @@ public sealed class WarmupScpSelectorPlugin : Plugin<Config>
 
     public override string Author => "Michael";
 
-    public override Version Version => new(1, 4, 0);
+    public override Version Version => new(1, 4, 1);
 
     public override Version RequiredApiVersion => new(LabApiProperties.CompiledVersion);
 

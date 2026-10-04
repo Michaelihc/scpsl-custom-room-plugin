@@ -45,22 +45,33 @@ namespace WarmupScpSelector.Tests
                         forced[player] = ScpOrder[random.Next(ScpOrder.Length)];
                 }
                 foreach (RoleTypeId role in ScpOrder)
-                    pools[role] = vanilla.Keys.Where(player => random.Next(2) == 0).ToList();
+                    pools[role] = vanilla.Keys.Where(player => !forced.ContainsKey(player) && random.Next(2) == 0).ToList();
 
-                Dictionary<int, RoleTypeId> reserved = ForcedScpSelectionPlanner.Build(vanilla, forced);
-                var plan = SelectionSwapPlanner.BuildPlan(ScpOrder, reserved, pools, candidates => candidates[0], forced.Keys);
-                foreach (var request in forced)
-                {
-                    if (plan.FinalRoles[request.Key] != request.Value)
-                        throw new Exception("A competing coin pool displaced a forced recipient.");
-                }
-                int expectedScps = Math.Max(vanilla.Values.Count(ScpOption.IsScpRole), forced.Count);
-                if (plan.FinalRoles.Values.Count(ScpOption.IsScpRole) != expectedScps)
-                    throw new Exception("Forced assignments failed to reuse available SCP slots.");
+                var priority = ForcedScpSelectionPlanner.Build(vanilla, forced);
+                if (priority.Swaps.Any(swap => swap.SelectedPlayer == swap.Holder))
+                    throw new Exception("Priority lotteries attempted a self-swap.");
+                var winners = priority.NaturalSelections.Select(selection => selection.Player)
+                    .Concat(priority.Swaps.Select(swap => swap.SelectedPlayer)).ToHashSet();
+                var plan = SelectionSwapPlanner.BuildPlan(ScpOrder, priority.FinalRoles, pools, candidates => candidates[0], winners);
                 foreach (RoleTypeId role in ScpOrder)
                 {
-                    if (reserved.Values.Count(value => value == role) != plan.FinalRoles.Values.Count(value => value == role))
-                        throw new Exception("Ordinary coin picks changed the reserved SCP multiset.");
+                    int capacity = vanilla.Values.Count(value => value == role);
+                    var expectedWinners = forced.Where(pair => pair.Value == role).Take(capacity).Select(pair => pair.Key);
+                    foreach (int player in expectedWinners)
+                    {
+                        if (!winners.Contains(player) || plan.FinalRoles[player] != role)
+                            throw new Exception("A competing coin pool displaced a priority lottery winner.");
+                    }
+                    if (winners.Count(player => forced[player] == role) != Math.Min(capacity, forced.Values.Count(value => value == role)))
+                        throw new Exception("Priority lotteries did not respect native capacity.");
+                }
+                int expectedScps = vanilla.Values.Count(ScpOption.IsScpRole);
+                if (plan.FinalRoles.Values.Count(ScpOption.IsScpRole) != expectedScps)
+                    throw new Exception("Priority lotteries changed the native SCP count.");
+                foreach (RoleTypeId role in ScpOrder)
+                {
+                    if (vanilla.Values.Count(value => value == role) != plan.FinalRoles.Values.Count(value => value == role))
+                        throw new Exception("Priority lotteries changed the native SCP multiset.");
                 }
             }
         }
